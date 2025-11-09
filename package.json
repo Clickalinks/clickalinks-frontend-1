@@ -1,0 +1,13 @@
+{
+  "name": "clickalinks-backend",
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "stripe": "^14.25.0"
+  },
+  "scripts": {
+    "server": "node server.js"
+  }
+}

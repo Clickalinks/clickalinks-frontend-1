@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLICKaLINKS - Home</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">  <!-- ADD THIS LINE -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #cbf8f4;
+            color: #333;
+        }
+        
+        /* HEADER STYLES */
+        header {
+            background: #98e0ee;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .logo-img {
+            max-height: 100px;
+            width: auto;
+            margin-bottom: 0.7rem;
+        }
+
+        /* CATEGORIES MENU */
+        .categories-menu {
+            background: none;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem auto;
+            max-width: 1000px;
+        }
+
+        .category-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            list-style: none;
+        }
+
+        .category-links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            background: #34495e;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .category-links a:hover {
+            background: #3498db;
+            transform: translateY(-2px);
+        }
+        
+/* RUNNING STRIP */
+.running-strip {
+    background: linear-gradient(90deg, #e74c3c, #f39c12, #e74c3c);
+    color: white;
+    padding: 5px 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.marquee {
+    white-space: nowrap;
+    display: inline-block;
+    animation: marquee 10s linear infinite;
+    padding-left: 100%;
+}
+        
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        /* Navigation */
+        .categories {
+            background-color: #3f7585;
+            padding: 1rem 0;
+            width: 100%;
+        }
+        
+        .nav-links {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 25px;
+            background: rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            background: #3498db;
+        }
+        
+        /* Main Content */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 20px;
+        }
+        
+        .content-box {
+            background: white;
+            padding: 3rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .content-box h1 {
+            color: #2319eb;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .content-box h2 {
+            color: #667eea;
+            font-size: 1.8rem;
+            margin: 2rem 0 1rem 0;
+        }
+        
+        .content-box p {
+            color: #2d3748;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .content-box ul {
+            text-align: left;
+            max-width: 600px;
+            margin: 0 auto 2rem auto;
+        }
+        
+        .content-box li {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .feature {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+        
+        .feature h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.4rem;
+        }
+        
+        .feature p {
+            color: #4a5568;
+            font-size: 1rem;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: #468393;
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .footer-links {
+            margin-bottom: 1.5rem;
+        }
+        
+        .footer-links a {
+            color: #f6eeee;
+            text-decoration: none;
+            margin: 0 1rem;
+        }
+        
+        .payment-icons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .payment-icons i {
+            font-size: 2rem;
+        }
+        
+        .copyright {
+            color: #85c9de;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .features {
+                grid-template-columns: 1fr;
+            }
+            
+            .logo-img {
+                max-height: 60px;
+            }
+            
+            .content-box {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+<style>
+/* FOOTER */
+footer {
+    background: linear-gradient(135deg, #637d84, #374e64);
+    color: rgb(255, 255, 255);
+    text-align: center;
+    padding: 3rem 1rem;
+    margin-top: 4rem;
+    border-top: 5px solid #3498db;
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.footer-links a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-links a:hover {
+    color: #3498db;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-3px);
+}
+
+.payment-icons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+}
+
+.payment-icons i {
+    font-size: 2.5rem;
+    color: #dfe2c5;
+    transition: all 0.3s ease;
+    margin: 0 2px;
+}
+
+.payment-icons i:hover {
+    color: #3498db;
+    transform: scale(1.2);
+}
+
+footer p {
+    font-size: 1.1rem;
+    margin: 1rem 0;
+    color: #ecf0f1;
+    font-weight: 500;
+}
+
+.copyright {
+    color: #a8babb;
+    font-size: 1rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #8d9349;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+</style>
+</style>
+</head>
+<body>
+        <!-- Header -->
+    <header>
+        <a href="index.html">
+            <img src="logo.PNG" alt="CLICKaLINKS" class="logo-img">
+        </a>
+        
+<!-- CATEGORIES MENU -->
+<div class="categories-menu">
+    <ul class="category-links" id="categoryLinks">
+        <li><a href="#">All</a></li>
+        <li><a href="#">Fashion</a></li>
+        <li><a href="#">Electronics</a></li>
+        <li><a href="#">Beauty</a></li>
+        <li><a href="#">Accessories</a></li>
+        <li><a href="#">Food</a></li>
+        <li><a href="#">Home & Garden</a></li>
+        <li><a href="#">Auto</a></li>
+        <li><a href="#">Services</a></li>
+    </ul>
+</div>
+    </header>
+
+    <!-- Running Strip -->
+    <div class="running-strip">
+        <div class="marquee">
+            🚀 DIRECTING BUSINESSES TO CUSTOMERS • ONE CLICK AT A TIME • AFFORDABLE ADVERTISING • STARTING AT £1/DAY • 
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="content-box">
+            <h1>🚀 About CLICKaLINKS</h1>
+            
+            <h2>🎯 Directing Businesses to Customers, One Click at a Time</h2>
+            <p><strong>CLICKaLINKS</strong> was founded with a simple mission: to connect amazing businesses with customers looking for great deals. We provide an affordable advertising platform where businesses of all sizes can showcase their offers directly to engaged shoppers.</p>
+            
+            <h2>📈 Why We Started</h2>
+            <p>Founded in 2025, CLICKaLINKS emerged from the need for simple, cost-effective advertising solutions. We noticed that many businesses struggled with expensive digital marketing campaigns, while customers wanted easier ways to discover local deals.</p>
+
+            <h2>⭐ What Makes Us Different</h2>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">💰</div>
+                    <h3>Affordable</h3>
+                    <p>Only £1 per day for premium ad space</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Simple</h3>
+                    <p>No complex contracts or hidden fees</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Effective</h3>
+                    <p>Direct click-through to your deals</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Flexible</h3>
+                    <p>Choose 10, 20, or 30-day campaigns</p>
+                </div>
+            </div>
+
+            <h2>💫 Our Values</h2>
+            <p>We believe in transparency, fairness, and creating win-win situations for both businesses and customers. Every square on our platform represents an opportunity for growth and discovery.</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+    <div class="footer-links">
+        <a href="about.html"><i class="fas fa-info-circle"></i> About</a>
+        <a href="terms.html"><i class="fas fa-file-contract"></i> Terms & Conditions</a>
+        <a href="how-it-works.html"><i class="fas fa-play-circle"></i> How It Works</a>
+        <a href="mailto:info@clickalinks.com" className="footer-link"><i className="fas fa-envelope"></i> Contact Us</a>
+    </div>
+    
+    <div class="payment-icons">
+        <i class="fab fa-cc-visa"></i>
+        <i class="fab fa-cc-mastercard"></i>
+        <i class="fab fa-cc-stripe"></i>
+        <i class="fab fa-cc-google-pay"></i>
+        <i class="fab fa-cc-apple-pay"></i>
+        <i class="fab fa-cc-amex"></i>
+        <i class="fab fa-cc-paypal"></i>
+    </div>
+    <p>All Major Payment Methods Accepted</p>
+    
+    <div class="copyright">
+        <i class="far fa-copyright"></i> 2024 CLICKaLINKS. All rights reserved.
+    </div>
+</footer>
+</body>
+</html>

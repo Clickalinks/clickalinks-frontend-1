@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Purchase - CLICKaLINKS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #cbf8f4;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .go-back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+        }
+        
+        .go-back-btn:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        header {
+            background: #98e0ee;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .logo-img {
+            max-height: 80px;
+            width: auto;
+            margin-bottom: 0.5rem;
+        }
+        
+        .running-strip {
+            background: linear-gradient(90deg, #e74c3c, #f39c12, #e74c3c);
+            color: white;
+            padding: 5px 0;
+            overflow: hidden;
+        }
+
+        .marquee {
+            white-space: nowrap;
+            display: inline-block;
+            animation: marquee 10s linear infinite;
+            padding-left: 100%;
+        }
+        
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 20px;
+        }
+        
+        .checkout-box {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .checkout-box h1 {
+            color: #2319eb;
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .order-summary {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+        
+        .order-summary h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .file-upload {
+            border: 2px dashed #e2e8f0;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+        
+        .file-upload:hover {
+            border-color: #3498db;
+        }
+        
+        .file-upload i {
+            font-size: 2rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+        
+        .file-info {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .preview-container {
+            text-align: center;
+            margin: 1rem 0;
+        }
+        
+        .logo-preview {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .btn-pay {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .btn-pay:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(72, 187, 120, 0.4);
+        }
+        
+        .btn-pay:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        footer {
+            background: linear-gradient(135deg, #637d84, #374e64);
+            color: white;
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 4rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #3498db;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .checkout-box {
+                padding: 2rem 1rem;
+            }
+            
+            .logo-img {
+                max-height: 60px;
+            }
+            
+            .footer-links {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="go-back-btn" onclick="goBackToPurchase()">
+        <i class="fas fa-arrow-left"></i> Back
+    </button>
+
+    <header>
+        <a href="index.html">
+            <img src="logo.PNG" alt="CLICKaLINKS" class="logo-img">
+        </a>
+    </header>
+
+    <div class="running-strip">
+        <div class="marquee">
+            🚀 DIRECTING BUSINESSES TO CUSTOMERS • ONE CLICK AT A TIME • AFFORDABLE ADVERTISING • 
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="checkout-box">
+            <h1>🎯 Complete Your Purchase</h1>
+            
+            <div class="order-summary">
+                <h3>Order Summary</h3>
+                <div id="orderDetails">Loading order details...</div>
+            </div>
+            
+            <h2>Business & Advertisement Details</h2>
+            <p>Fill in your business information to display on your square</p>
+            
+            <form id="checkoutForm">
+                <div class="form-group">
+                    <label for="businessName">Business Name *</label>
+                    <input type="text" id="businessName" required placeholder="Enter your business name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="contactEmail">Contact Email *</label>
+                    <input type="email" id="contactEmail" required placeholder="your@business.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="dealLink">Special Deal/Discount Link *</label>
+                    <input type="url" id="dealLink" required placeholder="https://yourbusiness.com/special-deal">
+                    <small style="color: #666; font-size: 0.9rem;">e.g., https://yourbusiness.com/20percent-off</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Business Logo *</label>
+                    <div class="file-upload" onclick="document.getElementById('logoUpload').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <div>Click to upload your logo</div>
+                        <div class="file-info">Recommended: 100x100px PNG or JPG (Max 2MB)</div>
+                    </div>
+                    <input type="file" id="logoUpload" accept="image/*" style="display: none;" onchange="previewLogo(event)">
+                    <div class="preview-container">
+                        <img id="logoPreview" class="logo-preview" style="display: none;">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="adText">Advertisement Text (Max 100 characters)</label>
+                    <textarea id="adText" maxlength="100" placeholder="e.g., Best pizza in town! 20% off first order"></textarea>
+                    <div style="text-align: right; font-size: 0.9rem; color: #666;">
+                        <span id="charCount">0</span>/100 characters
+                    </div>
+                </div>
+                
+                <button type="button" class="btn-pay" id="btnPay" onclick="processPayment()" disabled>
+                    <i class="fas fa-lock"></i> Pay Now
+                </button>
+            </form>
+        </div>
+    </div>
+
+<!-- Footer -->
+<footer>
+    <div class="footer-links">
+        <a href="about.html"><i class="fas fa-info-circle"></i> About</a>
+        <a href="terms.html"><i class="fas fa-file-contract"></i> Terms & Conditions</a>
+        <a href="how-it-works.html"><i class="fas fa-play-circle"></i> How It Works</a>
+        <a href="mailto:info@clickalinks.com" className="footer-link"><i className="fas fa-envelope"></i> Contact Us</a>
+    </div>
+    
+    <div class="payment-icons">
+        <i class="fab fa-cc-visa"></i>
+        <i class="fab fa-cc-mastercard"></i>
+        <i class="fab fa-cc-stripe"></i>
+        <i class="fab fa-cc-google-pay"></i>
+        <i class="fab fa-cc-apple-pay"></i>
+        <i class="fab fa-cc-amex"></i>
+        <i class="fab fa-cc-paypal"></i>
+    </div>
+    <p>All Major Payment Methods Accepted</p>
+    </div>
+
+    <div class="copyright">
+        <i class="far fa-copyright"></i> 2024 CLICKaLINKS. All rights reserved.
+    </div>
+</footer>
+
+    <script>
+        let selectedSquare, selectedDuration, totalPrice;
+        let logoData = null;
+
+        function goBackToPurchase() {
+            window.location.href = `purchase.html?square=${selectedSquare}`;
+        }
+
+        function getOrderDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            selectedSquare = urlParams.get('square') || 1;
+            selectedDuration = urlParams.get('duration') || 10;
+            totalPrice = selectedDuration; // £1 per day
+            
+            document.getElementById('orderDetails').innerHTML = `
+                <div><strong>Square:</strong> #${selectedSquare}</div>
+                <div><strong>Duration:</strong> ${selectedDuration} days</div>
+                <div><strong>Total:</strong> £${totalPrice}.00</div>
+            `;
+        }
+
+        function previewLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Check file size (2MB max)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('File size must be less than 2MB');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    logoData = e.target.result;
+                    const preview = document.getElementById('logoPreview');
+                    preview.src = logoData;
+                    preview.style.display = 'block';
+                    validateForm();
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateCharCount() {
+            const text = document.getElementById('adText').value;
+            document.getElementById('charCount').textContent = text.length;
+            validateForm();
+        }
+
+        function validateForm() {
+            const businessName = document.getElementById('businessName').value.trim();
+            const contactEmail = document.getElementById('contactEmail').value.trim();
+            const dealLink = document.getElementById('dealLink').value.trim();
+            const btnPay = document.getElementById('btnPay');
+            
+            const isValid = businessName && contactEmail && dealLink && logoData;
+            btnPay.disabled = !isValid;
+        }
+
+async function processPayment() {
+    const businessName = document.getElementById('businessName').value.trim();
+    const contactEmail = document.getElementById('contactEmail').value.trim();
+    const dealLink = document.getElementById('dealLink').value.trim();
+    const adText = document.getElementById('adText').value.trim();
+
+    // Save business details to localStorage for after payment
+    const purchaseData = {
+        squareId: selectedSquare,
+        duration: selectedDuration,
+        businessName: businessName,
+        contactEmail: contactEmail,
+        dealLink: dealLink,
+        logoData: logoData,
+        adText: adText,
+        purchaseDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + selectedDuration * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'pending'
+    };
+
+    try {
+        const btnPay = document.getElementById('btnPay');
+        btnPay.disabled = true;
+        btnPay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+        console.log('🔄 Sending request to backend...', {
+            squareId: selectedSquare,
+            duration: selectedDuration,
+            purchaseData: purchaseData
+        });
+
+        // Call Stripe backend with error handling
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+        ? 'http://192.168.0.240:3001' 
+        : 'http://localhost:3001';
+
+        const response = await fetch(`${API_BASE_URL}/create-checkout-session`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+    },
+            body: JSON.stringify({
+                squareId: selectedSquare,
+                duration: selectedDuration,
+                purchaseData: purchaseData
+            })
+        });
+
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response ok:', response.ok);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Server response error:', errorText);
+            throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+
+        const session = await response.json();
+        console.log('✅ Session created:', session);
+        
+        // Save purchase data temporarily
+        localStorage.setItem(`purchase_${selectedSquare}`, JSON.stringify(purchaseData));
+        
+        // Redirect to Stripe
+        console.log('🔗 Redirecting to Stripe...');
+        window.location.href = session.url;
+
+    } catch (error) {
+        console.error('❌ Payment error:', error);
+        
+        let errorMessage = 'Payment processing error: ';
+        if (error.message.includes('Failed to fetch')) {
+            errorMessage += 'Cannot connect to server. Make sure backend is running on port 3001.';
+        } else if (error.message.includes('Network response')) {
+            errorMessage += 'Server returned an error. Check backend logs.';
+        } else {
+            errorMessage += error.message;
+        }
+        
+        alert(errorMessage);
+        
+        // Reset button
+        const btnPay = document.getElementById('btnPay');
+        btnPay.disabled = false;
+        btnPay.innerHTML = '<i class="fas fa-lock"></i> Pay Now';
+    }
+}
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            getOrderDetails();
+            document.getElementById('businessName').addEventListener('input', validateForm);
+            document.getElementById('contactEmail').addEventListener('input', validateForm);
+            document.getElementById('dealLink').addEventListener('input', validateForm);
+            document.getElementById('adText').addEventListener('input', updateCharCount);
+        });
+    </script>
+</body>
+</html>
