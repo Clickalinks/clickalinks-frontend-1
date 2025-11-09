@@ -8,6 +8,6 @@
     "stripe": "^14.25.0"
   },
   "scripts": {
-    "server": "node server.js"
+  "start": "node server.js",
+  "server": "node server.js"
   }
-}
