@@ -126,11 +126,11 @@ app.post('/create-checkout-session', async (req, res) => {
       ],
       mode: 'payment',
       success_url: process.env.NODE_ENV === 'production' 
-        ? `https://www.clickalinks.com/success.html?square=${squareId}&session_id={CHECKOUT_SESSION_ID}`
-        : `http://localhost:3000/success.html?square=${squareId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: process.env.NODE_ENV === 'production'
-        ? `https://www.clickalinks.com/checkout.html?square=${squareId}&duration=${duration}`
-        : `http://localhost:3000/checkout.html?square=${squareId}&duration=${duration}`,
+        ? `https://www.clickalinks.com/success?square=${squareId}&session_id={CHECKOUT_SESSION_ID}`
+        : `http://localhost:3000/success?square=${squareId}&session_id={CHECKOUT_SESSION_ID}`,
+     cancel_url: process.env.NODE_ENV === 'production'
+        ? `https://www.clickalinks.com/checkout?square=${squareId}&duration=${duration}`
+        : `http://localhost:3000/checkout?square=${squareId}&duration=${duration}`,
       metadata: {
         squareId: squareId,
         duration: duration,

@@ -4,7 +4,10 @@ import Header from './components/Header';
 import RunningStrip from './components/RunningStrip';
 import AdGrid from './components/AdGrid';
 import Footer from './components/Footer'; // Make sure this line exists
+import Success from './components/Success';
 
+// In your Routes section, add:
+<Route path="/success" element={<Success />} />
 function App() {
   return (
     <div className="App">
