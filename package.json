@@ -1,13 +1,13 @@
 {
-  "name": "clickalinks-frontend",
+  "name": "clickalinks-frontend-1",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://clickalinks-backend-1.onrender.com",
+  "proxy": "https://clickalinks-backend-1.onrender.com",
   "dependencies": {
-    "@stripe/react-stripe-js": "^1.16.2",
-    "@stripe/stripe-js": "^1.54.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "@stripe/react-stripe-js": "^2.4.1",
+    "@stripe/stripe-js": "^2.1.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.1",
     "react-scripts": "5.0.1"
   },
@@ -28,5 +28,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
