@@ -3,7 +3,7 @@ services:
   - type: web
     name: clickalinks-frontend
     env: static
-    buildCommand: npm run build
+    buildCommand: CI=false npm install && CI=false npm run build
     staticPublishPath: ./build
     envVars:
       - key: REACT_APP_STRIPE_PUBLISHABLE_KEY
