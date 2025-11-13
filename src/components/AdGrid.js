@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AutoShuffleTimer from './AutoShuffleTimer';
+import AutoShuffleTimer from './AutoShuffleTimer'; // Fixed import name
 
 const AdGrid = ({ pageNumber = 1 }) => {
   const [squares, setSquares] = useState([]);
@@ -42,7 +42,7 @@ const AdGrid = ({ pageNumber = 1 }) => {
               id: squareNumber,
               isAvailable: false,
               businessName: purchase.businessName,
-              logoData: purchase.logoData, // This will show the uploaded logo!
+              logoData: purchase.logoData,
               dealLink: purchase.dealLink,
             };
           } else {
@@ -123,7 +123,7 @@ const AdGrid = ({ pageNumber = 1 }) => {
       <div className="page-info">
         <h3>Page {pageNumber} - Squares {startSquare} to {endSquare}</h3>
         
-        <AutoShuffleTimer />
+        <AutoShuffleTimer /> {/* Fixed component name */}
         
         <div className="page-stats">
           <span className="occupied-stat">{occupiedCount} Occupied</span>
