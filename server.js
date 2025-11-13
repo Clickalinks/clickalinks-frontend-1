@@ -12,20 +12,22 @@ const PORT = process.env.PORT || 10000;
 // Initialize Stripe with error handling
 let stripe;
 try {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY environment variable is missing');
+  }
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   console.log('✅ Stripe initialized successfully');
 } catch (error) {
   console.error('❌ Stripe initialization failed:', error.message);
-  process.exit(1);
+  // Don't exit - let health check show the error
 }
 
-// CORS - Allow everything temporarily to isolate the issue
+// CORS
 app.use(cors({
-  origin: true, // Allow all origins temporarily
+  origin: true,
   credentials: true
 }));
 
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 
 // Request logging
@@ -36,23 +38,23 @@ app.use((req, res, next) => {
 
 // Health check
 app.get('/health', (req, res) => {
+  const stripeStatus = stripe ? 'Configured' : 'Failed';
   res.json({ 
     status: 'OK', 
     service: 'ClickALinks Backend',
-    stripe: 'Configured',
+    stripe: stripeStatus,
     timestamp: new Date().toISOString()
   });
 });
 
-// ADD THE DEBUG ENDPOINT RIGHT HERE:
+// Debug endpoint
 app.get('/debug', (req, res) => {
   res.json({
     stripeSecretKeyExists: !!process.env.STRIPE_SECRET_KEY,
     stripeSecretKeyPrefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'MISSING',
     stripePublishableKeyExists: !!process.env.STRIPE_PUBLISHABLE_KEY,
     nodeEnv: process.env.NODE_ENV,
-    frontendUrl: process.env.FRONTEND_URL,
-    allEnvVars: Object.keys(process.env).filter(key => key.includes('STRIPE') || key.includes('NODE') || key.includes('FRONTEND'))
+    frontendUrl: process.env.FRONTEND_URL
   });
 });
 
@@ -64,10 +66,17 @@ app.get('/', (req, res) => {
   });
 });
 
-// PAYMENT ENDPOINT - SIMPLIFIED AND ROBUST
+// PAYMENT ENDPOINT - FIXED
 app.post('/api/create-checkout-session', async (req, res) => {
   console.log('💳 Payment request received:', req.body);
   
+  // Check if Stripe is initialized
+  if (!stripe) {
+    return res.status(500).json({ 
+      error: 'Stripe not configured - check server environment variables'
+    });
+  }
+
   try {
     const { amount, businessName, squareNumber, duration, contactEmail, currency = 'gbp' } = req.body;
 
@@ -92,7 +101,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
               name: `ClickALinks Ad - Square #${squareNumber}`,
               description: `${duration}-day campaign for ${businessName}`,
             },
-            unit_amount: Math.round(amount * 100), // Convert to pennies
+            unit_amount: Math.round(amount * 100),
           },
           quantity: 1,
         },
@@ -130,15 +139,9 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Error handler
-app.use((error, req, res, next) => {
-  console.error('🚨 Server error:', error);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`💳 Backend URL: https://clickalinks-backend-1.onrender.com`);
+  console.log(`💳 Backend URL: https://clickalinks-backend.onrender.com`); // ✅ FIXED URL
   console.log(`🔑 Stripe Mode: ${process.env.STRIPE_SECRET_KEY?.includes('_live_') ? 'LIVE' : 'TEST'}`);
 });
