@@ -107,8 +107,8 @@ app.post('/api/create-checkout-session', async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `https://clickanlinks-frontend.web.app/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `https://clickanlinks-frontend.web.app/checkout`,
+      success_url: `https://clickalinks-frontend.web.app/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://clickalinks-frontend.web.app/checkout`,
       customer_email: contactEmail,
       metadata: {
         businessName,
