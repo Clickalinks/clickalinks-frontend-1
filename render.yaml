@@ -4,7 +4,7 @@ services:
     name: clickalinks-frontend
     env: static
     buildCommand: CI=false npm install && CI=false npm run build
-    staticPublishPath: ./build
+    staticPublishPath: build
     envVars:
       - key: REACT_APP_STRIPE_PUBLISHABLE_KEY
         value: your_stripe_publishable_key_here
