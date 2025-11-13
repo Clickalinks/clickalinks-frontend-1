@@ -2,10 +2,27 @@ import express from 'express';
 import Stripe from 'stripe';
 
 const router = express.Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Fixed Stripe initialization with error handling
+let stripe;
+try {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY environment variable is missing');
+  }
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+} catch (error) {
+  console.error('Stripe initialization failed:', error.message);
+}
 
 // Stripe payment intent endpoint
 router.post('/create-payment-intent', async (req, res) => {
+  // Check if Stripe is initialized
+  if (!stripe) {
+    return res.status(500).json({ 
+      error: 'Stripe not configured - check server logs'
+    });
+  }
+
   try {
     const { amount, currency = 'gbp' } = req.body;
 
