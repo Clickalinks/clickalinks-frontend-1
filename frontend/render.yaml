@@ -1,0 +1,12 @@
+# render.yaml
+services:
+  - type: web
+    name: clickalinks-frontend
+    env: static
+    buildCommand: CI=false npm install && CI=false npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_STRIPE_PUBLISHABLE_KEY
+        value: your_stripe_publishable_key_here
+      - key: REACT_APP_BACKEND_URL
+        value: https://clickalinks-backend-1.onrender.com

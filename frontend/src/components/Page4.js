@@ -1,7 +1,7 @@
 import React from "react";
-import AdGrid from "../components/AdGrid";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import AdGrid from "./AdGrid";
+import Header from "./Header";
+import Footer from "./Footer";
 
 const Page4 = () => (
   <>

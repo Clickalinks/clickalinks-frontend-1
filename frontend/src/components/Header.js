@@ -1,34 +1,49 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import './Header.css';
 
 const Header = () => {
+  const location = useLocation();
   const pages = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   return (
     <header className="header">
-      {/* Centered Logo */}
-      <div className="logo-container">
-        <Link to="/">
-          <img 
-            src="/logo.PNG" 
-            alt="CLICKaLINKS - Multi-Page Advertising Platform" 
-            className="logo"
-          />
-        </Link>
-      </div>
-      
-      {/* Page Navigation Boxes - Horizontal */}
-      <nav className="page-navigation" aria-label="Page navigation">
-        {pages.map(page => (
-          <Link 
-            key={page}
-            to={page === 1 ? "/" : `/page${page}`}
-            className="page-box"
-          >
-            Page {page}
+      {/* Main Header Content */}
+      <div className="header-content">
+        {/* Logo Section */}
+        <div className="logo-section">
+          <Link to="/" className="logo-link">
+            <img
+              src="/logo.PNG"
+              alt="CLICKaLINKS - Multi-Page Advertising Platform"
+              className="logo"
+            />
           </Link>
-        ))}
-      </nav>
+        </div>
+
+        {/* Navigation Section */}
+        <nav className="navigation-section">
+          <div className="nav-container">
+            {pages.map(page => {
+              const isActive = 
+                (page === 1 && location.pathname === '/') || 
+                location.pathname === `/page${page}`;
+                
+              return (
+                <Link
+                  key={page}
+                  to={page === 1 ? "/" : `/page${page}`}
+                  className={`nav-item ${isActive ? 'nav-active' : ''}`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <span className="nav-number">{page}</span>
+                  <span className="nav-label">Page</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
     </header>
   );
 };

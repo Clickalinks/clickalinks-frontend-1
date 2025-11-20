@@ -1,0 +1,509 @@
+.campaign-selection-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.campaign-selection-content {
+  width: 90%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Header */
+.campaign-header {
+  background: white;
+  border-radius: 12px;
+  padding: 25px 30px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-text h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 5px;
+}
+
+.header-subtitle {
+  font-size: 14px;
+  color: #718096;
+  margin: 0;
+}
+
+.progress-navigation {
+  display: flex;
+  gap: 25px;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-indicator {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #718096;
+  border: 2px solid #e2e8f0;
+}
+
+.progress-step.active .step-indicator {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.step-check {
+  display: none;
+}
+
+.progress-step.active .step-indicator span {
+  display: none;
+}
+
+.progress-step.active .step-indicator .step-check {
+  display: block;
+}
+
+.step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.progress-step.active .step-label {
+  color: #667eea;
+}
+
+/* Main Content - FIXED HEIGHTS */
+.content-wrapper {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 25px;
+  align-items: stretch; /* This makes both columns same height */
+}
+
+/* Plans Section - FIXED HEIGHT */
+.plans-section {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  height: fit-content; /* Adjusts to content but matches neighbor */
+  min-height: 500px; /* Minimum height to match order summary */
+  display: flex;
+  flex-direction: column;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.section-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 5px;
+}
+
+.section-header p {
+  font-size: 14px;
+  color: #718096;
+  margin: 0;
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  flex: 1; /* Takes remaining space */
+}
+
+.plan-card {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Makes all cards same height */
+}
+
+.plan-card:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.plan-card--selected {
+  border-color: #667eea;
+  background: #f8faff;
+}
+
+.plan-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+}
+
+.plan-badge--popular {
+  background: #667eea;
+}
+
+.plan-badge--best-value {
+  background: #48bb78;
+}
+
+.plan-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.plan-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 5px 0;
+}
+
+.plan-description {
+  font-size: 12px;
+  color: #718096;
+  margin: 0 0 15px 0;
+}
+
+.plan-pricing {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.price-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+  margin-bottom: 5px;
+}
+
+.currency {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.plan-price {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.plan-duration {
+  font-size: 12px;
+  color: #718096;
+}
+
+.savings-badge {
+  background: #fed7d7;
+  color: #c53030;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.cost-efficiency {
+  text-align: center;
+  font-size: 12px;
+  color: #718096;
+  margin-bottom: 15px;
+  padding: 8px;
+  background: #f7fafc;
+  border-radius: 6px;
+}
+
+.selection-indicator {
+  text-align: center;
+  padding: 10px;
+  background: #e2e8f0;
+  color: #718096;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: auto; /* Pushes to bottom of card */
+}
+
+.selection-indicator--selected {
+  background: #667eea;
+  color: white;
+}
+
+/* Order Summary - FIXED HEIGHT */
+.order-summary {
+  height: 100%; /* Matches plans section height */
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  height: 100%; /* Takes full height of parent */
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-header {
+  margin-bottom: 20px;
+}
+
+.summary-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.summary-subtitle {
+  font-size: 12px;
+  color: #718096;
+  text-align: center;
+  margin: 0;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Takes remaining space */
+}
+
+.order-details {
+  margin-bottom: 20px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.detail-label {
+  color: #718096;
+  font-size: 13px;
+}
+
+.detail-value {
+  color: #2d3748;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.summary-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 15px 0;
+}
+
+.total-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.total-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.total-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.features-included {
+  margin-bottom: 20px;
+}
+
+.features-included h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 10px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #4a5568;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto; /* Pushes to bottom */
+}
+
+.btn {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn--primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn--primary:hover {
+  background: #5a6fd8;
+}
+
+.btn--secondary {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.btn--secondary:hover {
+  background: #f7fafc;
+}
+
+.trust-indicators {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  text-align: center;
+  margin-top: 15px;
+}
+
+.trust-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #718096;
+}
+
+/* Error State */
+.error-state {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  margin: 50px auto;
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.error-state h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 10px;
+}
+
+.error-state p {
+  font-size: 1rem;
+  color: #718096;
+  margin-bottom: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .campaign-selection-container {
+    padding: 15px;
+  }
+  
+  .content-wrapper {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .plans-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .order-summary {
+    position: static;
+    height: auto;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .progress-navigation {
+    gap: 15px;
+  }
+  
+  .plans-section {
+    min-height: auto; /* Remove fixed height on mobile */
+  }
+}

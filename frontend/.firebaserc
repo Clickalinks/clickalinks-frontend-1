@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "clickalinks-frontend",
+    "hosting": "clickalinks-frontend"
+  },
+  "targets": {},
+  "etags": {}
+}
