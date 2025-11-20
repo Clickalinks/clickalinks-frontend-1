@@ -1,54 +1,143 @@
-import React from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import React, { useState } from 'react';
 
-const stripePromise = loadStripe('pk_test_51SQ6vZR4ooGqKuuu3FR0zWxgKTQJsz3UsWtAweYFthqJqvTDL5vseIRbNLAoPboKZHX9nRxl4cOiM0ceaofeu7ce006n2Zg89j');
+const PaymentButton = ({ 
+  squareId = "1", 
+  duration = 10, 
+  businessName = "Your Business", 
+  contactEmail = "", 
+  adText = "Amazing business offer!",
+  onPaymentStart,
+  onPaymentComplete,
+  onPaymentError 
+}) => {
+  const [isProcessing, setIsProcessing] = useState(false);
 
-const PaymentButton = () => {
+  // Working Stripe test links for different durations
+  const stripeLinks = {
+    10: 'https://buy.stripe.com/test_14k5mweUJ0CB7OEbII',  // £10 for 10 days
+    20: 'https://buy.stripe.com/test_14k5mweUJ0CB7OEbII',  // £20 for 20 days (use same for demo)
+    30: 'https://buy.stripe.com/test_14k5mweUJ0CB7OEbII'   // £30 for 30 days (use same for demo)
+  };
 
-   const handleClick = async () => {
-  try {
-    console.log('Sending request to backend...');
+  const handlePayment = async () => {
+    if (isProcessing) return;
     
-    // ADD THIS REQUEST BODY - customize with your data
-    const requestBody = {
-      squareId: "1",  // Change to actual square ID
-      duration: 10,   // 10, 20, or 30 days
-      purchaseData: {
-        businessName: "Test Business",  // Change to actual business name
-        contactEmail: "test@example.com", // Change to actual email
-        adText: "Amazing business offer!" // Change to actual ad text
+    setIsProcessing(true);
+    
+    try {
+      // Call optional callback
+      if (onPaymentStart) {
+        onPaymentStart({ squareId, duration, businessName });
       }
-    };
-    
-    const response = await fetch('https://clickalinks-backend-1.onrender.com/create-checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)  // ADD THIS LINE
-    });
-    
-    const session = await response.json();
-    console.log('Session response:', session);
-    
-    if (session.url) {
-      console.log('Redirecting to:', session.url);
-      window.location.href = session.url;
-    } else {
-      console.error('No URL in response:', session);
-      alert('Payment error: No checkout URL received');
+
+      console.log('🚀 Starting payment process...');
+      console.log('Square ID:', squareId);
+      console.log('Duration:', duration, 'days');
+      console.log('Business:', businessName);
+      
+      // ✅ 100% CLIENT-SIDE - NO API CALLS
+      // Save booking info to localStorage
+      const bookingData = {
+        squareNumber: squareId,
+        businessName: businessName,
+        contactEmail: contactEmail,
+        adText: adText,
+        duration: duration,
+        amount: duration, // £1 per day
+        purchaseDate: new Date().toISOString(),
+        status: 'pending',
+        stripeSessionId: `session_${Date.now()}_${squareId}`
+      };
+
+      console.log('💾 Saving booking data:', bookingData);
+
+      // Get existing purchases
+      const existingPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+      existingPurchases[squareId] = bookingData;
+      localStorage.setItem('squarePurchases', JSON.stringify(existingPurchases));
+
+      // Save current session for success page
+      localStorage.setItem('currentPaymentSession', JSON.stringify({
+        squareId: squareId,
+        duration: duration,
+        amount: duration,
+        timestamp: Date.now()
+      }));
+
+      // ✅ DIRECT STRIPE REDIRECT - NO BACKEND
+      const stripeUrl = stripeLinks[duration] || stripeLinks[10];
+      
+      // Add success URL parameters
+      const successUrl = `${window.location.origin}/success?square=${squareId}&duration=${duration}&amount=${duration}`;
+      console.log('🎯 Success URL will be:', successUrl);
+      
+      console.log('🔗 Redirecting to Stripe checkout...');
+      
+      // Simple redirect - Stripe will handle the rest
+      window.location.href = stripeUrl;
+      
+      // Call optional completion callback
+      if (onPaymentComplete) {
+        onPaymentComplete({ squareId, duration });
+      }
+      
+    } catch (error) {
+      console.error('❌ Payment error:', error);
+      setIsProcessing(false);
+      
+      // Call optional error callback
+      if (onPaymentError) {
+        onPaymentError(error);
+      } else {
+        alert('Payment error: ' + error.message);
+      }
+    }
+  };
+
+  const getButtonText = () => {
+    if (isProcessing) {
+      return (
+        <>
+          <div className="spinner"></div>
+          Processing...
+        </>
+      );
     }
     
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Payment error: ' + error.message);
-  }
-}; 
+    const amount = duration; // £1 per day
+    return (
+      <>
+        <i className="fas fa-credit-card"></i>
+        Get Started with ClickaLinks - £{amount}.00
+      </>
+    );
+  };
+
+  const getDurationText = () => {
+    switch(duration) {
+      case 10: return '10-Day Campaign';
+      case 20: return '20-Day Campaign';
+      case 30: return '30-Day Campaign';
+      default: return `${duration}-Day Campaign`;
+    }
+  };
+
   return (
-    <button onClick={handleClick} className="pay-button">
-      <i className="fas fa-credit-card"></i>
-      Get Started with ClickaLinks - $10.00
-    </button>
+    <div className="payment-button-container">
+      <button 
+        onClick={handlePayment}
+        disabled={isProcessing}
+        className={`pay-button ${isProcessing ? 'processing' : ''}`}
+      >
+        {getButtonText()}
+      </button>
+      
+      <div className="payment-details">
+        <small>
+          <strong>{getDurationText()}</strong> • £1 per day • Secure payment via Stripe
+        </small>
+      </div>
+    </div>
   );
 };
 
