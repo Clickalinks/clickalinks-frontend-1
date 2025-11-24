@@ -10,13 +10,17 @@ const Header = () => {
     <header className="header">
       {/* Main Header Content */}
       <div className="header-content">
-        {/* Logo Section */}
         <div className="logo-section">
           <Link to="/" className="logo-link">
             <img
               src="/logo.PNG"
-              alt="CLICKaLINKS - Multi-Page Advertising Platform"
-              className="logo"
+              alt="CLICKaLINKS"
+              style={{
+                height: '130px', // Fixed height
+                width: 'auto',
+                maxWidth: '1000px',
+                objectFit: 'contain'
+              }}
             />
           </Link>
         </div>

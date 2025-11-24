@@ -40,24 +40,6 @@ body {
   width: 80%;
 }
 
-.logo-container {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-.logo {
-  max-height: 80px;
-  width: auto;
-  transition: all 0.3s ease;
-  filter: drop-shadow(0 2px 4px rgba(242, 238, 26, 0.925));
-  position: static !important;
-}
-
-.logo:hover {
-  transform: scale(1.05);
-}
-
 .page-navigation {
   display: flex;
   justify-content: center;

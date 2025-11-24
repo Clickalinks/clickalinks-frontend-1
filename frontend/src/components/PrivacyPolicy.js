@@ -154,15 +154,6 @@ const PrivacyPolicy = () => {
             </div>
           </section>
         </div>
-
-        <footer className="privacy-footer">
-          <p>Simple advertising, simple privacy.</p>
-          <div className="footer-links">
-            <a href="/terms">Terms of Service</a>
-            <a href="/contact">Contact Us</a>
-            <a href="/">Return to Home</a>
-          </div>
-        </footer>
       </div>
     </div>
   );

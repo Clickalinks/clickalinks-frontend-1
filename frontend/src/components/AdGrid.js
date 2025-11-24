@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from './firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { collection, getDocs } from 'firebase/firestore';
 import './AdGrid.css';
 
 const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
@@ -12,11 +12,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Calculate positions based on start/end props
-  const squaresPerPage = end - start + 1;
-  const squares = Array.from({ length: squaresPerPage }, (_, index) => {
-    return start + index;
-  });
+  const squares = Array.from({ length: end - start + 1 }, (_, index) => start + index);
 
   // Mobile detection
   useEffect(() => {
@@ -29,38 +25,63 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  // Firestore listener
+  // Load purchased squares
   useEffect(() => {
-    console.log('📡 Setting up Firestore real-time listener');
-    setIsLoading(true);
-    
-    const unsubscribe = onSnapshot(
-      collection(db, 'purchasedSquares'), 
-      (snapshot) => {
-        try {
-          const purchases = {};
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            if (data && typeof data === 'object') {
-              purchases[doc.id] = data;
-            }
-          });
-          setPurchasedSquares(purchases);
-          setIsLoading(false);
-          console.log('✅ Loaded purchased squares:', Object.keys(purchases).length);
-        } catch (error) {
-          console.error('❌ Data processing error:', error);
-          setIsLoading(false);
-        }
-      }, 
-      (error) => {
-        console.error('❌ Firestore connection error:', error);
+    const loadPurchasedSquares = async () => {
+      try {
+        console.log('🔄 Loading purchased squares...');
+        const querySnapshot = await getDocs(collection(db, 'purchasedSquares'));
+        
+        const purchases = {};
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data && data.status === 'active') {
+            purchases[doc.id] = data;
+          }
+        });
+
+        console.log('✅ Loaded:', Object.keys(purchases).length, 'purchased squares');
+        setPurchasedSquares(purchases);
+      } catch (error) {
+        console.error('❌ Error loading squares:', error);
+        // Fallback to localStorage
+        const localPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+        setPurchasedSquares(localPurchases);
+      } finally {
         setIsLoading(false);
       }
-    );
-    
-    return () => unsubscribe();
+    };
+
+    loadPurchasedSquares();
+
+    // Listen for new purchases
+    const handleStorageChange = () => {
+      console.log('🔄 Storage changed, reloading...');
+      loadPurchasedSquares();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Format time function
+  const formatTime = useCallback((seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  // Auto-shuffle functions
+  const triggerAutoShuffle = useCallback(() => {
+    console.log('Auto-shuffle triggered!');
+    setPurchasedSquares(prev => ({...prev}));
+    alert('🔄 Grid shuffled - positions randomized');
+  }, []);
+
+  const handleManualShuffle = useCallback(() => {
+    triggerAutoShuffle();
+  }, [triggerAutoShuffle]);
 
   // Auto-shuffle timer
   useEffect(() => {
@@ -75,23 +96,6 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = useCallback((seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }, []);
-
-  const triggerAutoShuffle = useCallback(() => {
-    console.log('🔄 Auto-shuffle triggered!');
-    setPurchasedSquares(prev => ({...prev}));
-    alert('🔄 Grid shuffled - positions randomized');
-  }, []);
-
-  const handleManualShuffle = useCallback(() => {
-    triggerAutoShuffle();
   }, [triggerAutoShuffle]);
 
   const isAvailable = useCallback((position) => {
@@ -100,41 +104,24 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
 
   const getBusinessInfo = useCallback((position) => {
     const purchase = purchasedSquares[position];
-    if (purchase && typeof purchase === 'object') {
-      return {
-        logo: purchase.logoData,
-        dealLink: purchase.dealLink || purchase.website, // Support both field names
-        contactEmail: purchase.contactEmail,
-        businessName: purchase.businessName
-      };
-    }
-    return null;
+    return purchase ? {
+      logo: purchase.logoData,
+      dealLink: purchase.dealLink,
+      contactEmail: purchase.contactEmail,
+      businessName: purchase.businessName
+    } : null;
   }, [purchasedSquares]);
 
   const handlePositionClick = useCallback((position) => {
-    if (!position || typeof position !== 'number') {
-      console.error('❌ Invalid position:', position);
-      return;
-    }
-
-    console.log(`🎯 Square ${position} clicked, Available: ${isAvailable(position)}`);
-
     if (isAvailable(position)) {
-      console.log(`🚀 Navigating to campaign for square ${position} on page ${pageNumber}`);
-      
       navigate('/campaign', { 
-        state: { 
-          selectedSquare: position,
-          pageNumber: pageNumber 
-        } 
+        state: { selectedSquare: position, pageNumber } 
       });
     } else {
       const businessInfo = getBusinessInfo(position);
       if (businessInfo?.dealLink) {
-        console.log(`🌐 Opening business website: ${businessInfo.dealLink}`);
         window.open(businessInfo.dealLink, '_blank', 'noopener,noreferrer');
       } else {
-        console.log(`ℹ️ Showing business info for square ${position}`);
         setSelectedOccupiedSquare(position);
       }
     }
@@ -144,136 +131,91 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     setSelectedOccupiedSquare(null);
   }, []);
 
-  const handleImageError = useCallback((event) => {
-    console.log('🖼️ Image failed to load, showing placeholder');
-    event.target.style.display = 'none';
-    // Show placeholder when image fails
-    const parent = event.target.parentElement;
-    if (parent) {
-      const placeholder = document.createElement('div');
-      placeholder.className = 'no-logo-placeholder';
-      placeholder.innerHTML = `
-        <span>Active Ad</span>
-        <span class="spot-number-small">#${event.target.getAttribute('data-position')}</span>
-      `;
-      parent.appendChild(placeholder);
-    }
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="ad-grid-container">
+        <div className="loading-message">
+          <div className="loading-spinner"></div>
+          Loading advertising spots...
+        </div>
+      </div>
+    );
+  }
 
-  const availablePositions = squares.filter(position => isAvailable(position));
-  const occupiedPositions = squares.filter(position => !isAvailable(position));
-
-  const handleKeyPress = useCallback((e, position) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handlePositionClick(position);
-    }
-  }, [handlePositionClick]);
-
-  // Stats for display
-  const totalSquares = squares.length;
-  const availableCount = availablePositions.length;
-  const occupiedCount = occupiedPositions.length;
+  const availableCount = squares.filter(position => isAvailable(position)).length;
+  const occupiedCount = squares.length - availableCount;
 
   return (
     <div className="ad-grid-container">
-      {/* Auto-Shuffle Timer */}
-      <div className="shuffle-timer-container">
-        <button 
-          className="shuffle-timer-btn" 
-          onClick={handleManualShuffle}
-          aria-label="Shuffle advertising positions"
-        >
-          <div className="timer-icon" aria-hidden="true">🔄</div>
-          <div className="timer-content">
-            <div className="timer-label">Next Auto-Shuffle</div>
-            <div className="timer-display">{formatTime(timeLeft)}</div>
-          </div>
-          <div className="shuffle-now">Shuffle Now</div>
-        </button>
-      </div>
-
-      {/* Page Stats */}
-      <div className="page-info">
-        <div className="page-stats">
-          <div className="available-stat">
-            ✅ {availableCount} Available
-          </div>
-          <div className="occupied-stat">
-            🔵 {occupiedCount} Occupied
-          </div>
-        </div>
-        <p className="page-instruction">
-          {isHome 
-            ? 'Click any available square to start advertising'
-            : `Click any available square on Page ${pageNumber} to advertise`
-          }
-        </p>
-      </div>
-
-      {/* Advertising Grid */}
-      <div className="grid-container">
-        {isLoading ? (
-          <div className="loading-message" role="status" aria-live="polite">
-            <div className="loading-spinner"></div>
-            Loading advertising spots...
-          </div>
-        ) : (
-          <div 
-            className={`positions-grid ${isMobile ? 'mobile-layout' : 'desktop-layout'}`}
-            role="grid"
-            aria-label="Advertising positions grid"
+      {/* Header Section - FIXED LAYOUT */}
+      <div className="grid-header">
+        <div className="shuffle-timer-container">
+          <button 
+            className="shuffle-timer-btn" 
+            onClick={handleManualShuffle}
+            aria-label="Shuffle advertising positions"
           >
-            {squares.map((position) => {
-              const businessInfo = getBusinessInfo(position);
-              const available = isAvailable(position);
-              
-              return (
-                <div
-                  key={position}
-                  className={`ad-position ${available ? 'available' : 'occupied'}`}
-                  onClick={() => handlePositionClick(position)}
-                  role="gridcell"
-                  aria-label={available ? 
-                    `Available advertising spot ${position}. Click to purchase.` : 
-                    `Occupied advertising spot ${position}`
-                  }
-                  tabIndex={0}
-                  onKeyDown={(e) => handleKeyPress(e, position)}
-                >
-                  <div className="position-content">
-                    {available ? (
-                      <div className="available-spot">
-                        <div className="spot-icon" aria-hidden="true">➕</div>
-                        <div className="spot-text">Advertise Here</div>
-                        <div className="spot-price">£1/day</div>
-                        <div className="spot-number">#{position}</div>
-                      </div>
-                    ) : (
-                      <div className="occupied-spot">
-                        {businessInfo?.logo ? (
-                          <img 
-                            src={businessInfo.logo} 
-                            className="business-logo"
-                            alt={`Business logo`}
-                            onError={handleImageError}
-                            loading="lazy"
-                            data-position={position}
-                          />
-                        ) : (
-                          <div className="no-logo-placeholder">
-                            <span>Active Ad</span>
-                            <span className="spot-number-small">#{position}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <div className="timer-icon" aria-hidden="true">🔄</div>
+            <div className="timer-content">
+              <div className="timer-label">Next Auto-Shuffle</div>
+              <div className="timer-display">{formatTime(timeLeft)}</div>
+            </div>
+            <div className="shuffle-now">Shuffle Now</div>
+          </button>
+        </div>
+
+        <div className="page-info">
+          <div className="page-stats">
+            <div className="available-stat">✅ {availableCount} Available</div>
+            <div className="occupied-stat">🔵 {occupiedCount} Occupied</div>
           </div>
-        )}
+          <p className="page-instruction">
+            {isHome ? `Page ${pageNumber}: 1 - 200 of 2000 spots` : `Page ${pageNumber}: Spots ${start} - ${end}`}
+          </p>
+        </div>
+      </div>
+
+      {/* Grid Container - CENTERED */}
+      <div className="grid-container">
+        <div className={`positions-grid ${isMobile ? 'mobile-layout' : 'desktop-layout'}`}>
+          {squares.map((position) => {
+            const businessInfo = getBusinessInfo(position);
+            const available = isAvailable(position);
+            
+            return (
+              <div
+                key={position}
+                className={`ad-position ${available ? 'available' : 'occupied'}`}
+                onClick={() => handlePositionClick(position)}
+              >
+                <div className="position-content">
+                  {available ? (
+                    <div className="available-spot">
+                      <div className="spot-text">Ad Spot</div>
+                      <div className="spot-price">£1/day</div>
+                      <div className="spot-number">#{position}</div>
+                    </div>
+                  ) : (
+                    <div className="occupied-spot">
+                      {businessInfo?.logo ? (
+                        <img 
+                          src={businessInfo.logo} 
+                          className="business-logo"
+                          alt="Business logo"
+                        />
+                      ) : (
+                        <div className="no-logo-placeholder">
+                          <span>Active Ad</span>
+                          <span className="spot-number-small">#{position}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Occupied Square Modal */}
@@ -290,9 +232,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
                 <p><strong>Business:</strong> {getBusinessInfo(selectedOccupiedSquare).businessName}</p>
               )}
             </div>
-            <button onClick={closeModal} className="btn-secondary">
-              Close
-            </button>
+            <button onClick={closeModal} className="btn-secondary">Close</button>
           </div>
         </div>
       )}
@@ -300,7 +240,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
       {/* Grid Info Footer */}
       <div className="grid-info">
         <p>
-          <strong>Page {pageNumber}</strong> • {totalSquares} total spots • 
+          <strong>Page {pageNumber}</strong> • Spots {start} - {end} • 
           {availableCount > 0 ? ` ${availableCount} available` : ' Fully booked'}
         </p>
       </div>

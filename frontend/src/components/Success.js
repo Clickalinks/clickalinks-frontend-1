@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { db } from './firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { saveLogoToStorage } from '../firebaseStorage';
 import './Success.css';
 
 const Success = () => {
@@ -11,88 +10,7 @@ const Success = () => {
   const [orderData, setOrderData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if this is a Stripe redirect (has session_id in URL)
   const sessionId = searchParams.get('session_id');
-
-  // 🔥 Save purchase to Firebase Firestore
-  const savePurchaseToFirestore = async (data) => {
-    try {
-      const purchaseData = {
-        status: 'active',
-        logoData: data.logoData,
-        dealLink: data.website,
-        contactEmail: data.contactEmail,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + (data.selectedDuration || 30) * 24 * 60 * 60 * 1000).toISOString(),
-        amount: data.finalAmount || 10,
-        duration: data.selectedDuration || 30,
-        transactionId: data.transactionId || 'temp_' + Math.random().toString(36).substr(2, 9),
-        purchaseDate: new Date().toISOString(),
-        paymentStatus: 'paid',
-        pageNumber: data.pageNumber || 1,
-        lastUpdated: new Date().toISOString()
-      };
-
-      // Save to Firestore
-      await setDoc(doc(db, 'purchasedSquares', data.squareNumber.toString()), purchaseData);
-      console.log('✅ Purchase saved to Firestore');
-      
-      // Also save to localStorage as backup
-      const existingPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
-      existingPurchases[data.squareNumber] = purchaseData;
-      localStorage.setItem('squarePurchases', JSON.stringify(existingPurchases));
-      
-      return true;
-    } catch (error) {
-      console.error('❌ Firestore save error:', error);
-      // Fallback to localStorage only
-      const existingPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
-      existingPurchases[data.squareNumber] = {
-        status: 'active',
-        logoData: data.logoData,
-        dealLink: data.website,
-        contactEmail: data.contactEmail,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + (data.selectedDuration || 30) * 24 * 60 * 60 * 1000).toISOString(),
-        amount: data.finalAmount || 10,
-        duration: data.selectedDuration || 30,
-        transactionId: data.transactionId || 'temp_' + Math.random().toString(36).substr(2, 9),
-        purchaseDate: new Date().toISOString(),
-        paymentStatus: 'paid',
-        pageNumber: data.pageNumber || 1
-      };
-      localStorage.setItem('squarePurchases', JSON.stringify(existingPurchases));
-      return false;
-    }
-  };
-
-  // Save purchase to both Firestore and localStorage
-  const savePurchaseToStorage = async (data) => {
-    console.log('💾 Saving purchase for position:', data.squareNumber);
-    
-    // Save to Firestore (and localStorage as fallback)
-    const firestoreSuccess = await savePurchaseToFirestore(data);
-    
-    console.log('✅ Purchase saved!', {
-      position: data.squareNumber,
-      hasLogo: !!data.logoData,
-      firestoreSuccess: firestoreSuccess,
-      page: data.pageNumber || 1
-    });
-
-    // Clean up temporary data
-    localStorage.removeItem('pendingPurchases');
-    localStorage.removeItem('businessFormData');
-    
-    // Force AdGrid to refresh
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new CustomEvent('purchaseCompleted'));
-    
-    // Double refresh after a delay
-    setTimeout(() => {
-      window.dispatchEvent(new Event('storage'));
-    }, 1000);
-  };
 
   useEffect(() => {
     const processSuccess = async () => {
@@ -114,6 +32,10 @@ const Success = () => {
         // Stripe redirect - try to reconstruct from localStorage
         console.log('🔄 Stripe redirect detected, session:', sessionId);
         
+        // Try multiple sources for logo data
+        const businessFormData = JSON.parse(localStorage.getItem('businessFormData') || '{}');
+        const pendingPurchases = JSON.parse(localStorage.getItem('pendingPurchases') || '{}');
+        
         // Find the most recent pending purchase
         const pendingKeys = Object.keys(pendingPurchases);
         const latestPending = pendingKeys.length > 0 ? pendingPurchases[pendingKeys[pendingKeys.length - 1]] : null;
@@ -122,20 +44,22 @@ const Success = () => {
           purchaseData = {
             squareNumber: latestPending.squareNumber,
             pageNumber: latestPending.pageNumber || 1,
+            businessName: latestPending.businessName,
             contactEmail: latestPending.contactEmail,
             website: latestPending.website,
             finalAmount: latestPending.amount || 10,
             selectedDuration: latestPending.duration || 30,
             transactionId: sessionId,
-            logoData: latestPending.logoData,
+            logoData: latestPending.logoData || businessFormData.logoData,
             paymentStatus: 'paid'
           };
-          console.log('✅ Reconstructed from pending purchase:', purchaseData);
-        } else if (businessFormData.contactEmail) {
+          console.log('✅ Reconstructed from pending purchase with logo:', !!purchaseData.logoData);
+        } else if (businessFormData.businessName) {
           // Fallback to businessFormData
           purchaseData = {
             squareNumber: businessFormData.squareNumber || 1,
             pageNumber: businessFormData.pageNumber || 1,
+            businessName: businessFormData.name,
             contactEmail: businessFormData.email,
             website: businessFormData.website,
             finalAmount: businessFormData.amount || 10,
@@ -144,15 +68,15 @@ const Success = () => {
             logoData: businessFormData.logoData,
             paymentStatus: 'paid'
           };
-          console.log('✅ Reconstructed from business form data:', purchaseData);
+          console.log('✅ Reconstructed from business form data with logo:', !!purchaseData.logoData);
         }
       } else {
         // Direct purchase (not Stripe redirect)
         purchaseData = location.state || {};
-        console.log('✅ Direct purchase data:', purchaseData);
+        console.log('✅ Direct purchase data with logo:', !!purchaseData.logoData);
       }
 
-      if (purchaseData.squareNumber) {
+      if (purchaseData.squareNumber && purchaseData.businessName) {
         setOrderData(purchaseData);
         await savePurchaseToStorage(purchaseData);
       } else {
@@ -164,6 +88,60 @@ const Success = () => {
 
     processSuccess();
   }, [sessionId, location.state]);
+
+  // Save purchase to storage
+  const savePurchaseToStorage = async (data) => {
+    console.log('💾 SAVING FINAL PURCHASE WITH FIREBASE STORAGE');
+
+    let finalLogoURL = data.logoData;
+
+    // Check if we need to upload to Firebase (if it's still a data URL)
+    if (data.logoData && data.logoData.startsWith('data:')) {
+      console.log('🔄 Uploading data URL to Firebase Storage...');
+      try {
+        finalLogoURL = await saveLogoToStorage(data.logoData, data.squareNumber);
+        console.log('✅ Data URL converted to Firebase URL:', finalLogoURL);
+      } catch (error) {
+        console.error('❌ Failed to upload logo to Firebase:', error);
+        finalLogoURL = data.logoData; // Fallback to data URL
+      }
+    }
+
+    const purchaseData = {
+      status: 'active',
+      businessName: data.businessName,
+      logoData: finalLogoURL,
+      dealLink: data.website,
+      contactEmail: data.contactEmail,
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + (data.selectedDuration || 30) * 24 * 60 * 60 * 1000).toISOString(),
+      amount: data.finalAmount || 10,
+      duration: data.selectedDuration || 30,
+      transactionId: data.transactionId,
+      purchaseDate: new Date().toISOString(),
+      paymentStatus: 'paid',
+      storageType: finalLogoURL && finalLogoURL.includes('firebasestorage') ? 'firebase' : 'local'
+    };
+
+    // Save to localStorage
+    const existingPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+    existingPurchases[data.squareNumber] = purchaseData;
+    localStorage.setItem('squarePurchases', JSON.stringify(existingPurchases));
+
+    console.log('✅ FINAL SAVE WITH FIREBASE:', {
+      square: data.squareNumber,
+      logoType: purchaseData.storageType,
+      logoURL: finalLogoURL ? 'PRESENT' : 'MISSING'
+    });
+
+    // Cleanup
+    localStorage.removeItem('pendingPurchases');
+    localStorage.removeItem('businessFormData');
+
+    // Force refresh
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('purchaseCompleted'));
+  };
 
   // Loading state
   if (isLoading) {
@@ -209,8 +187,12 @@ const Success = () => {
         <div className="order-details">
           <h3>Order Details</h3>
           <div className="detail-item">
-            <span>Advertising Location:</span>
-            <strong>Page {orderData.pageNumber || 1}</strong>
+            <span>Business Name:</span>
+            <strong>{orderData.businessName}</strong>
+          </div>
+          <div className="detail-item">
+            <span>Advertising Square:</span>
+            <strong>#{orderData.squareNumber} (Page {orderData.pageNumber || 1})</strong>
           </div>
           <div className="detail-item">
             <span>Campaign Duration:</span>
@@ -231,7 +213,6 @@ const Success = () => {
         <div className="success-actions">
           <button 
             onClick={() => {
-              // Force refresh and navigate
               window.dispatchEvent(new Event('storage'));
               navigate(`/page${orderData.pageNumber || 1}`);
             }}
@@ -249,18 +230,20 @@ const Success = () => {
         </div>
 
         <div className="debug-section">
-          <h4>Need Help?</h4>
-          <p>If your ad doesn't appear immediately, try refreshing the grid page.</p>
+          <h4>Debug Info</h4>
+          <p>Square: #{orderData.squareNumber} | Logo: {orderData.logoData ? '✅' : '❌'}</p>
           <button 
             onClick={() => {
-              console.log('📦 Current data:');
-              console.log('squarePurchases:', JSON.parse(localStorage.getItem('squarePurchases') || '{}'));
-              console.log('businessFormData:', JSON.parse(localStorage.getItem('businessFormData') || '{}'));
-              alert('Check browser console for detailed information');
+              console.log('📦 DEBUG DATA:', {
+                orderData,
+                squarePurchases: JSON.parse(localStorage.getItem('squarePurchases') || '{}'),
+                hasLogo: !!orderData.logoData
+              });
+              alert('Check browser console for debug data');
             }}
             className="btn-secondary"
           >
-            📊 Debug Information
+            📊 Show Debug Data
           </button>
         </div>
       </div>

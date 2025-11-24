@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { saveLogoToStorage } from '../firebaseStorage';
 import './BusinessDetails.css';
 
 const BusinessDetails = () => {
@@ -8,13 +9,14 @@ const BusinessDetails = () => {
   const { selectedSquare, pageNumber, selectedDuration, finalAmount } = location.state || {};
   
   const [formData, setFormData] = useState({
-    businessName: '', // ✅ Still collected for backend
+    businessName: '',
     contactEmail: '',
     website: ''
   });
   const [logoData, setLogoData] = useState(null);
   const [isFormValid, setIsFormValid] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [isUploading, setIsUploading] = useState(false);
 
   // Validate required props on component mount
   useEffect(() => {
@@ -42,7 +44,7 @@ const BusinessDetails = () => {
   const validateForm = () => {
     const errors = {};
 
-    // Business name validation (required for backend but won't show on ad)
+    // Business name validation
     if (!formData.businessName.trim()) {
       errors.businessName = 'Business name is required for our records';
     }
@@ -114,7 +116,7 @@ const BusinessDetails = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -122,50 +124,61 @@ const BusinessDetails = () => {
       return;
     }
 
-    const businessData = {
-      name: formData.businessName.trim(), // ✅ Sent to backend but won't display on ad
-      email: formData.contactEmail.trim(),
-      website: formData.website.trim(),
-      logoData: logoData
-    };
+    setIsUploading(true);
 
-    // ✅ CRITICAL: Save to localStorage for Success page
-    console.log('💾 Saving business form data to localStorage...');
-    localStorage.setItem('businessFormData', JSON.stringify({
-      ...businessData,
-      logoData: logoData
-    }));
-    
-    // ✅ Backup: Save to pending purchases
-    const pendingData = {
-      squareNumber: selectedSquare,
-      pageNumber: pageNumber,
-      businessName: businessData.name, // ✅ For backend records only
-      contactEmail: businessData.email,
-      website: businessData.website,
-      logoData: logoData,
-      amount: finalAmount,
-      duration: selectedDuration,
-      purchaseDate: new Date().toISOString()
-    };
-    
-    const pendingPurchases = JSON.parse(localStorage.getItem('pendingPurchases') || '{}');
-    const tempId = 'temp_' + Date.now();
-    pendingPurchases[tempId] = pendingData;
-    localStorage.setItem('pendingPurchases', JSON.stringify(pendingPurchases));
-    
-    console.log('✅ Business data saved to localStorage with logo:', !!logoData);
-    
-    navigate('/payment', { 
-      state: { 
-        selectedSquare, 
-        pageNumber, 
-        selectedDuration, 
-        finalAmount, 
-        businessData, 
-        logoData 
-      } 
-    });
+    try {
+      let firebaseLogoURL = null;
+      
+      // 🚀 UPLOAD LOGO TO FIREBASE STORAGE
+      if (logoData) {
+        firebaseLogoURL = await saveLogoToStorage(logoData, selectedSquare);
+        console.log('✅ Logo uploaded to Firebase:', firebaseLogoURL);
+      }
+
+      const businessData = {
+        name: formData.businessName.trim(),
+        email: formData.contactEmail.trim(),
+        website: formData.website.trim(),
+        logoData: firebaseLogoURL,
+        squareNumber: selectedSquare,
+        pageNumber: pageNumber,
+        amount: finalAmount,
+        duration: selectedDuration
+      };
+
+      // Save to localStorage as backup
+      localStorage.setItem('businessFormData', JSON.stringify(businessData));
+      
+      // Save to pending purchases with Firebase URL
+      const pendingData = {
+        ...businessData,
+        purchaseDate: new Date().toISOString()
+      };
+      
+      const pendingPurchases = JSON.parse(localStorage.getItem('pendingPurchases') || '{}');
+      const tempId = 'temp_' + Date.now();
+      pendingPurchases[tempId] = pendingData;
+      localStorage.setItem('pendingPurchases', JSON.stringify(pendingPurchases));
+      
+      console.log('✅ Business data prepared with Firebase logo URL');
+      
+      navigate('/payment', { 
+        state: { 
+          selectedSquare, 
+          pageNumber, 
+          selectedDuration, 
+          finalAmount, 
+          businessData: { ...businessData, logoData: firebaseLogoURL },
+          logoData: firebaseLogoURL
+        } 
+      });
+      
+    } catch (error) {
+      console.error('❌ Error uploading logo to Firebase:', error);
+      alert('Error uploading logo. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleBack = () => {
@@ -239,7 +252,7 @@ const BusinessDetails = () => {
                     </div>
                   </div>
                   
-                  {/* Business Name - For backend records only */}
+                  {/* Business Name */}
                   <div className="form-group">
                     <label htmlFor="businessName">Business Name *</label>
                     <input 
@@ -430,10 +443,10 @@ const BusinessDetails = () => {
                     </button>
                     <button 
                       onClick={handleSubmit}
-                      className={`btn btn--primary ${!isFormValid ? 'btn--disabled' : ''}`}
-                      disabled={!isFormValid}
+                      className={`btn btn--primary ${!isFormValid || isUploading ? 'btn--disabled' : ''}`}
+                      disabled={!isFormValid || isUploading}
                     >
-                      Continue to Payment
+                      {isUploading ? 'Uploading Logo...' : 'Continue to Payment'}
                       <span className="btn-icon">→</span>
                     </button>
                   </div>

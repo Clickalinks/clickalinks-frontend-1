@@ -12,122 +12,158 @@ const Payment = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const validateForm = () => {
-    const newErrors = {};
+  const BACKEND_URL = 'https://clickalinks-backend-2.onrender.com';
 
-    if (!acceptedTerms) {
-      newErrors.terms = 'Please accept the terms and conditions to proceed';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-const processPayment = async () => {
-  try {
-    setIsProcessing(true);
+  // 🚀 SENIOR FIX: Comprehensive data persistence
+  const persistPurchaseData = (sessionId) => {
+    console.log('💾 STARTING DATA PERSISTENCE FOR SESSION:', sessionId);
     
-    const BACKEND_URL = 'https://clickalinks-backend.onrender.com';
+    // Get data from ALL possible sources
+    const businessFormData = JSON.parse(localStorage.getItem('businessFormData') || '{}');
+    const currentLogo = localStorage.getItem('currentLogoData');
     
-    // ✅ FIXED: Proper payload with couponCode as empty string (not missing)
-    const paymentPayload = {
-      campaignDuration: selectedDuration,
-      amount: finalAmount * 100, // Convert to pence
-      squareId: selectedSquare,
-      pageNumber: pageNumber,
-      businessName: businessData?.name || '',
-      contactEmail: businessData?.email || '',
-      logoData: logoData || '',
-      dealLink: businessData?.website || '',
-      couponCode: '' // ✅ Always include as empty string
-    };
-
-    console.log('🔍 DEBUG - Payment payload:', paymentPayload);
-    
-    // ✅ FIXED: Only check for truly undefined/null, not empty strings
-    const missingFields = [];
-    Object.entries(paymentPayload).forEach(([key, value]) => {
-      // Don't check couponCode as it's optional
-      if (key === 'couponCode') return;
-      
-      // Only flag if truly undefined or null
-      if (value === undefined || value === null) {
-        missingFields.push(key);
-      }
-    });
-
-    if (missingFields.length > 0) {
-      console.error('❌ MISSING FIELDS:', missingFields);
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-    }
-
-    console.log('🔄 Creating Stripe checkout session...');
-
-    const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentPayload)
-    });
-
-    // Check if response is OK
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'Payment session creation failed');
-    }
-
-    console.log('✅ Stripe session created, redirecting to:', data.url);
-    
-    // Save purchase data to localStorage before redirecting
+    // Build robust purchase data
     const purchaseData = {
+      // Square info
       squareNumber: selectedSquare,
-      pageNumber: pageNumber,
-      businessName: businessData.name,
-      contactEmail: businessData.email,
-      website: businessData.website,
-      logoData: logoData,
-      amount: finalAmount,
-      duration: selectedDuration,
+      pageNumber: pageNumber || 1,
+      
+      // Business info - multiple fallbacks
+      businessName: businessData?.name || businessFormData.name,
+      contactEmail: businessData?.email || businessFormData.email,
+      website: businessData?.website || businessFormData.website,
+      
+      // Logo data - CRITICAL: multiple fallbacks with priority
+      logoData: logoData || businessData?.logoData || businessFormData.logoData || currentLogo,
+      
+      // Payment info
+      amount: finalAmount || 10,
+      duration: selectedDuration || 30,
       purchaseDate: new Date().toISOString(),
       status: 'pending',
-      endDate: new Date(Date.now() + selectedDuration * 24 * 60 * 60 * 1000).toISOString(),
-      paymentMethod: 'stripe',
-      sessionId: data.sessionId
+      sessionId: sessionId
     };
 
-    // Save to localStorage temporarily
-    const pendingPurchases = JSON.parse(localStorage.getItem('pendingPurchases') || '{}');
-    pendingPurchases[data.sessionId] = purchaseData;
-    localStorage.setItem('pendingPurchases', JSON.stringify(pendingPurchases));
+    console.log('📦 FINAL PURCHASE DATA:', {
+      square: purchaseData.squareNumber,
+      hasLogo: !!purchaseData.logoData,
+      logoSource: logoData ? 'location' : 
+                 businessData?.logoData ? 'businessData' : 
+                 businessFormData.logoData ? 'businessFormData' : 
+                 currentLogo ? 'currentLogo' : 'NONE'
+    });
 
-    // Redirect to Stripe Checkout
-    window.location.href = data.url;
-    
-  } catch (error) {
-    console.error('❌ Payment error details:', error);
-    alert(`Payment failed: ${error.message}`);
-    setIsProcessing(false);
-  }
-};
-  const handlePayment = async () => {
-    if (!validateForm()) return;
-    await processPayment();
+    // 🚀 MULTI-LAYER PERSISTENCE STRATEGY
+    try {
+      // Layer 1: Session-specific storage
+      const pendingPurchases = JSON.parse(localStorage.getItem('pendingPurchases') || '{}');
+      pendingPurchases[sessionId] = purchaseData;
+      localStorage.setItem('pendingPurchases', JSON.stringify(pendingPurchases));
+      console.log('✅ Layer 1: Saved to pendingPurchases');
+
+      // Layer 2: Square-specific storage (most reliable)
+      const squarePurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+      squarePurchases[selectedSquare] = {
+        ...purchaseData,
+        status: 'processing',
+        paymentStatus: 'pending'
+      };
+      localStorage.setItem('squarePurchases', JSON.stringify(squarePurchases));
+      console.log('✅ Layer 2: Saved to squarePurchases');
+
+      // Layer 3: Simple key-value backup
+      localStorage.setItem(`purchase_${selectedSquare}`, JSON.stringify(purchaseData));
+      console.log('✅ Layer 3: Saved to simple backup');
+
+      // Layer 4: Send to backend for redundancy
+      fetch(`${BACKEND_URL}/api/debug-purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          squareNumber: selectedSquare,
+          step: 'payment_before_redirect',
+          data: { ...purchaseData, logoData: purchaseData.logoData ? 'PRESENT' : 'MISSING' }
+        })
+      }).catch(e => console.log('Backend debug failed (normal)'));
+
+    } catch (error) {
+      console.error('❌ Persistence error:', error);
+    }
+
+    return purchaseData;
   };
 
+  const handlePayment = async () => {
+    if (!acceptedTerms) {
+      setErrors({ terms: 'Please accept the terms and conditions' });
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrors({});
+
+    try {
+      const payload = {
+        amount: Math.round(finalAmount),
+        squareNumber: selectedSquare,
+        pageNumber: pageNumber,
+        duration: selectedDuration,
+        businessName: businessData?.name,
+        contactEmail: businessData?.email,
+        website: businessData?.website
+      };
+
+      console.log('💰 Creating Stripe session for square:', selectedSquare);
+      
+      const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok && responseData.success && responseData.url) {
+        console.log('✅ Stripe session created:', responseData.sessionId);
+        
+        // 🚀 CRITICAL: Persist data BEFORE redirect
+        persistPurchaseData(responseData.sessionId);
+        
+        // Small delay to ensure persistence completes
+        setTimeout(() => {
+          console.log('🔗 Redirecting to Stripe...');
+          window.location.href = responseData.url;
+        }, 100);
+        
+      } else {
+        console.error('❌ Stripe session failed:', responseData.error);
+        setErrors({ payment: responseData.error || 'Payment failed' });
+        setIsProcessing(false);
+      }
+      
+    } catch (error) {
+      console.error('❌ Network error:', error);
+      setErrors({ payment: 'Network error. Please try again.' });
+      setIsProcessing(false);
+    }
+  };
+
+  // Rest of component remains the same...
   if (!selectedSquare || !businessData) {
     return (
       <div className="payment-container">
         <div className="payment-content">
           <div className="error-message">
-            <h2>Session Expired</h2>
-            <p>Please go back and start your purchase again.</p>
+            <h2>Missing Information</h2>
+            <p>Required purchase data is missing:</p>
+            <ul>
+              <li>Selected Square: {selectedSquare ? `#${selectedSquare}` : 'MISSING'}</li>
+              <li>Business Data: {businessData ? 'PRESENT' : 'MISSING'}</li>
+              <li>Page: {pageNumber || 'MISSING'}</li>
+              <li>Duration: {selectedDuration || 'MISSING'}</li>
+              <li>Amount: {finalAmount || 'MISSING'}</li>
+            </ul>
             <button onClick={() => navigate('/')} className="btn-primary">
               Return to Grid
             </button>
@@ -165,6 +201,16 @@ const processPayment = async () => {
           <p>Complete your purchase with secure payment processing</p>
         </div>
 
+        {errors.payment && (
+          <div className="global-error-message">
+            <div className="error-icon">⚠️</div>
+            <div className="error-content">
+              <strong>Payment Error</strong>
+              <p>{errors.payment}</p>
+            </div>
+          </div>
+        )}
+
         <div className="payment-body">
           {/* Order Summary */}
           <div className="order-summary-sidebar">
@@ -189,6 +235,10 @@ const processPayment = async () => {
               <span>Contact Email:</span>
               <span>{businessData?.email}</span>
             </div>
+            <div className="summary-item">
+              <span>Website:</span>
+              <span>{businessData?.website}</span>
+            </div>
             <div className="summary-item total">
               <span>Total Amount:</span>
               <span className="total-amount">£{finalAmount}</span>
@@ -205,7 +255,6 @@ const processPayment = async () => {
 
           {/* Payment Form */}
           <div className="payment-form-section">
-            {/* Payment Method Selection */}
             <div className="payment-methods">
               <h3>Select Payment Method</h3>
               <div className="method-options">
@@ -233,7 +282,6 @@ const processPayment = async () => {
               </div>
             </div>
 
-            {/* Card Payment - Stripe Checkout Info */}
             {paymentMethod === 'card' && (
               <div className="stripe-checkout-info">
                 <h3>Secure Card Payment</h3>
@@ -246,40 +294,10 @@ const processPayment = async () => {
                     <span className="feature-icon">💳</span>
                     <span>All Major Cards Accepted</span>
                   </div>
-                  <div className="feature-item">
-                    <span className="feature-icon">🛡️</span>
-                    <span>PCI DSS Compliant</span>
-                  </div>
-                  <div className="feature-item">
-                    <span className="feature-icon">⚡</span>
-                    <span>Fast & Secure Checkout</span>
-                  </div>
-                </div>
-                <div className="redirect-notice">
-                  <p>You'll be redirected to <strong>Stripe's secure payment page</strong> to complete your card details. This ensures your payment information is handled with the highest security standards.</p>
                 </div>
               </div>
             )}
 
-            {/* PayPal Payment */}
-            {paymentMethod === 'paypal' && (
-              <div className="paypal-section">
-                <div className="paypal-logo">PayPal</div>
-                <p>You will be redirected to PayPal to complete your payment securely.</p>
-                <div className="paypal-features">
-                  <div className="feature-item">
-                    <span className="feature-icon">🔒</span>
-                    <span>PayPal Buyer Protection</span>
-                  </div>
-                  <div className="feature-item">
-                    <span className="feature-icon">💳</span>
-                    <span>Pay with PayPal Balance or Card</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Terms and Conditions */}
             <div className="terms-section">
               <label className="checkbox-label">
                 <input
@@ -296,7 +314,6 @@ const processPayment = async () => {
               {errors.terms && <span className="error-message">{errors.terms}</span>}
             </div>
 
-            {/* Payment Actions */}
             <div className="payment-actions">
               <button 
                 onClick={handlePayment} 
@@ -306,7 +323,7 @@ const processPayment = async () => {
                 {isProcessing ? (
                   <>
                     <div className="spinner"></div>
-                    Connecting to Secure Payment...
+                    Processing...
                   </>
                 ) : (
                   `Pay £${finalAmount} Now`
@@ -320,26 +337,6 @@ const processPayment = async () => {
               >
                 ← Back
               </button>
-            </div>
-
-            {/* Security Assurance */}
-            <div className="security-assurance">
-              <div className="assurance-item">
-                <div className="assurance-icon">🔒</div>
-                <span>256-bit SSL Secure</span>
-              </div>
-              <div className="assurance-item">
-                <div className="assurance-icon">🛡️</div>
-                <span>PCI DSS Compliant</span>
-              </div>
-              <div className="assurance-item">
-                <div className="assurance-icon">💳</div>
-                <span>Card details never stored</span>
-              </div>
-              <div className="assurance-item">
-                <div className="assurance-icon">⭐</div>
-                <span>Stripe Powered</span>
-              </div>
             </div>
           </div>
         </div>

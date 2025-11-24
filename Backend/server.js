@@ -26,59 +26,28 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅ HEALTH CHECK
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    message: 'ClickaLinks Backend Server is running! 🚀',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Health check
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'Backend is running with FIXED CORS!',
-    timestamp: new Date().toISOString(),
-    frontend: 'https://clickalinks-frontend.web.app'
+    message: 'Backend is running!',
+    timestamp: new Date().toISOString()
   });
 });
 
-// ✅ TEST CORS ENDPOINT
-app.get('/api/test-cors', (req, res) => {
-  res.json({
-    success: true,
-    message: 'CORS IS WORKING! 🎉',
-    timestamp: new Date().toISOString(),
-    origin: req.headers.origin
-  });
-});
-
-// ✅ CHECK SESSION ENDPOINT (ADD THIS)
-app.get('/api/check-session/:sessionId', async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    console.log('🔍 Checking session:', sessionId);
-    
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    
-    res.json({
-      success: true,
-      session: {
-        id: session.id,
-        status: session.status,
-        payment_status: session.payment_status,
-        customer_email: session.customer_email,
-        amount_total: session.amount_total ? session.amount_total / 100 : 0,
-        metadata: session.metadata
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Session check error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// ✅ STRIPE PAYMENT ENDPOINT (UPDATED - NO DEAL DESCRIPTION)
+// Create Stripe checkout session
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
-    console.log('💰 Payment request received from:', req.headers.origin);
+    console.log('💰 Payment request received');
     
     const { 
       amount, 
@@ -88,7 +57,6 @@ app.post('/api/create-checkout-session', async (req, res) => {
       contactEmail,
       pageNumber = 1,
       website = ''
-      // Removed dealDescription
     } = req.body;
 
     // Validate required fields
@@ -110,7 +78,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
             name: `ClickALinks - Square #${squareNumber}`,
             description: `${duration} days advertising campaign`,
           },
-          unit_amount: Math.round(amount * 100),
+          unit_amount: Math.round(amount * 100), // Convert to pence
         },
         quantity: 1,
       }],
@@ -124,17 +92,17 @@ app.post('/api/create-checkout-session', async (req, res) => {
         duration: duration.toString(),
         contactEmail: contactEmail,
         website: website
-        // Removed dealDescription from metadata
       }
     });
 
     console.log('✅ Stripe session created:', session.id);
+    console.log('🔗 Success URL will be:', `https://clickalinks-frontend.web.app/success?session_id=${session.id}`);
+    console.log('🔗 Session URL (Stripe):', session.url);
     
     res.json({
       success: true,
       url: session.url,
-      sessionId: session.id,
-      message: 'Redirect to Stripe Checkout'
+      sessionId: session.id
     });
     
   } catch (error) {
@@ -146,36 +114,39 @@ app.post('/api/create-checkout-session', async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 CORS enabled for: clickalinks-frontend.web.app`);
-});
-
-// ✅ GET PURCHASED SQUARES ENDPOINT
-app.get('/api/purchased-squares', async (req, res) => {
+// Check session status
+app.get('/api/check-session/:sessionId', async (req, res) => {
   try {
-    // In a real app, you'd fetch from a database
-    // For now, we'll return a sample response
+    const { sessionId } = req.params;
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
     res.json({
       success: true,
-      purchases: {},
-      message: 'Backend connected but no database setup yet'
+      session: {
+        id: session.id,
+        status: session.status,
+        payment_status: session.payment_status,
+        customer_email: session.customer_email,
+        amount_total: session.amount_total ? session.amount_total / 100 : 0,
+        metadata: session.metadata
+      }
     });
+    
   } catch (error) {
-    console.error('Error fetching purchased squares:', error);
+    console.error('Session check error:', error);
     res.status(500).json({
       success: false,
       error: error.message
     });
   }
 });
-// Simple in-memory storage (replace with database later)
+
+// In-memory storage (replace with database later)
 let purchasedSquaresStorage = {};
 
-// ✅ GET ALL PURCHASED SQUARES
+// Get purchased squares
 app.get('/api/purchased-squares', async (req, res) => {
   try {
-    console.log('📡 Fetching purchased squares from server storage');
     res.json({
       success: true,
       purchases: purchasedSquaresStorage,
@@ -191,12 +162,10 @@ app.get('/api/purchased-squares', async (req, res) => {
   }
 });
 
-// ✅ SYNC PURCHASE TO SERVER
+// Sync purchase to server
 app.post('/api/sync-purchase', async (req, res) => {
   try {
     const { squareNumber, purchaseData } = req.body;
-    
-    console.log(`💾 Syncing purchase for square ${squareNumber} to server`);
     
     purchasedSquaresStorage[squareNumber] = {
       ...purchaseData,
@@ -205,8 +174,7 @@ app.post('/api/sync-purchase', async (req, res) => {
     
     res.json({
       success: true,
-      message: `Purchase for square ${squareNumber} synced to server`,
-      totalSquares: Object.keys(purchasedSquaresStorage).length
+      message: `Purchase for square ${squareNumber} synced to server`
     });
     
   } catch (error) {
@@ -215,5 +183,27 @@ app.post('/api/sync-purchase', async (req, res) => {
       success: false,
       error: error.message
     });
+  }
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+// ADD THIS TO Server.js - Debug endpoint to track purchase flow
+app.post('/api/debug-purchase', async (req, res) => {
+  try {
+    const { sessionId, squareNumber, step, data } = req.body;
+    console.log('🔍 PURCHASE DEBUG:', {
+      sessionId,
+      squareNumber, 
+      step,
+      timestamp: new Date().toISOString(),
+      data: data ? `Has logo: ${!!data.logoData}` : 'No data'
+    });
+    
+    res.json({ success: true, logged: true });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
