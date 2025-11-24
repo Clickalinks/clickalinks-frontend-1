@@ -78,8 +78,8 @@ const About = () => {
 
           {/* Stats Section */}
           <div className="stats-section">
-            <div className="section-card">
-              <h2>By The Numbers</h2>
+            <div className="stats-wrapper">
+              <h2 className="stats-title">By The Numbers</h2>
               <div className="stats-grid">
                 <div className="stat-item">
                   <div className="stat-number">2,000+</div>

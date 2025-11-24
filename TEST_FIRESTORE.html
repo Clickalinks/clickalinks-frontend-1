@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Firestore Connection</title>
+    <script type="module">
+        // Import Firebase
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        const firebaseConfig = {
+            apiKey: "XsxVvIS4mIRSzDzG2RtsbJ_I1p25-rjuupbwWCffz6g",
+            authDomain: "clickalinks-frontend.firebaseapp.com",
+            projectId: "clickalinks-frontend",
+            storageBucket: "clickalinks-frontend.firebasestorage.app",
+            messagingSenderId: "568043553622",
+            appId: "1:568043553622:web:d8e928c8b26e2847e50cf7"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        window.testFirestore = async () => {
+            try {
+                console.log('🧪 Testing Firestore write...');
+                
+                // Try to write a test document
+                const testDocRef = doc(db, 'purchasedSquares', '999');
+                await setDoc(testDocRef, {
+                    status: 'active',
+                    businessName: 'Test Business',
+                    logoData: 'https://test.com/logo.png',
+                    squareNumber: 999,
+                    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    test: true
+                });
+                
+                console.log('✅ Test document written successfully!');
+                
+                // Try to read it back
+                const snapshot = await getDocs(collection(db, 'purchasedSquares'));
+                console.log(`📊 Total documents: ${snapshot.size}`);
+                
+                snapshot.forEach(doc => {
+                    console.log(`📄 Document ${doc.id}:`, doc.data());
+                });
+                
+                alert('✅ Firestore test successful! Check console for details.');
+            } catch (error) {
+                console.error('❌ Firestore test failed:', error);
+                alert(`❌ Error: ${error.code} - ${error.message}`);
+            }
+        };
+    </script>
+</head>
+<body>
+    <h1>Firestore Connection Test</h1>
+    <button onclick="testFirestore()">Test Firestore Write</button>
+    <p>Open browser console (F12) to see results</p>
+</body>
+</html>
+

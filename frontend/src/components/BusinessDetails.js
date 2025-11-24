@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { saveLogoToStorage } from '../firebaseStorage';
+import { scanFileForVirus, validateFileSecurity } from '../utils/virusScan';
 import './BusinessDetails.css';
 
 const BusinessDetails = () => {
@@ -80,10 +81,18 @@ const BusinessDetails = () => {
     return isValid;
   };
 
-  const previewLogo = (event) => {
+  const previewLogo = async (event) => {
     const file = event.target.files[0];
     if (!file) {
       setLogoData(null);
+      return;
+    }
+
+    // Basic security validation
+    const securityCheck = await validateFileSecurity(file);
+    if (!securityCheck.valid) {
+      setFormErrors(prev => ({ ...prev, logoData: securityCheck.message }));
+      event.target.value = '';
       return;
     }
 
@@ -102,10 +111,37 @@ const BusinessDetails = () => {
       return;
     }
 
+    // Read file first
     const reader = new FileReader();
-    reader.onload = function(e) {
-      setLogoData(e.target.result);
-      setFormErrors(prev => ({ ...prev, logoData: '' }));
+    reader.onload = async function(e) {
+      const dataURL = e.target.result;
+      
+      // Scan for viruses
+      setFormErrors(prev => ({ ...prev, logoData: 'Scanning file for security...' }));
+      try {
+        const scanResult = await scanFileForVirus(dataURL, file.name);
+        
+        if (!scanResult.safe) {
+          setFormErrors(prev => ({ ...prev, logoData: `Security scan failed: ${scanResult.message}. Please upload a different file.` }));
+          event.target.value = '';
+          return;
+        }
+        
+        // File is safe, set logo data
+        setLogoData(dataURL);
+        setFormErrors(prev => ({ ...prev, logoData: '' }));
+        console.log('✅ Logo file loaded and scanned, size:', (file.size / 1024).toFixed(2), 'KB');
+        
+        if (scanResult.warning) {
+          console.warn('⚠️ Virus scan warning:', scanResult.message);
+        }
+      } catch (scanError) {
+        console.error('❌ Virus scan error:', scanError);
+        // Allow upload if scan fails (you can change this to block)
+        setLogoData(dataURL);
+        setFormErrors(prev => ({ ...prev, logoData: '' }));
+        console.warn('⚠️ Virus scan unavailable, allowing upload');
+      }
     };
     
     reader.onerror = function() {
@@ -131,8 +167,33 @@ const BusinessDetails = () => {
       
       // 🚀 UPLOAD LOGO TO FIREBASE STORAGE
       if (logoData) {
-        firebaseLogoURL = await saveLogoToStorage(logoData, selectedSquare);
-        console.log('✅ Logo uploaded to Firebase:', firebaseLogoURL);
+        console.log('📤 Starting logo upload process...');
+        console.log('📊 Logo data preview:', logoData.substring(0, 50) + '...');
+        
+        try {
+          const uploadResult = await saveLogoToStorage(logoData, selectedSquare);
+          // Handle both old format (string) and new format (object)
+          if (typeof uploadResult === 'string') {
+            firebaseLogoURL = uploadResult;
+          } else {
+            firebaseLogoURL = uploadResult.url;
+            // Store storage path for cleanup
+            localStorage.setItem(`logoPath_${selectedSquare}`, uploadResult.path);
+          }
+          console.log('✅ Logo uploaded to Firebase Storage successfully!');
+          console.log('🔗 Firebase URL:', firebaseLogoURL);
+        } catch (uploadError) {
+          console.error('❌ Firebase Storage upload failed:', uploadError);
+          // If upload fails, check if it's already a URL
+          if (logoData.startsWith('http')) {
+            console.log('✅ Logo is already a URL, using it directly');
+            firebaseLogoURL = logoData;
+          } else {
+            throw new Error('Failed to upload logo to Firebase Storage. Please check your Firebase configuration and try again.');
+          }
+        }
+      } else {
+        console.warn('⚠️ No logo data provided');
       }
 
       const businessData = {

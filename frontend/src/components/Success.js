@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { saveLogoToStorage } from '../firebaseStorage';
+import { db, storage } from '../firebase';
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore';
+import { cleanupExpiredAds } from '../utils/cleanupExpiredAds';
+import { savePurchaseToFirestore } from '../utils/savePurchaseToFirestore';
 import './Success.css';
 
 const Success = () => {
@@ -77,10 +81,23 @@ const Success = () => {
       }
 
       if (purchaseData.squareNumber && purchaseData.businessName) {
+        console.log('✅ Purchase data reconstructed successfully:', {
+          squareNumber: purchaseData.squareNumber,
+          businessName: purchaseData.businessName,
+          hasLogo: !!purchaseData.logoData,
+          logoType: purchaseData.logoData ? (purchaseData.logoData.startsWith('http') ? 'URL' : 'Data URL') : 'NONE'
+        });
         setOrderData(purchaseData);
         await savePurchaseToStorage(purchaseData);
       } else {
         console.error('❌ Could not reconstruct purchase data');
+        console.error('Missing data:', {
+          squareNumber: purchaseData.squareNumber,
+          businessName: purchaseData.businessName,
+          sessionId: sessionId,
+          businessFormData: businessFormData,
+          pendingPurchases: Object.keys(pendingPurchases)
+        });
       }
       
       setIsLoading(false);
@@ -96,17 +113,73 @@ const Success = () => {
     let finalLogoURL = data.logoData;
 
     // Check if we need to upload to Firebase (if it's still a data URL)
-    if (data.logoData && data.logoData.startsWith('data:')) {
-      console.log('🔄 Uploading data URL to Firebase Storage...');
-      try {
-        finalLogoURL = await saveLogoToStorage(data.logoData, data.squareNumber);
-        console.log('✅ Data URL converted to Firebase URL:', finalLogoURL);
-      } catch (error) {
-        console.error('❌ Failed to upload logo to Firebase:', error);
-        finalLogoURL = data.logoData; // Fallback to data URL
+    if (data.logoData) {
+      if (data.logoData.startsWith('data:')) {
+        console.log('🔄 Logo is a data URL, uploading to Firebase Storage...');
+        try {
+          const uploadResult = await saveLogoToStorage(data.logoData, data.squareNumber);
+          // Handle both old format (string) and new format (object)
+          if (typeof uploadResult === 'string') {
+            finalLogoURL = uploadResult;
+          } else {
+            finalLogoURL = uploadResult.url;
+            // Store storage path for cleanup
+            localStorage.setItem(`logoPath_${data.squareNumber}`, uploadResult.path);
+          }
+          console.log('✅ Data URL converted to Firebase URL:', finalLogoURL);
+        } catch (error) {
+          console.error('❌ Failed to upload logo to Firebase:', error);
+          console.error('Error details:', {
+            code: error.code,
+            message: error.message
+          });
+          // Fallback to data URL if Firebase upload fails
+          finalLogoURL = data.logoData;
+          console.warn('⚠️ Using data URL as fallback');
+        }
+      } else if (data.logoData.startsWith('http')) {
+        console.log('✅ Logo is already a URL, using directly:', data.logoData.substring(0, 60) + '...');
+        finalLogoURL = data.logoData;
+      } else {
+        console.warn('⚠️ Logo data format unknown:', data.logoData.substring(0, 50));
+        finalLogoURL = data.logoData;
       }
+    } else {
+      console.warn('⚠️ No logo data in purchase data');
     }
 
+    // Get storage path if available
+    const storagePath = localStorage.getItem(`logoPath_${data.squareNumber}`) || null;
+    
+    // 🔥 CRITICAL FIX: Save to Firestore using utility function FIRST
+    console.log('🔥 ATTEMPTING FIRESTORE SAVE:', {
+      documentId: data.squareNumber.toString(),
+      squareNumber: data.squareNumber,
+      businessName: data.businessName,
+      hasLogo: !!finalLogoURL
+    });
+    
+    const firestoreSuccess = await savePurchaseToFirestore({
+      squareNumber: data.squareNumber,
+      pageNumber: data.pageNumber || 1,
+      businessName: data.businessName,
+      contactEmail: data.contactEmail,
+      website: data.website || data.dealLink,
+      logoData: finalLogoURL,
+      amount: data.finalAmount || 10,
+      duration: data.selectedDuration || 30,
+      transactionId: data.transactionId,
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + (data.selectedDuration || 30) * 24 * 60 * 60 * 1000).toISOString(),
+      storagePath: storagePath,
+      purchaseDate: new Date().toISOString()
+    });
+    
+    if (!firestoreSuccess) {
+      console.error('❌ Failed to save to Firestore, but continuing with localStorage...');
+    }
+    
+    // Also save to localStorage as backup
     const purchaseData = {
       status: 'active',
       businessName: data.businessName,
@@ -120,10 +193,13 @@ const Success = () => {
       transactionId: data.transactionId,
       purchaseDate: new Date().toISOString(),
       paymentStatus: 'paid',
-      storageType: finalLogoURL && finalLogoURL.includes('firebasestorage') ? 'firebase' : 'local'
+      storageType: finalLogoURL && finalLogoURL.includes('firebasestorage') ? 'firebase' : 'local',
+      storagePath: storagePath,
+      squareNumber: data.squareNumber,
+      pageNumber: data.pageNumber || 1
     };
 
-    // Save to localStorage
+    // Save to localStorage as backup
     const existingPurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
     existingPurchases[data.squareNumber] = purchaseData;
     localStorage.setItem('squarePurchases', JSON.stringify(existingPurchases));
@@ -131,12 +207,22 @@ const Success = () => {
     console.log('✅ FINAL SAVE WITH FIREBASE:', {
       square: data.squareNumber,
       logoType: purchaseData.storageType,
-      logoURL: finalLogoURL ? 'PRESENT' : 'MISSING'
+      logoURL: finalLogoURL ? 'PRESENT' : 'MISSING',
+      firestore: 'SAVED',
+      localStorage: 'SAVED'
     });
 
     // Cleanup
     localStorage.removeItem('pendingPurchases');
     localStorage.removeItem('businessFormData');
+
+    // Clean up any expired ads before showing success
+    try {
+      await cleanupExpiredAds();
+    } catch (cleanupError) {
+      console.error('❌ Error during cleanup:', cleanupError);
+      // Don't block success page if cleanup fails
+    }
 
     // Force refresh
     window.dispatchEvent(new Event('storage'));
@@ -176,75 +262,137 @@ const Success = () => {
   return (
     <div className="success-container">
       <div className="success-content">
-        <div className="success-icon">✅</div>
-        
-        <h1>Payment Successful! 🎉</h1>
-        
-        <p className="success-message">
-          Your advertising campaign is now live and active!
-        </p>
-
-        <div className="order-details">
-          <h3>Order Details</h3>
-          <div className="detail-item">
-            <span>Business Name:</span>
-            <strong>{orderData.businessName}</strong>
-          </div>
-          <div className="detail-item">
-            <span>Advertising Square:</span>
-            <strong>#{orderData.squareNumber} (Page {orderData.pageNumber || 1})</strong>
-          </div>
-          <div className="detail-item">
-            <span>Campaign Duration:</span>
-            <strong>{orderData.selectedDuration || 30} days</strong>
-          </div>
-          <div className="detail-item">
-            <span>Total Paid:</span>
-            <strong>£{orderData.finalAmount || 10}.00</strong>
-          </div>
-          {orderData.transactionId && (
-            <div className="detail-item">
-              <span>Transaction ID:</span>
-              <strong className="transaction-id">{orderData.transactionId}</strong>
-            </div>
-          )}
+        {/* Success Header */}
+        <div className="success-header">
+          <div className="success-icon-large">✅</div>
+          <h1>Payment Successful! 🎉</h1>
+          <p className="success-subtitle">
+            Your advertising campaign is now live and active!
+          </p>
         </div>
 
+        {/* Logo Preview Section */}
+        {orderData.logoData && (
+          <div className="logo-preview-section">
+            <h3>Your Logo</h3>
+            <div className="logo-preview-container">
+              <img 
+                src={orderData.logoData} 
+                alt="Your business logo" 
+                className="success-logo-preview"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'block';
+                }}
+              />
+              <div className="logo-placeholder" style={{ display: 'none' }}>
+                <span>Logo Preview</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Order Details Card */}
+        <div className="order-details-card">
+          <h2>📋 Purchase Confirmation</h2>
+          
+          <div className="order-details-grid">
+            <div className="detail-row">
+              <span className="detail-label">Business Name:</span>
+              <span className="detail-value">{orderData.businessName}</span>
+            </div>
+            
+            <div className="detail-row highlight">
+              <span className="detail-label">📍 Advertising Square:</span>
+              <span className="detail-value">#{orderData.squareNumber} (Page {orderData.pageNumber || 1})</span>
+            </div>
+            
+            <div className="detail-row">
+              <span className="detail-label">⏱️ Campaign Duration:</span>
+              <span className="detail-value">{orderData.selectedDuration || 30} days</span>
+            </div>
+            
+            <div className="detail-row">
+              <span className="detail-label">📅 Start Date:</span>
+              <span className="detail-value">{new Date().toLocaleDateString('en-GB', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+              })}</span>
+            </div>
+            
+            <div className="detail-row">
+              <span className="detail-label">📅 End Date:</span>
+              <span className="detail-value">
+                {new Date(Date.now() + (orderData.selectedDuration || 30) * 24 * 60 * 60 * 1000)
+                  .toLocaleDateString('en-GB', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                  })}
+              </span>
+            </div>
+            
+            <div className="detail-row highlight-amount">
+              <span className="detail-label">💰 Total Paid:</span>
+              <span className="detail-value amount">£{orderData.finalAmount || 10}.00</span>
+            </div>
+            
+            {orderData.transactionId && (
+              <div className="detail-row">
+                <span className="detail-label">🔐 Transaction ID:</span>
+                <span className="detail-value transaction-id">{orderData.transactionId}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* What Happens Next Section */}
+        <div className="next-steps-section">
+          <h3>✨ What Happens Next?</h3>
+          <ul className="next-steps-list">
+            <li>
+              <span className="step-icon">✅</span>
+              <span>Your logo is now live on square #{orderData.squareNumber}</span>
+            </li>
+            <li>
+              <span className="step-icon">👆</span>
+              <span>Visitors can click your logo to visit your website</span>
+            </li>
+            <li>
+              <span className="step-icon">⏰</span>
+              <span>Your ad will remain active for {orderData.selectedDuration || 30} days</span>
+            </li>
+            <li>
+              <span className="step-icon">🔄</span>
+              <span>Your position may change during auto-shuffle, but your ad stays active</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Action Buttons */}
         <div className="success-actions">
           <button 
             onClick={() => {
               window.dispatchEvent(new Event('storage'));
               navigate(`/page${orderData.pageNumber || 1}`);
             }}
-            className="btn-primary"
+            className="btn-primary btn-large"
           >
             👁️ View Your Live Ad
           </button>
           
           <button 
             onClick={() => navigate('/')}
-            className="btn-secondary"
+            className="btn-secondary btn-large"
           >
             🏠 Return Home
           </button>
         </div>
 
-        <div className="debug-section">
-          <h4>Debug Info</h4>
-          <p>Square: #{orderData.squareNumber} | Logo: {orderData.logoData ? '✅' : '❌'}</p>
-          <button 
-            onClick={() => {
-              console.log('📦 DEBUG DATA:', {
-                orderData,
-                squarePurchases: JSON.parse(localStorage.getItem('squarePurchases') || '{}'),
-                hasLogo: !!orderData.logoData
-              });
-              alert('Check browser console for debug data');
-            }}
-            className="btn-secondary"
-          >
-            📊 Show Debug Data
-          </button>
+        {/* Support Section */}
+        <div className="support-section">
+          <p>Need help? <a href="/contact">Contact us</a> or check your <a href="/how-it-works">campaign details</a></p>
         </div>
       </div>
     </div>

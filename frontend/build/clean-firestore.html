@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clean Firestore - Keep Only 4 Logos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #c82333;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+        }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-warning { color: #ffc107; }
+        .log-info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Clean Firestore Database</h1>
+        
+        <div class="warning">
+            <strong>⚠️ WARNING:</strong> This will delete ALL documents except 4 unique logos with actual logo images. 
+            Documents without logos or duplicate logos will be deleted. This action cannot be undone!
+        </div>
+
+        <div class="info">
+            <strong>What this does:</strong>
+            <ul>
+                <li>Fetches all documents from Firestore</li>
+                <li>Filters to only documents WITH logos</li>
+                <li>Removes duplicate logos (keeps only unique ones)</li>
+                <li>Keeps the 4 most recent unique logos</li>
+                <li>Deletes all documents without logos and duplicate logos</li>
+                <li>Shows a log of all actions</li>
+            </ul>
+        </div>
+
+        <button id="cleanBtn" onclick="cleanFirestore()">🗑️ Clean Database (Keep 4 Most Recent)</button>
+        <button onclick="checkStatus()">📊 Check Current Status</button>
+        
+        <div id="log" class="log" style="display: none;"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, doc, deleteDoc, writeBatch, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase config from your firebase.js
+        const firebaseConfig = {
+            apiKey: "XsxVvIS4mIRSzDzG2RtsbJ_I1p25-rjuupbwWCffz6g",
+            authDomain: "clickalinks-frontend.firebaseapp.com",
+            projectId: "clickalinks-frontend",
+            storageBucket: "clickalinks-frontend.firebasestorage.app",
+            messagingSenderId: "568043553622",
+            appId: "1:568043553622:web:d8e928c8b26e2847e50cf7"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.log = function(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        };
+
+        window.checkStatus = async function() {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            logDiv.innerHTML = '';
+            
+            try {
+                log('📊 Checking Firestore status...', 'info');
+                const querySnapshot = await getDocs(collection(db, 'purchasedSquares'));
+                
+                log(`Found ${querySnapshot.size} total documents`, 'info');
+                
+                const documents = [];
+                querySnapshot.forEach(docSnapshot => {
+                    const data = docSnapshot.data();
+                    documents.push({
+                        id: docSnapshot.id,
+                        squareNumber: data.squareNumber || parseInt(docSnapshot.id),
+                        businessName: data.businessName || 'Unknown',
+                        purchaseDate: data.purchaseDate || data.createdAt || 'No date',
+                        logoData: data.logoData ? 'Yes' : 'No'
+                    });
+                });
+                
+                // Sort by date (most recent first)
+                documents.sort((a, b) => {
+                    const dateA = new Date(a.purchaseDate);
+                    const dateB = new Date(b.purchaseDate);
+                    return dateB - dateA;
+                });
+                
+                log('\n📋 All Documents:', 'info');
+                documents.forEach((doc, index) => {
+                    log(`${index + 1}. Square #${doc.squareNumber} - ${doc.businessName} (${doc.purchaseDate})`, 'info');
+                });
+                
+                if (documents.length > 4) {
+                    log(`\n⚠️ Found ${documents.length} documents. ${documents.length - 4} will be deleted.`, 'warning');
+                } else {
+                    log(`\n✅ Found ${documents.length} documents. All will be kept.`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        };
+
+        window.cleanFirestore = async function() {
+            const btn = document.getElementById('cleanBtn');
+            btn.disabled = true;
+            btn.textContent = 'Cleaning...';
+            
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            logDiv.innerHTML = '';
+            
+            try {
+                log('🧹 Starting cleanup - Keeping only 4 unique logos...', 'info');
+                
+                // Get all documents
+                log('📖 Fetching all documents from Firestore...', 'info');
+                const querySnapshot = await getDocs(collection(db, 'purchasedSquares'));
+                
+                if (querySnapshot.empty) {
+                    log('✅ No documents found. Database is already clean.', 'success');
+                    btn.disabled = false;
+                    btn.textContent = '🗑️ Clean Database (Keep 4 Most Recent)';
+                    return;
+                }
+                
+                log(`Found ${querySnapshot.size} documents`, 'info');
+                
+                // Collect all documents with their data
+                const documents = [];
+                querySnapshot.forEach(docSnapshot => {
+                    const data = docSnapshot.data();
+                    const logoData = data.logoData || '';
+                    const hasLogo = logoData && logoData.length > 0;
+                    
+                    documents.push({
+                        id: docSnapshot.id,
+                        squareNumber: data.squareNumber || parseInt(docSnapshot.id),
+                        businessName: data.businessName || 'Unknown',
+                        purchaseDate: data.purchaseDate || data.createdAt || new Date(0).toISOString(),
+                        logoData: logoData,
+                        hasLogo: hasLogo,
+                        logoHash: hasLogo ? logoData.substring(0, 100) : null, // Use first 100 chars as hash
+                        data: data
+                    });
+                });
+                
+                // Filter: Only keep documents WITH logos
+                const documentsWithLogos = documents.filter(doc => doc.hasLogo);
+                const documentsWithoutLogos = documents.filter(doc => !doc.hasLogo);
+                
+                log(`\n📊 Analysis:`, 'info');
+                log(`   Documents with logos: ${documentsWithLogos.length}`, 'info');
+                log(`   Documents without logos: ${documentsWithoutLogos.length}`, 'warning');
+                
+                // Sort by purchaseDate (most recent first)
+                documentsWithLogos.sort((a, b) => {
+                    const dateA = new Date(a.purchaseDate);
+                    const dateB = new Date(b.purchaseDate);
+                    return dateB - dateA;
+                });
+                
+                // Remove duplicates - keep only unique logos (by logoHash)
+                const uniqueLogos = [];
+                const seenLogos = new Set();
+                
+                for (const doc of documentsWithLogos) {
+                    if (!seenLogos.has(doc.logoHash)) {
+                        seenLogos.add(doc.logoHash);
+                        uniqueLogos.push(doc);
+                        
+                        if (uniqueLogos.length >= 4) {
+                            break; // Stop at 4 unique logos
+                        }
+                    }
+                }
+                
+                log(`\n📋 Found ${uniqueLogos.length} unique logos (keeping these):`, 'success');
+                uniqueLogos.forEach((doc, index) => {
+                    log(`  ${index + 1}. Square #${doc.squareNumber} - ${doc.businessName}`, 'success');
+                });
+                
+                // Everything else should be deleted
+                const toDelete = [];
+                
+                // Add all documents without logos
+                toDelete.push(...documentsWithoutLogos);
+                
+                // Add duplicate logos (documents with logos that we're not keeping)
+                for (const doc of documentsWithLogos) {
+                    const isKept = uniqueLogos.some(kept => kept.id === doc.id);
+                    if (!isKept) {
+                        toDelete.push(doc);
+                    }
+                }
+                
+                if (toDelete.length === 0) {
+                    log(`\n✅ No documents to delete. Database is clean!`, 'success');
+                    btn.disabled = false;
+                    btn.textContent = '🗑️ Clean Database (Keep 4 Most Recent)';
+                    return;
+                }
+                
+                log(`\n🗑️ Deleting ${toDelete.length} documents:`, 'warning');
+                log(`   - ${documentsWithoutLogos.length} without logos`, 'warning');
+                log(`   - ${toDelete.length - documentsWithoutLogos.length} duplicate logos`, 'warning');
+                
+                // Delete in batches - IMPORTANT: Create new batch for each commit
+                let batchCount = 0;
+                const MAX_BATCH_SIZE = 500;
+                
+                for (let i = 0; i < toDelete.length; i++) {
+                    const docToDelete = toDelete[i];
+                    
+                    // Create new batch if needed
+                    if (batchCount === 0) {
+                        var currentBatch = writeBatch(db);
+                    }
+                    
+                    const docRef = doc(db, 'purchasedSquares', docToDelete.id);
+                    currentBatch.delete(docRef);
+                    batchCount++;
+                    
+                    // Commit batch if approaching limit or at end
+                    if (batchCount >= MAX_BATCH_SIZE || i === toDelete.length - 1) {
+                        await currentBatch.commit();
+                        log(`✅ Committed batch: ${batchCount} deletions`, 'success');
+                        batchCount = 0;
+                    }
+                }
+                
+                log(`\n✅ Cleanup complete!`, 'success');
+                log(`   Kept: ${uniqueLogos.length} unique logos`, 'success');
+                log(`   Deleted: ${toDelete.length} documents`, 'success');
+                
+                alert(`✅ Cleanup complete!\n\nKept: ${uniqueLogos.length} unique logos\nDeleted: ${toDelete.length} documents\n\nPlease refresh your page to see the changes.`);
+                
+            } catch (error) {
+                log(`❌ Error during cleanup: ${error.message}`, 'error');
+                console.error('Full error:', error);
+                alert(`❌ Error: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🗑️ Clean Database (Keep 4 Most Recent)';
+            }
+        };
+    </script>
+</body>
+</html>
+

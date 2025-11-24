@@ -6,11 +6,35 @@
 }
 
 .contact-content {
-  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(240, 249, 255, 0.9));
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   padding: 3rem;
   border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.contact-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      #ff6b35 0px, #ff6b35 12px,
+      #06b6d4 12px, #06b6d4 24px,
+      #3b82f6 24px, #3b82f6 36px,
+      #10b981 36px, #10b981 48px,
+      #ec4899 48px, #ec4899 60px,
+      #fbbf24 60px, #fbbf24 72px
+    ),
+    linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  z-index: 0;
 }
 
 .contact-header {
@@ -19,10 +43,15 @@
 }
 
 .contact-header h1 {
-  color: #1976d2;
+  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-size: 2.5rem;
   margin-bottom: 1rem;
   font-weight: 800;
+  position: relative;
+  z-index: 1;
 }
 
 .contact-header p {
@@ -40,17 +69,30 @@
 
 /* Contact Form Styles */
 .contact-form-section h2 {
-  color: #2196f3;
+  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-size: 1.8rem;
   margin-bottom: 2rem;
   font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 
 .contact-form-container {
-  background: rgba(33, 150, 243, 0.05);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
   padding: 2rem;
   border-radius: 15px;
-  border-left: 4px solid #2196f3;
+  border-left: 4px solid;
+  border-image: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%) 1;
+  border-right: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 1;
 }
 
 .form-group {
@@ -89,29 +131,50 @@
 .contact-submit-btn {
   width: 100%;
   padding: 15px;
-  background: linear-gradient(135deg, #1976d2, #1565c0);
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      #ff6b35 0px, #ff6b35 12px,
+      #06b6d4 12px, #06b6d4 24px,
+      #3b82f6 24px, #3b82f6 36px,
+      #10b981 36px, #10b981 48px,
+      #ec4899 48px, #ec4899 60px,
+      #fbbf24 60px, #fbbf24 72px
+    ),
+    linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background-blend-mode: overlay;
   color: white;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 1rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .contact-submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3);
+  box-shadow: 0 4px 15px rgba(30, 64, 175, 0.4);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* Contact Info Styles */
 .contact-info-card {
-  background: rgba(76, 175, 80, 0.05);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
   padding: 2rem;
   border-radius: 15px;
-  border-left: 4px solid #4caf50;
+  border-left: 4px solid;
+  border-image: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%) 1;
+  border-right: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   height: fit-content;
+  position: relative;
+  z-index: 1;
 }
 
 .contact-info-card h3 {
@@ -143,7 +206,10 @@
 
 .contact-details strong {
   display: block;
-  color: #1976d2;
+  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 0.5rem;
   font-size: 1.1rem;
 }

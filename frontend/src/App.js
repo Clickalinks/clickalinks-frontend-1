@@ -18,6 +18,7 @@ import Terms from './components/Terms';
 import ContactForm from './components/ContactForm';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import AdminDashboard from './components/AdminDashboard';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   // Create page routes dynamically
@@ -29,15 +30,6 @@ function App() {
     
     return (
       <div className="container">
-        <div className="hero">
-          <h1>
-            {isHome ? 'Direct Advertising Platform' : `Advertising Page ${pageNumber}`}
-          </h1>
-          <h5>
-            {isHome ? 'Learn more about ClickaLinks in our footer information menu' : '200 premium advertising squares available'}
-          </h5>
-        </div>
-
         {/* Pass start and end props to AdGrid */}
         <AdGrid pageNumber={pageNumber} start={start} end={end} isHome={isHome} />
       </div>
@@ -46,6 +38,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="App">
         <Header />
         <RunningStrip />

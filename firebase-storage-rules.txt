@@ -1,0 +1,29 @@
+# Firebase Storage Security Rules
+# Copy these rules to Firebase Console > Storage > Rules
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow read access to all logo files
+    match /logos/{logoId} {
+      allow read: if true; // Public read access for logos
+      allow write: if true; // Allow uploads (you may want to restrict this in production)
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+# IMPORTANT: 
+# 1. Go to Firebase Console: https://console.firebase.google.com/
+# 2. Select your project: clickalinks-frontend
+# 3. Go to Storage > Rules tab
+# 4. Replace the existing rules with the rules above
+# 5. Click "Publish"
+
+# For production, you might want to restrict writes:
+# allow write: if request.auth != null; // Only authenticated users can upload
+

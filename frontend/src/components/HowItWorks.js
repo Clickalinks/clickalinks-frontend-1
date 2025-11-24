@@ -120,14 +120,6 @@ const HowItWorks = () => {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="cta-section">
-        <div className="container">
-          <h2>Ready to Boost Your Visibility?</h2>
-          <p>Join hundreds of businesses already growing with our advertising platform</p>
-          <button className="cta-button large">Start Your Campaign Today</button>
-        </div>
-      </div>
     </div>
   );
 };
