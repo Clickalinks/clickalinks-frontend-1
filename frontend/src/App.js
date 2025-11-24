@@ -7,6 +7,7 @@ import AutoShuffleTimer from './components/AutoShuffleTimer';
 import AdGrid from './components/AdGrid';
 import Footer from './components/Footer';
 import Success from './components/Success';
+import Cancel from './components/Cancel';
 import CampaignSelection from './components/CampaignSelection';
 import BusinessDetails from './components/BusinessDetails';
 import AdminPanel from './components/AdminPanel';
@@ -16,6 +17,7 @@ import HowItWorks from './components/HowItWorks';
 import Terms from './components/Terms';
 import ContactForm from './components/ContactForm';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   // Create page routes dynamically
@@ -66,7 +68,8 @@ function App() {
           <Route path="/business-details" element={<BusinessDetails />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/success" element={<Success />} />
-
+          <Route path="/cancel" element={<Cancel />} />
+         
           {/* Information Pages */}
           <Route path="/about" element={<About />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
@@ -74,8 +77,8 @@ function App() {
           <Route path="/contact" element={<ContactForm />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
 
-          {/* Admin Route */}
-          <Route path="/admin" element={<AdminPanel />} />
+          {/* Admin Route - FIXED: Only one route for /admin */}
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
 
         <Footer />
