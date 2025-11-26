@@ -3,11 +3,20 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import FormData from 'form-data';
+import shuffleRoutes from './routes/shuffle.js';
+import { sendAdConfirmationEmail } from './services/emailService.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+
+// 🔍 DEBUG: Check what key is being loaded
+console.log('🔑 Environment check:');
+console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
+console.log('Key starts with:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY');
+console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PORT = process.env.PORT || 10000;
 
@@ -27,12 +36,30 @@ app.use(cors({
 
 app.use(express.json());
 
+// Shuffle admin routes (must be before other routes to avoid conflicts)
+app.use('/', shuffleRoutes);
+
+// Log all registered routes for debugging
+app.use((req, res, next) => {
+  console.log(`📡 Request: ${req.method} ${req.path}`);
+  next();
+});
+
 // Root route
 app.get('/', (req, res) => {
   res.json({ 
     status: 'OK',
     message: 'ClickaLinks Backend Server is running! 🚀',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      testCors: '/api/test-cors',
+      testStripe: '/api/test-stripe',
+      createCheckout: '/api/create-checkout-session',
+      checkSession: '/api/check-session/:id',
+      purchasedSquares: '/api/purchased-squares',
+      sendConfirmationEmail: '/api/send-confirmation-email'
+    }
   });
 });
 
@@ -45,10 +72,60 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Test CORS endpoint
+app.get('/api/test-cors', (req, res) => {
+  res.json({
+    success: true,
+    message: 'CORS is working! ✅',
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test Stripe key endpoint
+app.get('/api/test-stripe', async (req, res) => {
+  try {
+    console.log('🔑 Testing Stripe key...');
+    
+    // Try to make a simple Stripe API call
+    const balance = await stripe.balance.retrieve();
+    
+    res.json({
+      success: true,
+      message: 'Stripe key is VALID! 🎉',
+      keyInfo: {
+        exists: !!process.env.STRIPE_SECRET_KEY,
+        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY',
+        length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0
+      },
+      balance: {
+        available: balance.available[0]?.amount || 0,
+        currency: balance.available[0]?.currency || 'gbp'
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Stripe key test failed:', error.message);
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      keyInfo: {
+        exists: !!process.env.STRIPE_SECRET_KEY,
+        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY',
+        length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Create Stripe checkout session
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
-    console.log('💰 Payment request received');
+    console.log('💰 Payment request received from:', req.headers.origin);
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
     
     const { 
       amount, 
@@ -62,6 +139,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
 
     // Validate required fields
     if (!amount || !squareNumber || !duration || !contactEmail) {
+      console.log('❌ Missing required fields:', { amount, squareNumber, duration, contactEmail });
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
@@ -108,9 +186,15 @@ app.post('/api/create-checkout-session', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Stripe error:', error.message);
+    console.error('❌ Full error details:', error);
+    
     res.status(500).json({ 
       success: false,
-      error: error.message
+      error: error.message,
+      keyInfo: {
+        exists: !!process.env.STRIPE_SECRET_KEY,
+        startsWith: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY'
+      }
     });
   }
 });
@@ -173,6 +257,13 @@ app.post('/api/sync-purchase', async (req, res) => {
       lastSynced: new Date().toISOString()
     };
     
+    // Send confirmation email (non-blocking)
+    if (purchaseData.contactEmail && purchaseData.paymentStatus === 'paid') {
+      sendAdConfirmationEmail(purchaseData).catch(err => {
+        console.warn('⚠️ Email send failed (non-blocking):', err.message);
+      });
+    }
+    
     res.json({
       success: true,
       message: `Purchase for square ${squareNumber} synced to server`
@@ -180,6 +271,42 @@ app.post('/api/sync-purchase', async (req, res) => {
     
   } catch (error) {
     console.error('Error syncing purchase:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Send confirmation email endpoint
+app.post('/api/send-confirmation-email', async (req, res) => {
+  try {
+    const purchaseData = req.body;
+    
+    if (!purchaseData.contactEmail) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email address is required'
+      });
+    }
+    
+    const result = await sendAdConfirmationEmail(purchaseData);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Confirmation email sent successfully',
+        messageId: result.messageId
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.message || 'Failed to send email'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error sending confirmation email:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -320,4 +447,14 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`✅ Virus scan endpoint available at: POST /api/scan-file`);
   console.log(`✅ Debug endpoint available at: POST /api/debug-purchase`);
+  console.log(`✅ Email confirmation endpoint available at: POST /api/send-confirmation-email`);
+  console.log(`✅ Shuffle endpoint available at: POST /admin/shuffle`);
+  console.log(`✅ Shuffle stats available at: GET /admin/shuffle/stats`);
+  
+  // Log email configuration status
+  if (process.env.SMTP_HOST || process.env.SENDGRID_API_KEY) {
+    console.log(`📧 Email service configured: ${process.env.SMTP_HOST || 'SendGrid'}`);
+  } else {
+    console.warn(`⚠️ Email service not configured - emails will not be sent`);
+  }
 });
