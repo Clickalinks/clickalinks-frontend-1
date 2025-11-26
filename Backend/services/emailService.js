@@ -27,16 +27,31 @@ function createTransporter() {
     });
   }
 
-  // Option 2: SMTP (Gmail, Outlook, custom)
+  // Option 2: SMTP (Gmail, Outlook, custom - including IONOS)
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const port = parseInt(process.env.SMTP_PORT || '587');
+    const isSecure = process.env.SMTP_SECURE === 'true';
+    
+    console.log(`📧 Creating SMTP transporter: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure})`);
+    console.log(`📧 SMTP User: ${process.env.SMTP_USER}`);
+    
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      port: port,
+      secure: isSecure, // true for 465 (SSL), false for 587 (TLS)
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
-      }
+      },
+      tls: {
+        // Do not fail on invalid certificates (some SMTP servers have self-signed certs)
+        rejectUnauthorized: false,
+        ciphers: 'SSLv3'
+      },
+      // IONOS-specific: May require explicit connection settings
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 10000
     });
   }
 
@@ -211,8 +226,15 @@ Need help? Contact us at ${process.env.SUPPORT_EMAIL || 'support@clickalinks.com
   `;
 
   try {
+    const fromEmail = process.env.EMAIL_FROM || `"ClickaLinks" <${process.env.SMTP_USER || 'noreply@clickalinks.com'}>`;
+    
+    console.log(`📧 Attempting to send email:`);
+    console.log(`   From: ${fromEmail}`);
+    console.log(`   To: ${contactEmail}`);
+    console.log(`   Subject: 🎉 Your ClickaLinks Ad is Live! - Square #${squareNumber}`);
+    
     const mailOptions = {
-      from: process.env.EMAIL_FROM || `"ClickaLinks" <${process.env.SMTP_USER || 'noreply@clickalinks.com'}>`,
+      from: fromEmail,
       to: contactEmail,
       subject: `🎉 Your ClickaLinks Ad is Live! - Square #${squareNumber}`,
       text: textContent,
@@ -221,6 +243,7 @@ Need help? Contact us at ${process.env.SUPPORT_EMAIL || 'support@clickalinks.com
 
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Confirmation email sent successfully:', info.messageId);
+    console.log(`   Response: ${info.response}`);
     return { 
       success: true, 
       messageId: info.messageId,
@@ -228,9 +251,26 @@ Need help? Contact us at ${process.env.SUPPORT_EMAIL || 'support@clickalinks.com
     };
   } catch (error) {
     console.error('❌ Error sending confirmation email:', error);
+    console.error('   Error code:', error.code);
+    console.error('   Error command:', error.command);
+    console.error('   Error response:', error.response);
+    console.error('   Error responseCode:', error.responseCode);
+    console.error('   Full error:', JSON.stringify(error, null, 2));
+    
+    // Provide more detailed error message
+    let errorMessage = error.message || 'Failed to send email';
+    if (error.code === 'EAUTH') {
+      errorMessage = 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS.';
+    } else if (error.code === 'ECONNECTION') {
+      errorMessage = `Cannot connect to SMTP server ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`;
+    } else if (error.code === 'ETIMEDOUT') {
+      errorMessage = 'SMTP connection timeout. Check SMTP_HOST and network.';
+    }
+    
     return { 
       success: false, 
-      error: error.message,
+      error: errorMessage,
+      errorCode: error.code,
       message: 'Failed to send email'
     };
   }
