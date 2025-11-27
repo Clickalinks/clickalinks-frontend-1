@@ -15,57 +15,6 @@ console.log('🔄 Starting server initialization...');
 
 const app = express();
 
-// CRITICAL: Handle OPTIONS requests at the VERY TOP, before ANY other middleware
-// This must be the first thing Express processes
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'https://clickalinks-frontend.web.app',
-    'https://clickalinks-frontend.firebaseapp.com',
-    'https://clickalinks-frontend-1.onrender.com',
-    'https://www.clickalinks.com'
-  ];
-  
-  const allowedHeaders = [
-    'Content-Type', 
-    'Authorization', 
-    'x-api-key', 
-    'X-API-Key',
-    'X-API-KEY',
-    'x-API-key',
-    'X-api-key',
-    'Accept',
-    'Origin',
-    'X-Requested-With',
-    'Access-Control-Request-Headers',
-    'Access-Control-Request-Method'
-  ];
-  
-  const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'];
-  
-  // Set CORS headers for allowed origins
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  
-  // Set all required CORS headers
-  res.setHeader('Access-Control-Allow-Methods', allowedMethods.join(', '));
-  res.setHeader('Access-Control-Allow-Headers', allowedHeaders.join(', '));
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  // Log for debugging
-  console.log('🚨 TOP-LEVEL OPTIONS HANDLER CALLED:', {
-    origin: origin,
-    path: req.path,
-    requestedHeaders: req.headers['access-control-request-headers'] || '',
-    allowedHeaders: allowedHeaders.join(', ')
-  });
-  
-  return res.status(204).end();
-});
-
 // 🔍 DEBUG: Check what key is being loaded
 console.log('🔑 Environment check:');
 console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
@@ -75,8 +24,9 @@ console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SE
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PORT = process.env.PORT || 10000;
 
-// CORS configuration - MUST be before routes
-const corsOptions = {
+// SIMPLIFIED CORS: Use cors() middleware ONLY - no manual handlers
+// This is the simplest and most reliable approach
+app.use(cors({
   origin: [
     'http://localhost:3000',
     'https://clickalinks-frontend.web.app',
@@ -89,117 +39,19 @@ const corsOptions = {
   allowedHeaders: [
     'Content-Type', 
     'Authorization', 
-    'x-api-key', 
+    'x-api-key',
     'X-API-Key',
     'X-API-KEY',
     'x-API-key',
     'X-api-key',
     'Accept',
     'Origin',
-    'X-Requested-With',
-    'Access-Control-Request-Headers',
-    'Access-Control-Request-Method'
+    'X-Requested-With'
   ],
-  exposedHeaders: ['x-api-key', 'X-API-Key'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-  // Disable cors() middleware from handling OPTIONS - we handle it manually
-  handlePreflightRequest: false
-};
+  exposedHeaders: ['x-api-key', 'X-API-Key']
+}));
 
-// CRITICAL: Handle OPTIONS preflight requests FIRST, before any other middleware
-// This MUST be before app.use() middleware to catch OPTIONS requests early
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = corsOptions.origin;
-  
-  // Set CORS headers for allowed origins
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  
-  const requestedHeaders = req.headers['access-control-request-headers'] || '';
-  
-  // Log for debugging
-  console.log('🔍 CORS Preflight OPTIONS (app.options):', {
-    origin: origin,
-    allowed: origin ? allowedOrigins.includes(origin) : false,
-    path: req.path,
-    requestedHeaders: requestedHeaders
-  });
-  
-  // CRITICAL: Set all required CORS headers explicitly for OPTIONS
-  const allowedHeadersString = corsOptions.allowedHeaders.join(', ');
-  const allowedMethodsString = corsOptions.methods.join(', ');
-  
-  res.setHeader('Access-Control-Allow-Methods', allowedMethodsString);
-  res.setHeader('Access-Control-Allow-Headers', allowedHeadersString);
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  // Log what we're sending
-  console.log('🔍 Setting Access-Control-Allow-Headers to:', allowedHeadersString);
-  console.log('✅ CORS Preflight Response Headers:', {
-    'Access-Control-Allow-Origin': origin && allowedOrigins.includes(origin) ? origin : 'NOT SET',
-    'Access-Control-Allow-Methods': allowedMethodsString,
-    'Access-Control-Allow-Headers': allowedHeadersString
-  });
-  
-  return res.status(204).end();
-});
-
-// CRITICAL: Manual CORS handling - Handle ALL requests (including OPTIONS)
-// This ensures complete control over CORS headers without cors() middleware conflicts
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = corsOptions.origin;
-  
-  // Set CORS headers for all requests (including OPTIONS)
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  
-  // Handle OPTIONS preflight requests
-  if (req.method === 'OPTIONS') {
-    const requestedHeaders = req.headers['access-control-request-headers'] || '';
-    
-    // Log for debugging
-    console.log('🔍 CORS Preflight OPTIONS:', {
-      origin: origin,
-      allowed: origin ? allowedOrigins.includes(origin) : false,
-      path: req.path,
-      requestedHeaders: requestedHeaders
-    });
-    
-    // CRITICAL: Set all required CORS headers explicitly for OPTIONS
-    // Join headers as comma-separated string
-    const allowedHeadersString = corsOptions.allowedHeaders.join(', ');
-    const allowedMethodsString = corsOptions.methods.join(', ');
-    
-    res.setHeader('Access-Control-Allow-Methods', allowedMethodsString);
-    res.setHeader('Access-Control-Allow-Headers', allowedHeadersString);
-    res.setHeader('Access-Control-Max-Age', '86400');
-    
-    // Double-check: Log the actual header value being sent
-    console.log('🔍 Setting Access-Control-Allow-Headers to:', allowedHeadersString);
-    
-    // Log what we're sending
-    console.log('✅ CORS Preflight Response Headers:', {
-      'Access-Control-Allow-Origin': origin && allowedOrigins.includes(origin) ? origin : 'NOT SET',
-      'Access-Control-Allow-Methods': corsOptions.methods.join(', '),
-      'Access-Control-Allow-Headers': corsOptions.allowedHeaders.join(', ')
-    });
-    
-    return res.status(204).end();
-  }
-  
-  // For non-OPTIONS requests, set CORS headers and continue
-  res.setHeader('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
-  res.setHeader('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
-  
-  next();
-});
+console.log('✅ CORS middleware configured with x-api-key header support');
 
 // Increase body size limit for logo uploads (10MB)
 app.use(express.json({ limit: '10mb' }));
