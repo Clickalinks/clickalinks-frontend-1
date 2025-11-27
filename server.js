@@ -51,69 +51,101 @@ const corsOptions = {
   ],
   exposedHeaders: ['x-api-key', 'X-API-Key'],
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  // Disable cors() middleware from handling OPTIONS - we handle it manually
+  handlePreflightRequest: false
 };
 
-// CRITICAL: Handle OPTIONS preflight FIRST, before cors() middleware
-// This ensures our custom headers are set correctly
+// CRITICAL: Handle OPTIONS preflight requests FIRST, before any other middleware
+// This MUST be before app.use() middleware to catch OPTIONS requests early
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
   const allowedOrigins = corsOptions.origin;
+  
+  // Set CORS headers for allowed origins
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  
   const requestedHeaders = req.headers['access-control-request-headers'] || '';
   
   // Log for debugging
-  console.log('🔍 CORS Preflight OPTIONS:', {
+  console.log('🔍 CORS Preflight OPTIONS (app.options):', {
     origin: origin,
     allowed: origin ? allowedOrigins.includes(origin) : false,
     path: req.path,
     requestedHeaders: requestedHeaders
   });
   
-  // Set origin if allowed
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (origin) {
-    console.warn('⚠️ CORS: Origin not allowed:', origin, 'Allowed:', allowedOrigins);
-  }
+  // CRITICAL: Set all required CORS headers explicitly for OPTIONS
+  const allowedHeadersString = corsOptions.allowedHeaders.join(', ');
+  const allowedMethodsString = corsOptions.methods.join(', ');
   
-  // CRITICAL: Set all required CORS headers explicitly
-  // Use setHeader instead of header() to ensure they're set
-  res.setHeader('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
-  res.setHeader('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', allowedMethodsString);
+  res.setHeader('Access-Control-Allow-Headers', allowedHeadersString);
   res.setHeader('Access-Control-Max-Age', '86400');
   
   // Log what we're sending
+  console.log('🔍 Setting Access-Control-Allow-Headers to:', allowedHeadersString);
   console.log('✅ CORS Preflight Response Headers:', {
     'Access-Control-Allow-Origin': origin && allowedOrigins.includes(origin) ? origin : 'NOT SET',
-    'Access-Control-Allow-Methods': corsOptions.methods.join(', '),
-    'Access-Control-Allow-Headers': corsOptions.allowedHeaders.join(', ')
+    'Access-Control-Allow-Methods': allowedMethodsString,
+    'Access-Control-Allow-Headers': allowedHeadersString
   });
   
-  res.status(204).end();
+  return res.status(204).end();
 });
 
-// Apply CORS middleware for all other requests (non-OPTIONS)
-// Disable preflight handling since we handle it manually above
-app.use(cors({
-  ...corsOptions,
-  preflightContinue: false
-}));
-
-// Backup CORS headers middleware - ensures headers are always set for actual requests
+// CRITICAL: Manual CORS handling - Handle ALL requests (including OPTIONS)
+// This ensures complete control over CORS headers without cors() middleware conflicts
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = corsOptions.origin;
   
-  // Set CORS headers for all requests
+  // Set CORS headers for all requests (including OPTIONS)
   if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   
-  // Set CORS headers for actual requests
-  res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
-  res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
+  // Handle OPTIONS preflight requests
+  if (req.method === 'OPTIONS') {
+    const requestedHeaders = req.headers['access-control-request-headers'] || '';
+    
+    // Log for debugging
+    console.log('🔍 CORS Preflight OPTIONS:', {
+      origin: origin,
+      allowed: origin ? allowedOrigins.includes(origin) : false,
+      path: req.path,
+      requestedHeaders: requestedHeaders
+    });
+    
+    // CRITICAL: Set all required CORS headers explicitly for OPTIONS
+    // Join headers as comma-separated string
+    const allowedHeadersString = corsOptions.allowedHeaders.join(', ');
+    const allowedMethodsString = corsOptions.methods.join(', ');
+    
+    res.setHeader('Access-Control-Allow-Methods', allowedMethodsString);
+    res.setHeader('Access-Control-Allow-Headers', allowedHeadersString);
+    res.setHeader('Access-Control-Max-Age', '86400');
+    
+    // Double-check: Log the actual header value being sent
+    console.log('🔍 Setting Access-Control-Allow-Headers to:', allowedHeadersString);
+    
+    // Log what we're sending
+    console.log('✅ CORS Preflight Response Headers:', {
+      'Access-Control-Allow-Origin': origin && allowedOrigins.includes(origin) ? origin : 'NOT SET',
+      'Access-Control-Allow-Methods': corsOptions.methods.join(', '),
+      'Access-Control-Allow-Headers': corsOptions.allowedHeaders.join(', ')
+    });
+    
+    return res.status(204).end();
+  }
+  
+  // For non-OPTIONS requests, set CORS headers and continue
+  res.setHeader('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
+  res.setHeader('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
   
   next();
 });
@@ -134,6 +166,18 @@ console.log('✅ Promo code routes registered at /api/promo-code');
 app.use((req, res, next) => {
   console.log(`📡 Request: ${req.method} ${req.path}`);
   next();
+});
+
+// Test CORS endpoint - for debugging
+app.get('/api/test-cors', (req, res) => {
+  res.json({
+    success: true,
+    message: 'CORS test endpoint',
+    headers: {
+      origin: req.headers.origin,
+      'x-api-key': req.headers['x-api-key'] ? 'present' : 'missing'
+    }
+  });
 });
 
 // Root route
