@@ -24,8 +24,39 @@ console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SE
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PORT = process.env.PORT || 10000;
 
-// SIMPLIFIED CORS: Use cors() middleware ONLY - no manual handlers
-// This is the simplest and most reliable approach
+// CRITICAL: Handle OPTIONS requests FIRST, before cors() middleware
+// This ensures x-api-key header is always allowed in preflight responses
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://clickalinks-frontend.web.app',
+    'https://clickalinks-frontend.firebaseapp.com',
+    'https://clickalinks-frontend-1.onrender.com',
+    'https://www.clickalinks.com'
+  ];
+  
+  // Set CORS headers for allowed origins
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  // CRITICAL: Explicitly allow x-api-key header (all case variations)
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, x-API-key, X-api-key, Accept, Origin, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  console.log('🚨 OPTIONS preflight handled:', {
+    origin: origin,
+    path: req.path,
+    requestedHeaders: req.headers['access-control-request-headers'] || ''
+  });
+  
+  return res.status(204).end();
+});
+
+// CORS middleware for non-OPTIONS requests
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -51,7 +82,7 @@ app.use(cors({
   exposedHeaders: ['x-api-key', 'X-API-Key']
 }));
 
-console.log('✅ CORS middleware configured with x-api-key header support');
+console.log('✅ CORS configured: OPTIONS handler + cors() middleware');
 
 // Increase body size limit for logo uploads (10MB)
 app.use(express.json({ limit: '10mb' }));
