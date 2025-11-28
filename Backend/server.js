@@ -22,7 +22,6 @@ console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
 console.log('Key starts with:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY');
 console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
 
-<<<<<<< HEAD
 // Initialize Stripe - handle missing key gracefully
 let stripe;
 if (process.env.STRIPE_SECRET_KEY) {
