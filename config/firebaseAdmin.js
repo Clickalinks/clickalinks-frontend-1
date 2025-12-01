@@ -18,16 +18,57 @@ const __dirname = dirname(__filename);
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
   try {
-    // Priority 1: Use service account from environment variable (JSON string)
+    // Priority 1: Use service account from environment variable (JSON string or Base64)
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      const projectId = serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        projectId: projectId // ALWAYS set projectId explicitly
-      });
-      console.log('✅ Firebase Admin initialized from FIREBASE_SERVICE_ACCOUNT env var');
-      console.log('🔑 Project ID:', projectId);
+      try {
+        let jsonString = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+        
+        // Check if it's Base64 encoded (common pattern: starts with valid base64 chars, ends with =)
+        if (jsonString.match(/^[A-Za-z0-9+/]+=*$/) && jsonString.length > 100) {
+          try {
+            // Try to decode Base64
+            const decoded = Buffer.from(jsonString, 'base64').toString('utf-8');
+            jsonString = decoded;
+            console.log('📦 Detected Base64 encoded JSON, decoded successfully');
+          } catch (base64Error) {
+            // Not Base64, continue with original string
+            console.log('ℹ️ Not Base64, treating as raw JSON');
+          }
+        }
+        
+        // Remove any surrounding quotes if present
+        if ((jsonString.startsWith('"') && jsonString.endsWith('"')) ||
+            (jsonString.startsWith("'") && jsonString.endsWith("'"))) {
+          jsonString = jsonString.slice(1, -1);
+        }
+        
+        // Try to parse
+        const serviceAccount = JSON.parse(jsonString);
+        
+        // Validate required fields
+        if (!serviceAccount.private_key || !serviceAccount.client_email || !serviceAccount.project_id) {
+          throw new Error('Service account JSON is missing required fields (private_key, client_email, or project_id)');
+        }
+        
+        const projectId = serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+          projectId: projectId // ALWAYS set projectId explicitly
+        });
+        console.log('✅ Firebase Admin initialized from FIREBASE_SERVICE_ACCOUNT env var');
+        console.log('🔑 Project ID:', projectId);
+      } catch (parseError) {
+        console.error('❌ Error parsing FIREBASE_SERVICE_ACCOUNT JSON:', parseError.message);
+        console.error('❌ JSON parse error at position:', parseError.message.match(/position (\d+)/)?.[1] || 'unknown');
+        console.error('❌ First 500 chars of JSON:', process.env.FIREBASE_SERVICE_ACCOUNT.substring(0, 500));
+        console.error('❌ Falling back to default credentials...');
+        // Don't throw - let it fall through to Priority 4 (default credentials)
+        // This allows the app to start even if JSON is malformed
+      }
+    }
+    
+    // If Priority 1 failed or wasn't set, continue to Priority 2
+    if (!admin.apps.length) {
     } 
     // Priority 2: Use service account JSON file (for local development)
     else {
