@@ -21,7 +21,8 @@ if (!admin.apps.length) {
     // Priority 1: Use service account from environment variable (JSON string or Base64)
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       try {
-        let jsonString = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+        // CRITICAL: Trim whitespace and newlines that Render.com might add
+        let jsonString = process.env.FIREBASE_SERVICE_ACCOUNT.trim().replace(/\r\n/g, '').replace(/\n/g, '');
         console.log('🔍 Processing FIREBASE_SERVICE_ACCOUNT (length:', jsonString.length, 'chars)');
         console.log('🔍 First 50 chars:', jsonString.substring(0, 50));
         
@@ -33,7 +34,10 @@ if (!admin.apps.length) {
           // Doesn't start with JSON - likely Base64, try decoding
           console.log('🔍 String does NOT start with { or [, attempting Base64 decode...');
           try {
-            const decoded = Buffer.from(jsonString, 'base64').toString('utf-8');
+            // Remove any whitespace/newlines that might have been added
+            const cleanBase64 = jsonString.trim().replace(/\s+/g, '');
+            console.log('🔍 Cleaned Base64 length:', cleanBase64.length);
+            const decoded = Buffer.from(cleanBase64, 'base64').toString('utf-8');
             console.log('🔍 Base64 decode successful, decoded length:', decoded.length);
             console.log('🔍 Decoded first 50 chars:', decoded.substring(0, 50));
             
