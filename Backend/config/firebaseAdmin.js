@@ -22,9 +22,11 @@ if (!admin.apps.length) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID
       });
       console.log('✅ Firebase Admin initialized from FIREBASE_SERVICE_ACCOUNT env var');
+      console.log('🔑 Project ID:', serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'Not set');
     } 
     // Priority 2: Use service account JSON file (for local development)
     else {
@@ -51,10 +53,20 @@ if (!admin.apps.length) {
           });
           console.log('✅ Firebase Admin initialized from environment variables');
         } 
-        // Priority 4: Fallback to default credentials
+        // Priority 4: Fallback to default credentials (with explicit project ID if available)
         else {
-          admin.initializeApp();
+          const initOptions = {};
+          if (process.env.FIREBASE_PROJECT_ID) {
+            initOptions.projectId = process.env.FIREBASE_PROJECT_ID;
+          }
+          admin.initializeApp(initOptions);
           console.log('✅ Firebase Admin initialized with default credentials');
+          if (process.env.FIREBASE_PROJECT_ID) {
+            console.log('🔑 Project ID:', process.env.FIREBASE_PROJECT_ID);
+          } else {
+            console.warn('⚠️ WARNING: Project ID not set - Firestore queries may fail!');
+            console.warn('⚠️ Set FIREBASE_PROJECT_ID environment variable on Render.com');
+          }
         }
       }
     }

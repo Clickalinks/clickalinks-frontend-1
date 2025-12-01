@@ -65,6 +65,11 @@ export async function performGlobalShuffle() {
   const startTime = Date.now();
   
   try {
+    // Verify Firestore is initialized
+    if (!db) {
+      throw new Error('Firestore database not initialized. Check Firebase Admin configuration.');
+    }
+    
     console.log('🔄 Starting Fisher-Yates shuffle...');
     
     // Get seed for deterministic shuffling
@@ -72,10 +77,16 @@ export async function performGlobalShuffle() {
     console.log(`📊 Using seed: ${seed} (2-hour period)`);
     
     // STEP 1: Get all active, paid purchases
-    const purchasesSnapshot = await db.collection(COLLECTION_NAME)
-      .where('status', '==', 'active')
-      .where('paymentStatus', '==', 'paid')
-      .get();
+    let purchasesSnapshot;
+    try {
+      purchasesSnapshot = await db.collection(COLLECTION_NAME)
+        .where('status', '==', 'active')
+        .where('paymentStatus', '==', 'paid')
+        .get();
+    } catch (firestoreError) {
+      console.error('❌ Firestore query error:', firestoreError);
+      throw new Error(`Firestore error: ${firestoreError.message}. Check Firebase configuration and Project ID.`);
+    }
     
     if (purchasesSnapshot.empty) {
       console.log('ℹ️ No purchases to shuffle');
@@ -166,10 +177,35 @@ export async function performGlobalShuffle() {
  */
 export async function getShuffleStats() {
   try {
-    const purchasesSnapshot = await db.collection(COLLECTION_NAME)
-      .where('status', '==', 'active')
-      .where('paymentStatus', '==', 'paid')
-      .get();
+    // Verify Firestore is initialized
+    if (!db) {
+      return {
+        success: false,
+        error: 'Firestore database not initialized. Check Firebase Admin configuration.',
+        totalPurchases: 0,
+        shuffledPurchases: 0,
+        lastShuffle: null,
+        shuffleInterval: '2 hours'
+      };
+    }
+    
+    let purchasesSnapshot;
+    try {
+      purchasesSnapshot = await db.collection(COLLECTION_NAME)
+        .where('status', '==', 'active')
+        .where('paymentStatus', '==', 'paid')
+        .get();
+    } catch (firestoreError) {
+      console.error('❌ Firestore query error:', firestoreError);
+      return {
+        success: false,
+        error: `Firestore error: ${firestoreError.message}. Check Firebase configuration and Project ID.`,
+        totalPurchases: 0,
+        shuffledPurchases: 0,
+        lastShuffle: null,
+        shuffleInterval: '2 hours'
+      };
+    }
     
     const totalPurchases = purchasesSnapshot.size;
     const shuffledPurchases = purchasesSnapshot.docs.filter(doc => {

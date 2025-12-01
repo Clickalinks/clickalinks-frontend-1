@@ -456,6 +456,16 @@ export async function bulkDeletePromoCodes(promoIds) {
  */
 export async function getAllPromoCodes() {
   try {
+    // Verify Firestore is initialized
+    if (!db) {
+      console.error('❌ Firestore database not initialized');
+      return {
+        success: false,
+        error: 'Firestore database not initialized. Check Firebase Admin configuration.',
+        promoCodes: []
+      };
+    }
+    
     // Try to get all promo codes, handle missing index gracefully
     let promoSnapshot;
     try {
@@ -466,7 +476,12 @@ export async function getAllPromoCodes() {
     } catch (orderByError) {
       // If orderBy fails (missing index), fall back to simple query
       console.warn('⚠️ orderBy failed, using simple query:', orderByError.message);
-      promoSnapshot = await db.collection(COLLECTION_NAME).get();
+      try {
+        promoSnapshot = await db.collection(COLLECTION_NAME).get();
+      } catch (queryError) {
+        console.error('❌ Firestore query error:', queryError);
+        throw new Error(`Firestore error: ${queryError.message}. Check Firebase configuration and Project ID.`);
+      }
     }
     
     const promoCodes = [];
