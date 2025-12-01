@@ -22,33 +22,34 @@ if (!admin.apps.length) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       try {
         let jsonString = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+        console.log('🔍 Processing FIREBASE_SERVICE_ACCOUNT (length:', jsonString.length, 'chars)');
+        console.log('🔍 First 50 chars:', jsonString.substring(0, 50));
         
-        // CRITICAL: Check for Base64 FIRST before trying to parse as JSON
-        // Base64 detection: If it doesn't start with { or [ and matches Base64 pattern, try decoding
-        const base64Pattern = /^[A-Za-z0-9+/]+=*$/;
-        const isNotJson = !jsonString.startsWith('{') && !jsonString.startsWith('[');
-        const matchesBase64Pattern = base64Pattern.test(jsonString);
-        const isLongEnough = jsonString.length > 50;
+        // CRITICAL: ALWAYS try Base64 decode FIRST if it doesn't start with { or [
+        // This is the most reliable way to detect Base64
+        const startsWithJson = jsonString.startsWith('{') || jsonString.startsWith('[');
         
-        // Try Base64 decode if it looks like Base64
-        if (isNotJson && matchesBase64Pattern && isLongEnough) {
+        if (!startsWithJson) {
+          // Doesn't start with JSON - likely Base64, try decoding
+          console.log('🔍 String does NOT start with { or [, attempting Base64 decode...');
           try {
-            console.log('🔍 Attempting Base64 decode (length:', jsonString.length, 'chars)');
-            // Decode Base64
             const decoded = Buffer.from(jsonString, 'base64').toString('utf-8');
+            console.log('🔍 Base64 decode successful, decoded length:', decoded.length);
+            console.log('🔍 Decoded first 50 chars:', decoded.substring(0, 50));
+            
             // Verify it decoded to valid JSON-like content
             if (decoded.trim().startsWith('{') || decoded.trim().startsWith('[')) {
               jsonString = decoded;
-              console.log('📦 Detected Base64 encoded JSON, decoded successfully');
+              console.log('✅ Base64 detected and decoded successfully!');
             } else {
-              console.log('ℹ️ Base64 decode didn\'t produce JSON, treating as raw JSON');
+              console.log('⚠️ Base64 decode didn\'t produce JSON, will try raw parse');
             }
           } catch (base64Error) {
-            console.log('ℹ️ Base64 decode failed, treating as raw JSON:', base64Error.message);
+            console.log('⚠️ Base64 decode failed:', base64Error.message, '- treating as raw JSON');
             // Continue with original string - might be raw JSON
           }
         } else {
-          console.log('ℹ️ Not Base64 format, treating as raw JSON');
+          console.log('ℹ️ String starts with { or [, treating as raw JSON');
         }
         
         // Remove any surrounding quotes if present
@@ -58,6 +59,7 @@ if (!admin.apps.length) {
         }
         
         // Now try to parse as JSON
+        console.log('🔍 Attempting JSON.parse...');
         const serviceAccount = JSON.parse(jsonString);
         
         // Validate required fields
