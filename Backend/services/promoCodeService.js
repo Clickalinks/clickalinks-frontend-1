@@ -456,29 +456,52 @@ export async function bulkDeletePromoCodes(promoIds) {
  */
 export async function getAllPromoCodes() {
   try {
-    const promoSnapshot = await db.collection(COLLECTION_NAME)
-      .orderBy('createdAt', 'desc')
-      .get();
+    // Try to get all promo codes, handle missing index gracefully
+    let promoSnapshot;
+    try {
+      // First try with orderBy (requires index)
+      promoSnapshot = await db.collection(COLLECTION_NAME)
+        .orderBy('createdAt', 'desc')
+        .get();
+    } catch (orderByError) {
+      // If orderBy fails (missing index), fall back to simple query
+      console.warn('⚠️ orderBy failed, using simple query:', orderByError.message);
+      promoSnapshot = await db.collection(COLLECTION_NAME).get();
+    }
     
     const promoCodes = [];
     promoSnapshot.forEach(doc => {
-      const data = doc.data();
-      promoCodes.push({
-        id: doc.id,
-        code: data.code,
-        discountType: data.discountType,
-        discountValue: data.discountValue,
-        freeDays: data.freeDays,
-        description: data.description,
-        maxUses: data.maxUses,
-        usedCount: data.usedCount || 0,
-        status: data.status,
-        startDate: data.startDate ? data.startDate.toDate().toISOString() : null,
-        expiryDate: data.expiryDate ? data.expiryDate.toDate().toISOString() : null,
-        createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
-        lastUsedAt: data.lastUsedAt ? data.lastUsedAt.toDate().toISOString() : null
-      });
+      try {
+        const data = doc.data();
+        promoCodes.push({
+          id: doc.id,
+          code: data.code,
+          discountType: data.discountType,
+          discountValue: data.discountValue,
+          freeDays: data.freeDays,
+          description: data.description,
+          maxUses: data.maxUses,
+          usedCount: data.usedCount || 0,
+          status: data.status,
+          startDate: data.startDate ? (data.startDate.toDate ? data.startDate.toDate().toISOString() : data.startDate) : null,
+          expiryDate: data.expiryDate ? (data.expiryDate.toDate ? data.expiryDate.toDate().toISOString() : data.expiryDate) : null,
+          createdAt: data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt) : null,
+          lastUsedAt: data.lastUsedAt ? (data.lastUsedAt.toDate ? data.lastUsedAt.toDate().toISOString() : data.lastUsedAt) : null
+        });
+      } catch (docError) {
+        console.warn(`⚠️ Error processing document ${doc.id}:`, docError.message);
+        // Continue processing other documents
+      }
     });
+    
+    // Sort client-side if orderBy failed
+    if (promoCodes.length > 0 && promoCodes[0].createdAt) {
+      promoCodes.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Descending order
+      });
+    }
     
     return {
       success: true,
@@ -488,9 +511,14 @@ export async function getAllPromoCodes() {
     
   } catch (error) {
     console.error('❌ Error getting promo codes:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     return {
       success: false,
-      error: error.message,
+      error: error.message || 'Failed to load promo codes',
       promoCodes: []
     };
   }
