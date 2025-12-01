@@ -1,179 +1,140 @@
 /**
  * Promo Code Service
- * Manages promotion codes/coupons with Firestore storage
+ * Clean implementation for promo code management
  */
 
-import admin from 'firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
+import admin from '../config/firebaseAdmin.js';
 
-// Initialize Firebase Admin if not already initialized
-let db;
-const COLLECTION_NAME = 'promoCodes';
-
-try {
-  if (!admin.apps.length) {
-    console.log('🔧 Initializing Firebase Admin for promo codes...');
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-      : null;
-
-    if (serviceAccount) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.project_id
-      });
-      console.log('✅ Firebase Admin initialized with service account');
-    } else {
-      // Fallback: use default credentials
-      try {
-        const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-        if (credPath && require('fs').existsSync(credPath)) {
-          const credData = JSON.parse(require('fs').readFileSync(credPath, 'utf8'));
-          admin.initializeApp({
-            credential: admin.credential.cert(credData),
-            projectId: credData.project_id
-          });
-          console.log('✅ Firebase Admin initialized with GOOGLE_APPLICATION_CREDENTIALS');
-        } else {
-          admin.initializeApp({
-            credential: admin.credential.applicationDefault()
-          });
-          console.log('✅ Firebase Admin initialized with application default');
-        }
-      } catch (e) {
-        admin.initializeApp({
-          credential: admin.credential.applicationDefault()
-        });
-        console.log('✅ Firebase Admin initialized with application default (fallback)');
-      }
-    }
-  } else {
-    console.log('✅ Firebase Admin already initialized');
+// Get Firestore instance lazily to ensure Firebase Admin is initialized
+const getDb = () => {
+  try {
+    return admin.firestore();
+  } catch (error) {
+    console.error('❌ Error getting Firestore instance:', error);
+    throw new Error('Firebase Admin not initialized. Check Firebase configuration.');
   }
+};
 
-  // Initialize Firestore
-  db = admin.firestore();
-  console.log('✅ Firestore initialized for promo codes');
-} catch (error) {
-  console.error('❌ CRITICAL: Failed to initialize Firebase Admin for promo codes:', error.message);
-  db = null;
-}
+const COLLECTION_NAME = 'promoCodes';
 
 /**
  * Validate a promo code
- * @param {string} code - The promo code to validate
- * @param {number} originalAmount - Original purchase amount
- * @returns {Object} - Validation result with discount details
+ * 
+ * @param {string} code - Promo code to validate
+ * @param {number} originalAmount - Original amount before discount
+ * @returns {Promise<Object>} - Validation result
  */
-export async function validatePromoCode(code, originalAmount = 0) {
+export async function validatePromoCode(code, originalAmount) {
   try {
-    if (!db) {
-      console.error('❌ Firestore not initialized for promo codes');
-      return { valid: false, error: 'Promo code service not available' };
-    }
-
     if (!code || typeof code !== 'string') {
       return {
+        success: false,
         valid: false,
         error: 'Invalid promo code format'
       };
     }
-
-    const codeUpper = code.trim().toUpperCase();
     
-    // Fetch promo code from Firestore
-    const promoDoc = await db.collection(COLLECTION_NAME)
+    const codeUpper = code.trim().toUpperCase();
+    const db = getDb();
+    
+    // Try exact match first
+    let promoSnapshot = await db.collection(COLLECTION_NAME)
       .where('code', '==', codeUpper)
-      .where('active', '==', true)
+      .where('status', '==', 'active')
       .limit(1)
       .get();
-
-    if (promoDoc.empty) {
+    
+    // If no exact match, try prefix matching (e.g., "PROMO10" matches "PROMO10-XXXXX")
+    if (promoSnapshot.empty) {
+      const allPromosSnapshot = await db.collection(COLLECTION_NAME)
+        .where('status', '==', 'active')
+        .get();
+      
+      const matchingPromo = allPromosSnapshot.docs.find(doc => {
+        const promoCode = doc.data().code || '';
+        return promoCode.startsWith(codeUpper) || codeUpper.startsWith(promoCode.split('-')[0]);
+      });
+      
+      if (matchingPromo) {
+        promoSnapshot = {
+          docs: [matchingPromo],
+          empty: false
+        };
+      }
+    }
+    
+    if (promoSnapshot.empty) {
       return {
+        success: false,
         valid: false,
-        error: 'Promo code not found or inactive'
+        error: 'Promo code not found'
       };
     }
-
-    const promoData = promoDoc.docs[0].data();
-    const promoId = promoDoc.docs[0].id;
-    const now = new Date();
-
-    // Check expiry date
-    if (promoData.expiryDate) {
-      const expiryDate = promoData.expiryDate.toDate();
-      if (expiryDate < now) {
+    
+    const promoData = promoSnapshot.docs[0].data();
+    const promoId = promoSnapshot.docs[0].id;
+    
+    // Check expiration
+    if (promoData.expiresAt) {
+      const expiresAt = promoData.expiresAt.toDate ? promoData.expiresAt.toDate() : new Date(promoData.expiresAt);
+      if (expiresAt < new Date()) {
         return {
+          success: false,
           valid: false,
           error: 'Promo code has expired'
         };
       }
     }
-
-    // Check start date (if set)
-    if (promoData.startDate) {
-      const startDate = promoData.startDate.toDate();
-      if (startDate > now) {
-        return {
-          valid: false,
-          error: 'Promo code is not yet active'
-        };
-      }
-    }
-
+    
     // Check usage limits
-    const usedCount = promoData.usedCount || 0;
+    const currentUses = promoData.currentUses || 0;
     const maxUses = promoData.maxUses || Infinity;
-
-    if (usedCount >= maxUses) {
+    
+    if (currentUses >= maxUses) {
       return {
+        success: false,
         valid: false,
-        error: 'Promo code has reached maximum usage limit'
+        error: 'Promo code has reached its usage limit'
       };
     }
-
+    
     // Calculate discount
     let discountAmount = 0;
     let finalAmount = originalAmount;
     let freeDays = 0;
-
-    if (promoData.discountType === 'percent') {
-      // Percentage discount
+    
+    if (promoData.discountType === 'percentage') {
       discountAmount = (originalAmount * promoData.discountValue) / 100;
       finalAmount = Math.max(0, originalAmount - discountAmount);
     } else if (promoData.discountType === 'fixed') {
-      // Fixed amount discount
       discountAmount = Math.min(promoData.discountValue, originalAmount);
       finalAmount = Math.max(0, originalAmount - discountAmount);
     } else if (promoData.discountType === 'free_days') {
-      // Free days (e.g., 10 free days)
       freeDays = promoData.discountValue || 0;
       discountAmount = 0; // No price discount
-      finalAmount = originalAmount; // Price stays same, but duration extends
+      finalAmount = originalAmount; // Price unchanged
     } else if (promoData.discountType === 'free') {
-      // 100% off (free purchase)
       discountAmount = originalAmount;
       finalAmount = 0;
     }
-
+    
     return {
+      success: true,
       valid: true,
+      code: promoData.code,
       promoId: promoId,
-      code: codeUpper,
       discountType: promoData.discountType,
       discountValue: promoData.discountValue,
-      discountAmount: discountAmount,
-      finalAmount: finalAmount,
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      finalAmount: Math.round(finalAmount * 100) / 100,
       freeDays: freeDays,
-      description: promoData.description || '',
-      maxUses: maxUses,
-      usedCount: usedCount,
-      remainingUses: maxUses - usedCount
+      description: promoData.description || 'Promo code applied'
     };
-
+    
   } catch (error) {
     console.error('❌ Error validating promo code:', error);
     return {
+      success: false,
       valid: false,
       error: 'Error validating promo code'
     };
@@ -181,267 +142,354 @@ export async function validatePromoCode(code, originalAmount = 0) {
 }
 
 /**
- * Apply/Use a promo code (increment usage count)
- * @param {string} code - The promo code that was used
- * @param {string} purchaseId - The purchase ID that used this code
- * @returns {Object} - Result of applying the code
+ * Apply a promo code (increment usage)
+ * 
+ * @param {string} promoId - Promo code document ID
+ * @returns {Promise<Object>} - Application result
  */
-export async function applyPromoCode(code, purchaseId) {
+export async function applyPromoCode(promoId) {
   try {
-    if (!db) {
-      console.error('❌ Firestore not initialized for promo codes');
-      return { success: false, error: 'Promo code service not available' };
-    }
-
-    const codeUpper = code.trim().toUpperCase();
+    const db = getDb();
+    const promoRef = db.collection(COLLECTION_NAME).doc(promoId);
+    const promoDoc = await promoRef.get();
     
-    // Find the promo code
-    const promoDoc = await db.collection(COLLECTION_NAME)
-      .where('code', '==', codeUpper)
-      .limit(1)
-      .get();
-
-    if (promoDoc.empty) {
+    if (!promoDoc.exists) {
       return {
         success: false,
         error: 'Promo code not found'
       };
     }
-
-    const promoRef = promoDoc.docs[0].ref;
-    const promoData = promoDoc.docs[0].data();
-
-    // Increment usage count
-    const newUsedCount = (promoData.usedCount || 0) + 1;
     
-    // Update Firestore
-    await promoRef.update({
-      usedCount: newUsedCount,
-      lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
-      lastUsedBy: purchaseId
-    });
-
-    // If max uses reached, deactivate
-    if (promoData.maxUses && newUsedCount >= promoData.maxUses) {
-      await promoRef.update({
-        active: false
-      });
+    const promoData = promoDoc.data();
+    const currentUses = promoData.currentUses || 0;
+    const maxUses = promoData.maxUses || Infinity;
+    
+    if (currentUses >= maxUses) {
+      return {
+        success: false,
+        error: 'Promo code has reached its usage limit'
+      };
     }
-
+    
+    // Increment usage
+    await promoRef.update({
+      currentUses: admin.firestore.FieldValue.increment(1),
+      lastUsedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
     return {
       success: true,
-      usedCount: newUsedCount,
-      remainingUses: (promoData.maxUses || Infinity) - newUsedCount
+      message: 'Promo code applied successfully'
     };
-
+    
   } catch (error) {
     console.error('❌ Error applying promo code:', error);
     return {
       success: false,
-      error: error.message
+      error: 'Error applying promo code'
     };
   }
 }
 
 /**
- * Create a new promo code
+ * Create a single promo code
+ * 
  * @param {Object} promoData - Promo code data
- * @returns {Object} - Created promo code
+ * @returns {Promise<Object>} - Creation result
  */
 export async function createPromoCode(promoData) {
   try {
-    if (!db) {
-      console.error('❌ Firestore not initialized for promo codes');
-      return { success: false, error: 'Promo code service not available' };
-    }
-
     const {
       code,
-      discountType, // 'percent', 'fixed', 'free', 'free_days'
+      discountType,
       discountValue,
-      description,
-      maxUses,
-      expiryDate,
-      startDate,
-      active = true
+      maxUses = 1,
+      expiresAt = null,
+      description = '',
+      status = 'active'
     } = promoData;
-
+    
     if (!code || !discountType || discountValue === undefined) {
       return {
         success: false,
         error: 'Missing required fields: code, discountType, discountValue'
       };
     }
-
+    
     const codeUpper = code.trim().toUpperCase();
-
+    const db = getDb();
+    
     // Check if code already exists
-    const existing = await db.collection(COLLECTION_NAME)
+    const existingSnapshot = await db.collection(COLLECTION_NAME)
       .where('code', '==', codeUpper)
       .limit(1)
       .get();
-
-    if (!existing.empty) {
+    
+    if (!existingSnapshot.empty) {
       return {
         success: false,
         error: 'Promo code already exists'
       };
     }
-
-    // Create promo code document
+    
     const newPromo = {
       code: codeUpper,
       discountType,
       discountValue,
-      description: description || '',
-      maxUses: maxUses || null,
-      usedCount: 0,
-      active: active,
+      maxUses,
+      currentUses: 0,
+      status,
+      description,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      expiryDate: expiryDate ? admin.firestore.Timestamp.fromDate(new Date(expiryDate)) : null,
-      startDate: startDate ? admin.firestore.Timestamp.fromDate(new Date(startDate)) : null
+      expiresAt: expiresAt ? admin.firestore.Timestamp.fromDate(new Date(expiresAt)) : null
     };
-
+    
     const docRef = await db.collection(COLLECTION_NAME).add(newPromo);
-
+    
     return {
       success: true,
       promoId: docRef.id,
-      code: codeUpper,
-      ...newPromo
+      message: 'Promo code created successfully'
     };
-
+    
   } catch (error) {
     console.error('❌ Error creating promo code:', error);
     return {
       success: false,
-      error: error.message
+      error: 'Error creating promo code'
     };
   }
 }
 
 /**
  * Bulk create promo codes
- * @param {Object} config - Configuration for bulk creation
- * @returns {Object} - Result with created codes
+ * 
+ * @param {Object} options - Bulk create options
+ * @returns {Promise<Object>} - Creation result
  */
-export async function bulkCreatePromoCodes(config) {
+export async function bulkCreatePromoCodes(options) {
   try {
-    if (!db) {
-      console.error('❌ Firestore not initialized for promo codes');
-      return { success: false, error: 'Promo code service not available', created: 0, failed: 0, codes: [] };
-    }
-
     const {
-      count = 200,
-      prefix = 'FREE10',
-      discountType = 'free_days',
-      discountValue = 10,
-      description = '10 Free Days Campaign',
+      code,
+      count = 1,
+      discountType,
+      discountValue,
       maxUses = 1,
-      expiryDate = null,
-      startDate = null
-    } = config;
-
-    const createdCodes = [];
+      useSameCodeName = false,
+      expiresAt = null,
+      description = ''
+    } = options;
+    
+    if (!code || !discountType || discountValue === undefined) {
+      return {
+        success: false,
+        error: 'Missing required fields: code, discountType, discountValue'
+      };
+    }
+    
+    const created = [];
     const errors = [];
-
+    
+    const db = getDb();
+    
     for (let i = 0; i < count; i++) {
-      // Generate unique code: PREFIX + random 6 characters
-      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const code = `${prefix}-${randomSuffix}`;
-
-      const result = await createPromoCode({
-        code,
-        discountType,
-        discountValue,
-        description,
-        maxUses,
-        expiryDate,
-        startDate,
-        active: true
-      });
-
-      if (result.success) {
-        createdCodes.push({
-          code: result.code,
-          promoId: result.promoId
+      try {
+        let finalCode;
+        if (useSameCodeName) {
+          // Use same code name for all (e.g., "PROMO10")
+          finalCode = code.trim().toUpperCase();
+        } else {
+          // Generate unique code (e.g., "PROMO10-1234567890-ABC123")
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+          finalCode = `${code.trim().toUpperCase()}-${timestamp}-${random}`;
+        }
+        
+        const newPromo = {
+          code: finalCode,
+          discountType,
+          discountValue,
+          maxUses,
+          currentUses: 0,
+          status: 'active',
+          description,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          expiresAt: expiresAt ? admin.firestore.Timestamp.fromDate(new Date(expiresAt)) : null
+        };
+        
+        const docRef = await db.collection(COLLECTION_NAME).add(newPromo);
+        created.push({
+          id: docRef.id,
+          code: finalCode
         });
-      } else {
+        
+      } catch (error) {
         errors.push({
-          code,
-          error: result.error
+          index: i,
+          error: error.message
         });
       }
     }
-
+    
     return {
       success: true,
-      created: createdCodes.length,
-      failed: errors.length,
-      codes: createdCodes,
-      errors: errors
+      created: created.length,
+      errors: errors.length,
+      codes: created,
+      errorDetails: errors
     };
-
+    
   } catch (error) {
     console.error('❌ Error bulk creating promo codes:', error);
     return {
       success: false,
-      error: error.message
+      error: 'Error bulk creating promo codes'
     };
   }
 }
 
 /**
- * Get all promo codes (for admin dashboard)
- * @param {Object} filters - Optional filters
- * @returns {Object} - List of promo codes
+ * Get all promo codes
+ * 
+ * @returns {Promise<Object>} - List of promo codes
  */
-export async function getAllPromoCodes(filters = {}) {
+export async function getAllPromoCodes() {
   try {
-    if (!db) {
-      console.error('❌ Firestore not initialized for promo codes');
-      return { success: false, error: 'Promo code service not available', codes: [] };
-    }
-
-    let query = db.collection(COLLECTION_NAME);
-
-    if (filters.active !== undefined) {
-      query = query.where('active', '==', filters.active);
-    }
-
-    const snapshot = await query.orderBy('createdAt', 'desc').get();
+    const db = getDb();
     
-    const promoCodes = [];
-    snapshot.forEach(doc => {
+    // Try to fetch with orderBy, fallback to simple query if index missing
+    let snapshot;
+    try {
+      snapshot = await db.collection(COLLECTION_NAME)
+        .orderBy('createdAt', 'desc')
+        .get();
+    } catch (error) {
+      // If index missing, fetch without orderBy and sort client-side
+      console.warn('⚠️ Firestore index missing, fetching without orderBy');
+      snapshot = await db.collection(COLLECTION_NAME).get();
+    }
+    
+    const promoCodes = snapshot.docs.map(doc => {
       const data = doc.data();
-      promoCodes.push({
+      const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now());
+      const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : (data.expiresAt ? new Date(data.expiresAt) : null);
+      const lastUsedAt = data.lastUsedAt?.toDate ? data.lastUsedAt.toDate() : (data.lastUsedAt ? new Date(data.lastUsedAt) : null);
+      
+      return {
         id: doc.id,
         code: data.code,
         discountType: data.discountType,
         discountValue: data.discountValue,
-        description: data.description,
-        maxUses: data.maxUses,
-        usedCount: data.usedCount || 0,
-        remainingUses: data.maxUses ? data.maxUses - (data.usedCount || 0) : 'Unlimited',
-        active: data.active,
-        expiryDate: data.expiryDate ? data.expiryDate.toDate().toISOString() : null,
-        startDate: data.startDate ? data.startDate.toDate().toISOString() : null,
-        createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null
-      });
+        maxUses: data.maxUses || 0,
+        currentUses: data.currentUses || 0,
+        status: data.status || 'active',
+        description: data.description || '',
+        createdAt: createdAt.toISOString(),
+        expiresAt: expiresAt ? expiresAt.toISOString() : null,
+        lastUsedAt: lastUsedAt ? lastUsedAt.toISOString() : null
+      };
     });
-
+    
+    // Sort by createdAt if not already sorted
+    promoCodes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
     return {
       success: true,
-      codes: promoCodes,
+      promoCodes,
       count: promoCodes.length
     };
-
+    
   } catch (error) {
     console.error('❌ Error getting promo codes:', error);
     return {
       success: false,
-      error: error.message
+      error: 'Error getting promo codes',
+      promoCodes: [],
+      count: 0
+    };
+  }
+}
+
+/**
+ * Delete a promo code
+ * 
+ * @param {string} promoId - Promo code document ID
+ * @returns {Promise<Object>} - Deletion result
+ */
+export async function deletePromoCode(promoId) {
+  try {
+    const db = getDb();
+    await db.collection(COLLECTION_NAME).doc(promoId).delete();
+    
+    return {
+      success: true,
+      message: 'Promo code deleted successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ Error deleting promo code:', error);
+    return {
+      success: false,
+      error: 'Error deleting promo code'
+    };
+  }
+}
+
+/**
+ * Bulk delete promo codes
+ * 
+ * @param {Array<string>} promoIds - Array of promo code document IDs
+ * @returns {Promise<Object>} - Deletion result
+ */
+export async function bulkDeletePromoCodes(promoIds) {
+  try {
+    if (!Array.isArray(promoIds) || promoIds.length === 0) {
+      return {
+        success: false,
+        error: 'Invalid promo IDs array'
+      };
+    }
+    
+    const db = getDb();
+    const MAX_BATCH = 500; // Firestore batch limit
+    const batches = [];
+    let currentBatch = db.batch();
+    let count = 0;
+    let deleted = 0;
+    
+    for (const promoId of promoIds) {
+      const docRef = db.collection(COLLECTION_NAME).doc(promoId);
+      currentBatch.delete(docRef);
+      count++;
+      deleted++;
+      
+      if (count >= MAX_BATCH) {
+        batches.push(currentBatch);
+        currentBatch = db.batch();
+        count = 0;
+      }
+    }
+    
+    if (count > 0) {
+      batches.push(currentBatch);
+    }
+    
+    // Commit all batches
+    for (const batch of batches) {
+      await batch.commit();
+    }
+    
+    return {
+      success: true,
+      deleted,
+      message: `Successfully deleted ${deleted} promo code(s)`
+    };
+    
+  } catch (error) {
+    console.error('❌ Error bulk deleting promo codes:', error);
+    return {
+      success: false,
+      error: 'Error bulk deleting promo codes'
     };
   }
 }

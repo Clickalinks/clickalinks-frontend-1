@@ -1,211 +1,182 @@
 /**
  * Promo Code Routes
- * API endpoints for promo code validation and management
+ * Endpoints for promo code management
  */
 
 import express from 'express';
-import cors from 'cors';
 import {
   validatePromoCode,
   applyPromoCode,
   createPromoCode,
   bulkCreatePromoCodes,
-  getAllPromoCodes
+  getAllPromoCodes,
+  deletePromoCode,
+  bulkDeletePromoCodes
 } from '../services/promoCodeService.js';
 
 const router = express.Router();
 
-// CORS configuration for promo code routes
-const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://clickalinks-frontend.web.app',
-    'https://clickalinks-frontend.firebaseapp.com',
-    'https://clickalinks-frontend-1.onrender.com',
-    'https://www.clickalinks.com'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-API-Key'],
-  exposedHeaders: ['x-api-key', 'X-API-Key'],
-  optionsSuccessStatus: 204
+// Middleware to check admin API key for admin endpoints
+const checkAdminAuth = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'] || req.headers['X-API-Key'] || req.headers['X-API-KEY'];
+  const adminApiKey = process.env.ADMIN_API_KEY;
+  
+  if (!adminApiKey) {
+    return res.status(500).json({
+      success: false,
+      error: 'Admin authentication not configured'
+    });
+  }
+  
+  if (apiKey !== adminApiKey) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Invalid API key'
+    });
+  }
+  
+  next();
 };
 
-// Note: CORS is handled by main server.js middleware
-// No need for route-specific CORS here - it's already applied globally
-
-/**
- * POST /api/promo-code/validate
- * Validate a promo code
- * Body: { code: string, originalAmount?: number }
- */
+// Validate promo code (public endpoint)
 router.post('/validate', async (req, res) => {
   try {
-    const { code, originalAmount = 0 } = req.body;
-
+    const { code, originalAmount } = req.body;
+    
     if (!code) {
       return res.status(400).json({
         success: false,
+        valid: false,
         error: 'Promo code is required'
       });
     }
-
-    const result = await validatePromoCode(code, originalAmount);
-
-    if (result.valid) {
-      res.json({
-        success: true,
-        valid: true,
-        ...result
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        valid: false,
-        error: result.error
-      });
-    }
-
+    
+    const result = await validatePromoCode(code, originalAmount || 0);
+    res.json(result);
   } catch (error) {
     console.error('❌ Error validating promo code:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      valid: false,
+      error: 'Error validating promo code'
     });
   }
 });
 
-/**
- * POST /api/promo-code/apply
- * Apply/use a promo code (increment usage)
- * Body: { code: string, purchaseId: string }
- */
+// Apply promo code (increment usage)
 router.post('/apply', async (req, res) => {
   try {
-    const { code, purchaseId } = req.body;
-
-    if (!code || !purchaseId) {
+    const { promoId } = req.body;
+    
+    if (!promoId) {
       return res.status(400).json({
         success: false,
-        error: 'Code and purchaseId are required'
+        error: 'Promo ID is required'
       });
     }
-
-    const result = await applyPromoCode(code, purchaseId);
-
-    if (result.success) {
-      res.json(result);
-    } else {
-      res.status(400).json(result);
-    }
-
+    
+    const result = await applyPromoCode(promoId);
+    res.json(result);
   } catch (error) {
     console.error('❌ Error applying promo code:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Error applying promo code'
     });
   }
 });
 
-/**
- * POST /api/promo-code/create
- * Create a new promo code (admin only)
- * Requires ADMIN_API_KEY in header
- */
-router.post('/create', async (req, res) => {
+// Create single promo code (admin only)
+router.post('/create', checkAdminAuth, async (req, res) => {
   try {
-    // Basic admin authentication
-    const apiKey = req.headers['x-api-key'];
-    if (!apiKey || apiKey !== process.env.ADMIN_API_KEY) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: Invalid API Key'
-      });
-    }
-
     const result = await createPromoCode(req.body);
-
+    
     if (result.success) {
       res.json(result);
     } else {
       res.status(400).json(result);
     }
-
   } catch (error) {
     console.error('❌ Error creating promo code:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Error creating promo code'
     });
   }
 });
 
-/**
- * POST /api/promo-code/bulk-create
- * Bulk create promo codes (for campaigns)
- * Requires ADMIN_API_KEY in header
- */
-router.post('/bulk-create', async (req, res) => {
+// Bulk create promo codes (admin only)
+router.post('/bulk-create', checkAdminAuth, async (req, res) => {
   try {
-    // Basic admin authentication
-    const apiKey = req.headers['x-api-key'];
-    if (!apiKey || apiKey !== process.env.ADMIN_API_KEY) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: Invalid API Key'
-      });
-    }
-
     const result = await bulkCreatePromoCodes(req.body);
-
     res.json(result);
-
   } catch (error) {
     console.error('❌ Error bulk creating promo codes:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Error bulk creating promo codes'
     });
   }
 });
 
-/**
- * GET /api/promo-code/list
- * Get all promo codes (admin only)
- * Requires ADMIN_API_KEY in header
- */
-router.get('/list', async (req, res) => {
+// List all promo codes (admin only)
+router.get('/list', checkAdminAuth, async (req, res) => {
   try {
-    // Basic admin authentication
-    const apiKey = req.headers['x-api-key'];
-    if (!apiKey || apiKey !== process.env.ADMIN_API_KEY) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: Invalid API Key'
-      });
-    }
-
-    const filters = {
-      active: req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined
-    };
-
-    const result = await getAllPromoCodes(filters);
-
+    const result = await getAllPromoCodes();
     res.json(result);
-
   } catch (error) {
     console.error('❌ Error getting promo codes:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Error getting promo codes',
+      promoCodes: [],
+      count: 0
     });
   }
 });
 
-// Note: OPTIONS requests are handled by main server.js CORS middleware
-// The main app.options('*') handler in server.js covers all routes
-// router.options('*') and router.use(cors()) above are sufficient
+// Delete single promo code (admin only)
+router.delete('/:id', checkAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await deletePromoCode(id);
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('❌ Error deleting promo code:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error deleting promo code'
+    });
+  }
+});
+
+// Bulk delete promo codes (admin only)
+router.post('/bulk-delete', checkAdminAuth, async (req, res) => {
+  try {
+    const { promoIds } = req.body;
+    
+    if (!Array.isArray(promoIds) || promoIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'promoIds array is required'
+      });
+    }
+    
+    const result = await bulkDeletePromoCodes(promoIds);
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Error bulk deleting promo codes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error bulk deleting promo codes'
+    });
+  }
+});
 
 export default router;
 

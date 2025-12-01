@@ -11,6 +11,7 @@ import promoCodeRoutes from './routes/promoCode.js';
 dotenv.config();
 
 console.log('🔄 Starting server initialization...');
+console.log('🔑 ADMIN_API_KEY check:', process.env.ADMIN_API_KEY ? `SET (${process.env.ADMIN_API_KEY.substring(0, 10)}...)` : 'NOT SET');
 
 
 const app = express();
@@ -21,7 +22,17 @@ console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
 console.log('Key starts with:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...' : 'NO KEY');
 console.log('Key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe - handle missing key gracefully
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  console.log('✅ Stripe initialized');
+} else {
+  console.warn('⚠️ STRIPE_SECRET_KEY not found in environment variables');
+  console.warn('⚠️ Stripe functionality will not work until STRIPE_SECRET_KEY is set');
+  // Create a dummy stripe object to prevent crashes
+  stripe = null;
+}
 const PORT = process.env.PORT || 10000;
 
 // CRITICAL: Manual CORS handling - NO cors() middleware to avoid conflicts
@@ -37,32 +48,57 @@ const allowedOrigins = [
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Set CORS headers for allowed origins
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  
-  // CRITICAL: Handle OPTIONS preflight requests
+  // CRITICAL: Handle OPTIONS preflight requests FIRST
+  // Must set headers BEFORE checking origin for preflight to work
   if (req.method === 'OPTIONS') {
-    // CRITICAL: Explicitly allow x-api-key header (all case variations)
+    // Set CORS headers for preflight - must include origin if it's allowed
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    
+    // CRITICAL: Check what headers the browser is requesting
+    const requestedHeaders = req.headers['access-control-request-headers'] || '';
+    
+    // Build allowed headers list - include x-api-key in lowercase first (most common)
+    // Include all case variations to be safe
+    const allowedHeadersList = [
+      'Content-Type',
+      'Authorization', 
+      'x-api-key',  // Lowercase - most common
+      'X-API-Key',
+      'X-API-KEY',
+      'Accept',
+      'Origin',
+      'X-Requested-With'
+    ].join(', ');
+    
+    // CRITICAL: Always set these headers for OPTIONS requests
+    // Browser needs these in preflight response to allow the actual request
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, x-API-key, X-api-key, Accept, Origin, X-Requested-With');
+    res.setHeader('Access-Control-Allow-Headers', allowedHeadersList);
     res.setHeader('Access-Control-Max-Age', '86400');
     
     console.log('🚨 OPTIONS preflight handled:', {
       origin: origin,
       path: req.path,
-      requestedHeaders: req.headers['access-control-request-headers'] || '',
-      allowedHeaders: 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, x-API-key, X-api-key, Accept, Origin, X-Requested-With'
+      requestedHeaders: requestedHeaders,
+      allowedHeaders: allowedHeadersList,
+      originAllowed: origin && allowedOrigins.includes(origin)
     });
     
     return res.status(204).end();
   }
   
-  // For non-OPTIONS requests, set CORS headers and continue
+  // For non-OPTIONS requests, set CORS headers for allowed origins
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  // Always set these headers for actual requests
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, x-API-key, X-api-key, Accept, Origin, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, X-API-Key, X-API-KEY, Accept, Origin, X-Requested-With');
   
   next();
 });
@@ -70,6 +106,7 @@ app.use((req, res, next) => {
 console.log('✅ CORS configured: Manual handling (no cors() middleware)');
 
 // Increase body size limit for logo uploads (10MB)
+// CRITICAL: Must be before routes to parse DELETE request bodies
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -92,12 +129,12 @@ app.get('/api/test-cors', (req, res) => {
   res.json({
     success: true,
     message: 'CORS test endpoint',
-    headers: {
-      origin: req.headers.origin,
-      'x-api-key': req.headers['x-api-key'] ? 'present' : 'missing'
-    }
+      headers: {
+        origin: req.headers.origin,
+        'x-api-key': req.headers['x-api-key'] ? 'present' : 'missing'
+      }
+    });
   });
-});
 
 // Root route
 app.get('/', (req, res) => {
@@ -125,7 +162,6 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-
 // Test CORS endpoint
 app.get('/api/test-cors', (req, res) => {
   res.json({
@@ -200,6 +236,13 @@ app.post('/api/create-checkout-session', async (req, res) => {
       });
     }
 
+    if (!stripe) {
+      return res.status(500).json({
+        success: false,
+        error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables.'
+      });
+    }
+    
     console.log(`🔄 Creating Stripe session for Square #${squareNumber}, Amount: £${amount}`);
     
     const session = await stripe.checkout.sessions.create({
@@ -256,6 +299,13 @@ app.post('/api/create-checkout-session', async (req, res) => {
 // Check session status
 app.get('/api/check-session/:sessionId', async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(500).json({
+        success: false,
+        error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables.'
+      });
+    }
+    
     const { sessionId } = req.params;
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     
