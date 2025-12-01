@@ -1,16 +1,22 @@
 /**
  * Fisher-Yates Shuffle Service
- * Backend service for shuffling advertising squares
+ * Clean implementation for shuffling advertising squares
  * Uses Fisher-Yates algorithm for efficient O(n) shuffling
  */
 
 import admin from '../config/firebaseAdmin.js';
 
-// Use admin.firestore() directly for better compatibility
-// This ensures Firebase Admin is properly initialized before accessing Firestore
-const db = admin.firestore();
+// Get Firestore instance lazily to ensure Firebase Admin is initialized
+const getDb = () => {
+  try {
+    return admin.firestore();
+  } catch (error) {
+    console.error('❌ Error getting Firestore instance:', error);
+    throw new Error('Firebase Admin not initialized. Check Firebase configuration.');
+  }
+};
 
-const COLLECTION_NAME = 'purchasedSquares'; // Consistent camelCase
+const COLLECTION_NAME = 'purchasedSquares';
 
 /**
  * Fisher-Yates Shuffle Algorithm
@@ -26,14 +32,19 @@ function fisherYatesShuffle(array, seed = null) {
   const shuffled = [...array];
   const length = shuffled.length;
   
-  // Use seed for deterministic shuffling (same seed = same shuffle order)
-  let random = seed !== null 
-    ? () => {
-        seed = (seed * 9301 + 49297) % 233280;
-        return seed / 233280;
-      }
-    : () => Math.random();
+  // Seeded random number generator for deterministic shuffling
+  let random;
+  if (seed !== null) {
+    let currentSeed = seed;
+    random = () => {
+      currentSeed = (currentSeed * 9301 + 49297) % 233280;
+      return currentSeed / 233280;
+    };
+  } else {
+    random = () => Math.random();
+  }
   
+  // Fisher-Yates: iterate from end to beginning
   for (let i = length - 1; i > 0; i--) {
     const randomIndex = Math.floor(random() * (i + 1));
     [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
@@ -45,14 +56,15 @@ function fisherYatesShuffle(array, seed = null) {
 /**
  * Get time-based seed for deterministic shuffling
  * Same time period = same seed = same shuffle order for all users
+ * Shuffles happen every 2 hours
  * 
  * @returns {number} - Seed based on current 2-hour period
  */
 function getTimeBasedSeed() {
   const SHUFFLE_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
   const now = Date.now();
-  const currentPeriod = Math.floor(now / SHUFFLE_INTERVAL);
-  return currentPeriod;
+  const periodStart = Math.floor(now / SHUFFLE_INTERVAL) * SHUFFLE_INTERVAL;
+  return periodStart;
 }
 
 /**
@@ -65,48 +77,45 @@ export async function performGlobalShuffle() {
   const startTime = Date.now();
   
   try {
-    // Verify Firestore is initialized
-    if (!db) {
-      throw new Error('Firestore database not initialized. Check Firebase Admin configuration.');
-    }
-    
     console.log('🔄 Starting Fisher-Yates shuffle...');
     
-    // Get seed for deterministic shuffling
+    // Get time-based seed for deterministic shuffling
     const seed = getTimeBasedSeed();
-    console.log(`📊 Using seed: ${seed} (2-hour period)`);
+    console.log(`🌱 Using seed: ${seed}`);
     
-    // STEP 1: Get all active, paid purchases
-    let purchasesSnapshot;
-    try {
-      purchasesSnapshot = await db.collection(COLLECTION_NAME)
-        .where('status', '==', 'active')
-        .where('paymentStatus', '==', 'paid')
-        .get();
-    } catch (firestoreError) {
-      console.error('❌ Firestore query error:', firestoreError);
-      throw new Error(`Firestore error: ${firestoreError.message}. Check Firebase configuration and Project ID.`);
-    }
+    // STEP 1: Fetch all active purchases from Firestore
+    const db = getDb();
+    const purchasesSnapshot = await db.collection(COLLECTION_NAME)
+      .where('status', '==', 'active')
+      .get();
     
     if (purchasesSnapshot.empty) {
-      console.log('ℹ️ No purchases to shuffle');
+      console.log('ℹ️ No active purchases to shuffle');
       return {
         success: true,
         shuffledCount: 0,
         message: 'No active purchases to shuffle',
+        seed: seed,
         duration: Date.now() - startTime
       };
     }
     
-    const purchases = [];
-    purchasesSnapshot.forEach(doc => {
-      purchases.push({
-        docId: doc.id,
-        ...doc.data()
-      });
-    });
+    // Convert to array
+    const purchases = purchasesSnapshot.docs.map(doc => ({
+      docId: doc.id,
+      purchaseId: doc.data().purchaseId || doc.id,
+      squareNumber: doc.data().squareNumber,
+      pageNumber: doc.data().pageNumber,
+      ...doc.data()
+    }));
     
     console.log(`📊 Found ${purchases.length} active purchases to shuffle`);
+    
+    // Limit to 2000 purchases (one per square)
+    if (purchases.length > 2000) {
+      console.warn(`⚠️ More purchases (${purchases.length}) than squares (2000), shuffling first 2000`);
+      purchases.splice(2000);
+    }
     
     // STEP 2: Generate array of all available squares (1-2000)
     const allSquares = Array.from({ length: 2000 }, (_, i) => i + 1);
@@ -115,36 +124,68 @@ export async function performGlobalShuffle() {
     const shuffledSquares = fisherYatesShuffle(allSquares, seed);
     
     // STEP 4: Assign purchases to shuffled squares
-    const batch = db.batch();
-    const assignments = [];
+    const assignments = purchases.map((purchase, index) => ({
+      docId: purchase.docId,
+      purchaseId: purchase.purchaseId,
+      oldSquareNumber: purchase.squareNumber,
+      newSquareNumber: shuffledSquares[index],
+      oldPageNumber: purchase.pageNumber,
+      newPageNumber: Math.ceil(shuffledSquares[index] / 200)
+    }));
     
-    purchases.forEach((purchase, index) => {
-      if (index < shuffledSquares.length) {
-        const newSquareNumber = shuffledSquares[index];
-        const newPageNumber = Math.ceil(newSquareNumber / 200);
-        
-        assignments.push({
-          docId: purchase.docId,
-          purchaseId: purchase.purchaseId || purchase.docId,
-          oldSquareNumber: purchase.squareNumber,
-          newSquareNumber: newSquareNumber,
-          oldPageNumber: purchase.pageNumber,
-          newPageNumber: newPageNumber
-        });
-        
-        // Update document
-        const docRef = db.collection(COLLECTION_NAME).doc(purchase.docId);
-        batch.update(docRef, {
-          squareNumber: newSquareNumber,
-          pageNumber: newPageNumber,
-          shuffledAt: admin.firestore.FieldValue.serverTimestamp(),
-          shuffleSeed: seed
-        });
+    // STEP 5: Verify no duplicates
+    const squareNumbers = new Set();
+    const purchaseIds = new Set();
+    
+    for (const assignment of assignments) {
+      if (squareNumbers.has(assignment.newSquareNumber)) {
+        throw new Error(`Duplicate square detected: ${assignment.newSquareNumber}`);
       }
-    });
+      if (purchaseIds.has(assignment.purchaseId)) {
+        throw new Error(`Duplicate purchase detected: ${assignment.purchaseId}`);
+      }
+      squareNumbers.add(assignment.newSquareNumber);
+      purchaseIds.add(assignment.purchaseId);
+    }
     
-    // STEP 5: Commit batch update
-    await batch.commit();
+    console.log(`✅ Pre-commit verification: ${assignments.length} unique assignments`);
+    
+    // STEP 6: Batch update (Firestore limit: 500 operations per batch)
+    const db = getDb();
+    const MAX_BATCH = 500;
+    const batches = [];
+    let currentBatch = db.batch();
+    let count = 0;
+    
+    for (const assignment of assignments) {
+      const docRef = db.collection(COLLECTION_NAME).doc(assignment.docId);
+      currentBatch.update(docRef, {
+        squareNumber: assignment.newSquareNumber,
+        pageNumber: assignment.newPageNumber,
+        shuffledAt: admin.firestore.FieldValue.serverTimestamp(),
+        shuffleSeed: seed
+      });
+      
+      count++;
+      
+      if (count >= MAX_BATCH) {
+        batches.push(currentBatch);
+        currentBatch = db.batch();
+        count = 0;
+      }
+    }
+    
+    // Add final batch if it has operations
+    if (count > 0) {
+      batches.push(currentBatch);
+    }
+    
+    // STEP 7: Commit all batches
+    console.log(`💾 Committing ${batches.length} batch(es)...`);
+    for (let i = 0; i < batches.length; i++) {
+      await batches[i].commit();
+      console.log(`✅ Batch ${i + 1}/${batches.length} committed`);
+    }
     
     const duration = Date.now() - startTime;
     console.log(`✅ Shuffle completed: ${assignments.length} purchases shuffled in ${duration}ms`);
@@ -155,18 +196,12 @@ export async function performGlobalShuffle() {
       message: `Successfully shuffled ${assignments.length} purchases`,
       seed: seed,
       duration: duration,
-      timestamp: new Date().toISOString(),
-      assignments: assignments.slice(0, 10) // Return first 10 for logging
+      batches: batches.length
     };
     
   } catch (error) {
-    console.error('❌ Error performing shuffle:', error);
-    return {
-      success: false,
-      error: error.message,
-      errorCode: 'SHUFFLE_ERROR',
-      duration: Date.now() - startTime
-    };
+    console.error('❌ Shuffle error:', error);
+    throw error;
   }
 }
 
@@ -177,60 +212,57 @@ export async function performGlobalShuffle() {
  */
 export async function getShuffleStats() {
   try {
-    // Verify Firestore is initialized
-    if (!db) {
-      return {
-        success: false,
-        error: 'Firestore database not initialized. Check Firebase Admin configuration.',
-        totalPurchases: 0,
-        shuffledPurchases: 0,
-        lastShuffle: null,
-        shuffleInterval: '2 hours'
-      };
+    const db = getDb();
+    
+    // Get total purchases
+    const totalSnapshot = await db.collection(COLLECTION_NAME)
+      .where('status', '==', 'active')
+      .get();
+    
+    const totalPurchases = totalSnapshot.size;
+    
+    // Get shuffled purchases (have shuffleSeed)
+    const shuffledSnapshot = await db.collection(COLLECTION_NAME)
+      .where('status', '==', 'active')
+      .where('shuffleSeed', '!=', null)
+      .get();
+    
+    const shuffledPurchases = shuffledSnapshot.size;
+    
+    // Get last shuffle time
+    let lastShuffle = null;
+    if (shuffledSnapshot.size > 0) {
+      const lastShuffledDoc = shuffledSnapshot.docs
+        .map(doc => ({ id: doc.id, shuffledAt: doc.data().shuffledAt }))
+        .filter(doc => doc.shuffledAt)
+        .sort((a, b) => {
+          const aTime = a.shuffledAt?.toMillis?.() || 0;
+          const bTime = b.shuffledAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        })[0];
+      
+      if (lastShuffledDoc?.shuffledAt) {
+        lastShuffle = lastShuffledDoc.shuffledAt.toDate().toISOString();
+      }
     }
-    
-    let purchasesSnapshot;
-    try {
-      purchasesSnapshot = await db.collection(COLLECTION_NAME)
-        .where('status', '==', 'active')
-        .where('paymentStatus', '==', 'paid')
-        .get();
-    } catch (firestoreError) {
-      console.error('❌ Firestore query error:', firestoreError);
-      return {
-        success: false,
-        error: `Firestore error: ${firestoreError.message}. Check Firebase configuration and Project ID.`,
-        totalPurchases: 0,
-        shuffledPurchases: 0,
-        lastShuffle: null,
-        shuffleInterval: '2 hours'
-      };
-    }
-    
-    const totalPurchases = purchasesSnapshot.size;
-    const shuffledPurchases = purchasesSnapshot.docs.filter(doc => {
-      const data = doc.data();
-      return data.shuffledAt !== undefined;
-    }).length;
-    
-    const lastShuffle = purchasesSnapshot.docs
-      .map(doc => doc.data().shuffledAt)
-      .filter(date => date !== undefined)
-      .sort((a, b) => b.toMillis() - a.toMillis())[0];
     
     return {
       success: true,
       totalPurchases: totalPurchases,
       shuffledPurchases: shuffledPurchases,
-      lastShuffle: lastShuffle ? lastShuffle.toDate().toISOString() : null,
-      nextShuffleSeed: getTimeBasedSeed() + 1,
+      lastShuffle: lastShuffle,
       shuffleInterval: '2 hours'
     };
+    
   } catch (error) {
     console.error('❌ Error getting shuffle stats:', error);
+    // Return safe defaults if collection doesn't exist
     return {
-      success: false,
-      error: error.message
+      success: true,
+      totalPurchases: 0,
+      shuffledPurchases: 0,
+      lastShuffle: null,
+      shuffleInterval: '2 hours'
     };
   }
 }

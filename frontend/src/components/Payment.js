@@ -330,8 +330,7 @@ const Payment = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              code: promoCode.toUpperCase(),
-              purchaseId: fakeSessionId
+              promoId: appliedPromo.promoId
             })
           }).catch(err => console.warn('Promo code tracking failed:', err));
         }

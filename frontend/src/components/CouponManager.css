@@ -1,98 +1,199 @@
-/* Coupon Manager Styles */
-
 .coupon-manager {
-  max-width: 1200px;
+  padding: 2rem;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-.coupon-manager h2 {
-  color: #333;
-  margin-bottom: 2rem;
-}
-
-.error-message {
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  color: #721c24;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.success-message {
-  background: #d4edda;
-  border: 1px solid #c3e6cb;
-  color: #155724;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-/* Tabs */
-.coupon-tabs {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.coupon-tabs button {
-  padding: 12px 24px;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
-  color: #666;
-  transition: all 0.2s;
-  margin-bottom: -2px;
-}
-
-.coupon-tabs button:hover {
-  color: #667eea;
-}
-
-.coupon-tabs button.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
-}
-
-/* List View */
-.coupon-list {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-}
-
-.list-header {
+.coupon-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
 }
 
-.list-header h3 {
+.coupon-header h2 {
   margin: 0;
   color: #333;
 }
 
-.btn-refresh,
-.btn-export {
-  padding: 10px 20px;
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-create,
+.btn-bulk,
+.btn-delete-selected {
+  padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-refresh {
+.btn-create {
+  background: #28a745;
+  color: white;
+}
+
+.btn-create:hover {
+  background: #218838;
+}
+
+.btn-bulk {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-bulk:hover {
+  background: #138496;
+}
+
+.btn-delete-selected {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-delete-selected:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.btn-delete-selected:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.success-message {
+  background: #efe;
+  border: 1px solid #cfc;
+  color: #3c3;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.form-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.form-card h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn-submit {
+  padding: 0.75rem 1.5rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  padding: 0.75rem 1.5rem;
   background: #6c757d;
   color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-cancel:hover {
+  background: #5a6268;
+}
+
+.coupon-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.coupon-list-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.btn-refresh {
+  padding: 0.5rem 1rem;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .btn-refresh:hover:not(:disabled) {
@@ -104,183 +205,86 @@
   cursor: not-allowed;
 }
 
-.btn-export {
-  background: #28a745;
-  color: white;
-}
-
-.btn-export:hover {
-  background: #218838;
-}
-
-.loading {
+.loading,
+.empty-state {
   text-align: center;
-  padding: 2rem;
+  padding: 3rem;
   color: #666;
 }
 
-.no-codes {
-  text-align: center;
-  padding: 3rem;
-  color: #999;
-  font-style: italic;
-}
-
-/* Table */
-.codes-table {
+.coupon-table-container {
   overflow-x: auto;
 }
 
-.codes-table table {
+.coupon-table {
   width: 100%;
   border-collapse: collapse;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.codes-table th {
+.coupon-table thead {
   background: #f8f9fa;
-  padding: 12px;
+}
+
+.coupon-table th,
+.coupon-table td {
+  padding: 1rem;
   text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.coupon-table th {
   font-weight: 600;
   color: #333;
-  border-bottom: 2px solid #e0e0e0;
 }
 
-.codes-table td {
-  padding: 12px;
-  border-bottom: 1px solid #e0e0e0;
-  color: #666;
-}
-
-.codes-table tr:hover {
+.coupon-table tbody tr:hover {
   background: #f8f9fa;
 }
 
-.codes-table code {
-  background: #f5f5f5;
-  padding: 4px 8px;
-  border-radius: 4px;
+.code-cell {
   font-family: monospace;
-  font-size: 14px;
+  font-weight: 500;
+  color: #007bff;
 }
 
 .status-badge {
-  padding: 4px 12px;
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
   border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.status-badge.active {
+.status-active {
   background: #d4edda;
   color: #155724;
 }
 
-.status-badge.inactive {
+.status-inactive {
   background: #f8d7da;
   color: #721c24;
 }
 
-/* Form */
-.coupon-form {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-}
-
-.coupon-form h3 {
-  color: #333;
-  margin-top: 0;
-  margin-bottom: 2rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 16px;
-  box-sizing: border-box;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.btn-primary {
-  padding: 14px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.btn-delete {
+  padding: 0.5rem 1rem;
+  background: #dc3545;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.2s;
+  font-size: 0.875rem;
 }
 
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+.btn-delete:hover:not(:disabled) {
+  background: #c82333;
 }
 
-.btn-primary:disabled {
+.btn-delete:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .list-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .btn-refresh,
-  .btn-export {
-    width: 100%;
-  }
-
-  .codes-table {
-    font-size: 14px;
-  }
-
-  .codes-table th,
-  .codes-table td {
-    padding: 8px;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .coupon-tabs {
-    flex-direction: column;
-  }
-
-  .coupon-tabs button {
-    width: 100%;
-    text-align: left;
-  }
 }
 

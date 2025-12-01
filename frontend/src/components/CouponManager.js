@@ -1,47 +1,42 @@
 /**
  * Coupon Manager Component
- * Admin interface for managing promo codes/coupons
+ * Admin interface for managing promo codes
  */
 
 import React, { useState, useEffect } from 'react';
 import './CouponManager.css';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:10000';
+const ADMIN_API_KEY = process.env.REACT_APP_ADMIN_API_KEY || '';
+
 const CouponManager = () => {
   const [promoCodes, setPromoCodes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('list');
-  const [selectedCodes, setSelectedCodes] = useState([]);
+  const [selectedCodes, setSelectedCodes] = useState(new Set());
   
-  // Single coupon form
-  const [singleForm, setSingleForm] = useState({
+  // Form states
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showBulkForm, setShowBulkForm] = useState(false);
+  const [formData, setFormData] = useState({
     code: '',
     discountType: 'percentage',
-    discountValue: 0,
-    freeDays: 0,
-    description: '',
-    maxUses: null,
-    startDate: '',
-    expiryDate: ''
+    discountValue: 10,
+    maxUses: 1,
+    expiresAt: '',
+    description: ''
   });
-  
-  // Bulk coupon form
-  const [bulkForm, setBulkForm] = useState({
-    count: 220,
+  const [bulkFormData, setBulkFormData] = useState({
+    code: '',
+    count: 10,
     discountType: 'percentage',
-    discountValue: 0,
-    freeDays: 0,
-    description: '',
-    maxUses: 1, // Default to 1 use per code
-    startDate: '',
-    expiryDate: '',
-    prefix: 'PROMO10', // Default prefix
-    sameCodeName: true // All codes will have the same name
+    discountValue: 10,
+    maxUses: 1,
+    useSameCodeName: false,
+    expiresAt: '',
+    description: ''
   });
-
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
-  const ADMIN_API_KEY = process.env.REACT_APP_ADMIN_API_KEY || '';
 
   useEffect(() => {
     loadPromoCodes();
@@ -50,230 +45,133 @@ const CouponManager = () => {
   const loadPromoCodes = async () => {
     setLoading(true);
     setError('');
-    
+
     try {
       if (!ADMIN_API_KEY) {
-        setError('⚠️ ADMIN_API_KEY not configured. Promo code management requires API key.');
-        setLoading(false);
-        return;
-      }
-
-      if (!BACKEND_URL) {
-        setError('⚠️ Backend URL not configured. Please set REACT_APP_BACKEND_URL.');
-        setLoading(false);
+        setError('ADMIN_API_KEY not configured');
         return;
       }
 
       const response = await fetch(`${BACKEND_URL}/api/promo-code/list`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ADMIN_API_KEY
+          'x-api-key': ADMIN_API_KEY,
+          'Content-Type': 'application/json'
         }
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setPromoCodes(result.promoCodes || []);
-        setError(''); // Clear any previous errors
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setPromoCodes(data.promoCodes || []);
       } else {
-        let errorText = '';
-        try {
-          errorText = await response.text();
-        } catch (e) {
-          errorText = 'Unable to read error response';
-        }
-        
-        const errorMessage = errorText || response.statusText || 'Unknown error';
-        setError(`Failed to load coupons: ${response.status} ${errorMessage}`);
-        console.error('Error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
+        setError(data.error || 'Failed to load promo codes');
       }
     } catch (err) {
-      // Handle network errors, CORS errors, etc.
-      const errorMessage = err.message || 'Network error';
-      const isNetworkError = err.message?.includes('Failed to fetch') || 
-                           err.message?.includes('NetworkError') ||
-                           err.message?.includes('CORS');
-      
-      if (isNetworkError) {
-        setError(`Unable to connect to backend server. Please check:\n1. Backend URL: ${BACKEND_URL}\n2. Network connection\n3. CORS configuration`);
-      } else {
-        setError(`Error loading coupons: ${errorMessage}`);
-      }
       console.error('Error loading promo codes:', err);
+      setError(`Error loading promo codes: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const createSinglePromoCode = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      if (!ADMIN_API_KEY) {
-        setError('⚠️ ADMIN_API_KEY not configured.');
-        setLoading(false);
-        return;
-      }
-
-      if (!BACKEND_URL) {
-        setError('⚠️ Backend URL not configured.');
-        setLoading(false);
-        return;
-      }
-
       const response = await fetch(`${BACKEND_URL}/api/promo-code/create`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ADMIN_API_KEY
+          'x-api-key': ADMIN_API_KEY,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(singleForm)
+        body: JSON.stringify({
+          ...formData,
+          expiresAt: formData.expiresAt || null
+        })
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setSuccess(`✅ Promo code created: ${result.code || singleForm.code}`);
-        setSingleForm({
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccess('✅ Promo code created successfully!');
+        setShowCreateForm(false);
+        setFormData({
           code: '',
           discountType: 'percentage',
-          discountValue: 0,
-          freeDays: 0,
-          description: '',
-          maxUses: null,
-          startDate: '',
-          expiryDate: ''
+          discountValue: 10,
+          maxUses: 1,
+          expiresAt: '',
+          description: ''
         });
         await loadPromoCodes();
       } else {
-        let errorText = '';
-        try {
-          errorText = await response.text();
-        } catch (e) {
-          errorText = 'Unable to read error response';
-        }
-        
-        const errorMessage = errorText || response.statusText || 'Unknown error';
-        setError(`Failed to create coupon: ${response.status} ${errorMessage}`);
-        console.error('Create coupon error:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
+        setError(data.error || 'Failed to create promo code');
       }
     } catch (err) {
-      const errorMessage = err.message || 'Network error';
-      const isNetworkError = err.message?.includes('Failed to fetch') || 
-                           err.message?.includes('NetworkError') ||
-                           err.message?.includes('CORS');
-      
-      if (isNetworkError) {
-        setError(`Unable to connect to backend server. Please check your network connection and backend URL: ${BACKEND_URL}`);
-      } else {
-        setError(`Error creating coupon: ${errorMessage}`);
-      }
       console.error('Error creating promo code:', err);
+      setError(`Error creating promo code: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const createBulkPromoCodes = async (e) => {
+  const handleBulkCreate = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      if (!ADMIN_API_KEY) {
-        setError('⚠️ ADMIN_API_KEY not configured.');
-        setLoading(false);
-        return;
-      }
-
-      if (!BACKEND_URL) {
-        setError('⚠️ Backend URL not configured.');
-        setLoading(false);
-        return;
-      }
-
       const response = await fetch(`${BACKEND_URL}/api/promo-code/bulk-create`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ADMIN_API_KEY
+          'x-api-key': ADMIN_API_KEY,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(bulkForm)
+        body: JSON.stringify({
+          ...bulkFormData,
+          expiresAt: bulkFormData.expiresAt || null
+        })
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setSuccess(`✅ Created ${result.count || bulkForm.count} promo codes successfully!`);
-        setBulkForm({
-          count: 220,
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccess(`✅ Created ${data.created} promo code(s)!`);
+        setShowBulkForm(false);
+        setBulkFormData({
+          code: '',
+          count: 10,
           discountType: 'percentage',
-          discountValue: 0,
-          freeDays: 0,
-          description: '',
+          discountValue: 10,
           maxUses: 1,
-          startDate: '',
-          expiryDate: '',
-          prefix: 'PROMO10',
-          sameCodeName: true
+          useSameCodeName: false,
+          expiresAt: '',
+          description: ''
         });
         await loadPromoCodes();
       } else {
-        let errorText = '';
-        try {
-          errorText = await response.text();
-        } catch (e) {
-          errorText = 'Unable to read error response';
-        }
-        
-        const errorMessage = errorText || response.statusText || 'Unknown error';
-        setError(`Failed to create coupons: ${response.status} ${errorMessage}`);
-        console.error('Bulk create coupon error:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
+        setError(data.error || 'Failed to bulk create promo codes');
       }
     } catch (err) {
-      const errorMessage = err.message || 'Network error';
-      const isNetworkError = err.message?.includes('Failed to fetch') || 
-                           err.message?.includes('NetworkError') ||
-                           err.message?.includes('CORS');
-      
-      if (isNetworkError) {
-        setError(`Unable to connect to backend server. Please check your network connection and backend URL: ${BACKEND_URL}`);
-      } else {
-        setError(`Error creating coupons: ${errorMessage}`);
-      }
-      console.error('Error creating promo codes:', err);
+      console.error('Error bulk creating promo codes:', err);
+      setError(`Error bulk creating promo codes: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const exportPromoCodes = () => {
-    const dataStr = JSON.stringify(promoCodes, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `promo-codes-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-  };
-
-  const deletePromoCode = async (promoId) => {
-    if (!window.confirm('Are you sure you want to delete this promo code? This action cannot be undone.')) {
+  const handleDelete = async (promoId) => {
+    if (!window.confirm('Are you sure you want to delete this promo code?')) {
       return;
     }
 
@@ -282,43 +180,37 @@ const CouponManager = () => {
     setSuccess('');
 
     try {
-      if (!ADMIN_API_KEY) {
-        setError('⚠️ ADMIN_API_KEY not configured.');
-        setLoading(false);
-        return;
-      }
-
       const response = await fetch(`${BACKEND_URL}/api/promo-code/${promoId}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ADMIN_API_KEY
+          'x-api-key': ADMIN_API_KEY,
+          'Content-Type': 'application/json'
         }
       });
 
-      if (response.ok) {
-        setSuccess('✅ Promo code deleted successfully');
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccess('✅ Promo code deleted successfully!');
         await loadPromoCodes();
-        setSelectedCodes(selectedCodes.filter(id => id !== promoId));
       } else {
-        const errorText = await response.text();
-        setError(`Failed to delete coupon: ${errorText}`);
+        setError(data.error || 'Failed to delete promo code');
       }
     } catch (err) {
-      setError(`Error deleting coupon: ${err.message}`);
       console.error('Error deleting promo code:', err);
+      setError(`Error deleting promo code: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const bulkDeletePromoCodes = async () => {
-    if (selectedCodes.length === 0) {
+  const handleBulkDelete = async () => {
+    if (selectedCodes.size === 0) {
       setError('Please select at least one promo code to delete');
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to delete ${selectedCodes.length} promo code(s)? This action cannot be undone.`)) {
+    if (!window.confirm(`Are you sure you want to delete ${selectedCodes.size} promo code(s)?`)) {
       return;
     }
 
@@ -327,94 +219,83 @@ const CouponManager = () => {
     setSuccess('');
 
     try {
-      if (!ADMIN_API_KEY) {
-        setError('⚠️ ADMIN_API_KEY not configured.');
-        setLoading(false);
-        return;
-      }
-
-      console.log('🗑️ Sending bulk delete request:', {
-        count: selectedCodes.length,
-        ids: selectedCodes.slice(0, 5), // Log first 5 for debugging
-        allIds: selectedCodes // Log all for debugging
-      });
-
-      const requestBody = { promoIds: selectedCodes };
-      console.log('🗑️ Request body:', JSON.stringify(requestBody).substring(0, 200));
-
-      // Use POST instead of DELETE because some servers don't support DELETE with body
       const response = await fetch(`${BACKEND_URL}/api/promo-code/bulk-delete`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ADMIN_API_KEY
+          'x-api-key': ADMIN_API_KEY,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          promoIds: Array.from(selectedCodes)
+        })
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Bulk delete response:', result);
-        setSuccess(`✅ ${result.deletedCount || selectedCodes.length} promo code(s) deleted successfully`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccess(`✅ Deleted ${data.deleted} promo code(s)!`);
+        setSelectedCodes(new Set());
         await loadPromoCodes();
-        setSelectedCodes([]);
       } else {
-        let errorText = '';
-        try {
-          errorText = await response.text();
-        } catch (e) {
-          errorText = 'Unable to read error response';
-        }
-        console.error('❌ Bulk delete error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
-        setError(`Failed to delete coupons: ${response.status} ${errorText}`);
+        setError(data.error || 'Failed to bulk delete promo codes');
       }
     } catch (err) {
-      console.error('❌ Error bulk deleting promo codes:', err);
-      setError(`Error deleting coupons: ${err.message}`);
+      console.error('Error bulk deleting promo codes:', err);
+      setError(`Error bulk deleting promo codes: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleSelectCode = (promoId) => {
-    setSelectedCodes(prev => 
-      prev.includes(promoId) 
-        ? prev.filter(id => id !== promoId)
-        : [...prev, promoId]
-    );
+  const toggleSelect = (promoId) => {
+    const newSelected = new Set(selectedCodes);
+    if (newSelected.has(promoId)) {
+      newSelected.delete(promoId);
+    } else {
+      newSelected.add(promoId);
+    }
+    setSelectedCodes(newSelected);
   };
 
   const toggleSelectAll = () => {
-    console.log('🔄 Toggle select all:', {
-      currentSelected: selectedCodes.length,
-      totalCodes: promoCodes.length,
-      allSelected: selectedCodes.length === promoCodes.length
-    });
-    
-    if (selectedCodes.length === promoCodes.length && promoCodes.length > 0) {
-      setSelectedCodes([]);
-      console.log('✅ Deselected all');
+    if (selectedCodes.size === promoCodes.length) {
+      setSelectedCodes(new Set());
     } else {
-      const allIds = promoCodes.map(promo => promo.id);
-      setSelectedCodes(allIds);
-      console.log('✅ Selected all:', {
-        count: allIds.length,
-        firstFew: allIds.slice(0, 5)
-      });
+      setSelectedCodes(new Set(promoCodes.map(p => p.id)));
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Never';
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return dateString;
     }
   };
 
   return (
     <div className="coupon-manager">
-      <h2>🎫 Coupon Management</h2>
-      
+      <div className="coupon-header">
+        <h2>🎫 Promo Code Management</h2>
+        <div className="header-actions">
+          <button onClick={() => { setShowCreateForm(true); setShowBulkForm(false); }} className="btn-create">
+            ➕ Create Single
+          </button>
+          <button onClick={() => { setShowBulkForm(true); setShowCreateForm(false); }} className="btn-bulk">
+            📦 Bulk Create
+          </button>
+          {selectedCodes.size > 0 && (
+            <button onClick={handleBulkDelete} className="btn-delete-selected" disabled={loading}>
+              🗑️ Delete Selected ({selectedCodes.size})
+            </button>
+          )}
+        </div>
+      </div>
+
       {error && (
         <div className="error-message">
-          {error}
+          ❌ {error}
         </div>
       )}
       
@@ -424,345 +305,289 @@ const CouponManager = () => {
         </div>
       )}
 
-      <div className="coupon-tabs">
-        <button 
-          className={activeTab === 'list' ? 'active' : ''}
-          onClick={() => setActiveTab('list')}
-        >
-          📋 List ({promoCodes.length})
-        </button>
-        <button 
-          className={activeTab === 'single' ? 'active' : ''}
-          onClick={() => setActiveTab('single')}
-        >
-          ➕ Create Single
-        </button>
-        <button 
-          className={activeTab === 'bulk' ? 'active' : ''}
-          onClick={() => setActiveTab('bulk')}
-        >
-          📦 Bulk Create (220)
-        </button>
-      </div>
-
-      {activeTab === 'list' && (
-        <div className="coupon-list">
-          <div className="list-header">
-            <h3>All Promo Codes</h3>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              {selectedCodes.length > 0 && (
-                <button 
-                  onClick={bulkDeletePromoCodes} 
-                  className="btn-delete" 
-                  disabled={loading}
-                  style={{ backgroundColor: '#dc3545', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                >
-                  🗑️ Delete Selected ({selectedCodes.length})
-                </button>
-              )}
-              <button onClick={loadPromoCodes} className="btn-refresh" disabled={loading}>
-                🔄 Refresh
-              </button>
-              <button onClick={exportPromoCodes} className="btn-export">
-                💾 Export JSON
-              </button>
-            </div>
-          </div>
-          
-          {loading ? (
-            <div className="loading">Loading promo codes...</div>
-          ) : promoCodes.length === 0 ? (
-            <div className="no-codes">No promo codes found. Create your first one!</div>
-          ) : (
-            <div className="codes-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: '40px' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedCodes.length === promoCodes.length && promoCodes.length > 0}
-                        onChange={toggleSelectAll}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </th>
-                    <th>Code</th>
-                    <th>Type</th>
-                    <th>Value</th>
-                    <th>Free Days</th>
-                    <th>Used</th>
-                    <th>Max Uses</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {promoCodes.map((promo) => (
-                    <tr key={promo.id}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedCodes.includes(promo.id)}
-                          onChange={() => toggleSelectCode(promo.id)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                      </td>
-                      <td><code>{promo.code}</code></td>
-                      <td>{promo.discountType}</td>
-                      <td>{promo.discountValue}</td>
-                      <td>{promo.freeDays || 0}</td>
-                      <td>{promo.usedCount || 0}</td>
-                      <td>{promo.maxUses || '∞'}</td>
-                      <td>
-                        <span className={`status-badge ${promo.status}`}>
-                          {promo.status}
-                        </span>
-                      </td>
-                      <td>
-                        {promo.createdAt 
-                          ? new Date(promo.createdAt).toLocaleDateString() 
-                          : 'N/A'}
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => deletePromoCode(promo.id)}
-                          disabled={loading}
-                          style={{
-                            backgroundColor: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            fontSize: '0.875rem'
-                          }}
-                          title="Delete this promo code"
-                        >
-                          🗑️ Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'single' && (
-        <div className="coupon-form">
+      {showCreateForm && (
+        <div className="form-card">
           <h3>Create Single Promo Code</h3>
-          <form onSubmit={createSinglePromoCode}>
+          <form onSubmit={handleCreate}>
             <div className="form-group">
               <label>Code *</label>
               <input
                 type="text"
-                value={singleForm.code}
-                onChange={(e) => setSingleForm({...singleForm, code: e.target.value.toUpperCase()})}
-                placeholder="PROMO2024"
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 required
+                placeholder="PROMO10"
               />
             </div>
             
             <div className="form-row">
               <div className="form-group">
-                <label>Discount Type</label>
+                <label>Discount Type *</label>
                 <select
-                  value={singleForm.discountType}
-                  onChange={(e) => setSingleForm({...singleForm, discountType: e.target.value})}
+                  value={formData.discountType}
+                  onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
+                  required
                 >
                   <option value="percentage">Percentage</option>
                   <option value="fixed">Fixed Amount</option>
-                  <option value="free">Free</option>
                   <option value="free_days">Free Days</option>
+                  <option value="free">Free (100% off)</option>
                 </select>
               </div>
               
               <div className="form-group">
-                <label>Discount Value</label>
+                <label>Discount Value *</label>
                 <input
                   type="number"
-                  value={singleForm.discountValue}
-                  onChange={(e) => setSingleForm({...singleForm, discountValue: parseFloat(e.target.value) || 0})}
+                  value={formData.discountValue || ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                    setFormData({ ...formData, discountValue: isNaN(val) ? '' : val });
+                  }}
+                  required
                   min="0"
                   step="0.01"
                 />
               </div>
             </div>
             
-            <div className="form-group">
-              <label>Free Days</label>
-              <input
-                type="number"
-                value={singleForm.freeDays}
-                onChange={(e) => setSingleForm({...singleForm, freeDays: parseInt(e.target.value) || 0})}
-                min="0"
-              />
+            <div className="form-row">
+              <div className="form-group">
+                <label>Max Uses *</label>
+                <input
+                  type="number"
+                  value={formData.maxUses || ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    setFormData({ ...formData, maxUses: isNaN(val) ? '' : val });
+                  }}
+                  required
+                  min="1"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Expires At (optional)</label>
+                <input
+                  type="datetime-local"
+                  value={formData.expiresAt}
+                  onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+                />
+              </div>
             </div>
             
             <div className="form-group">
-              <label>Description</label>
+              <label>Description (optional)</label>
               <input
                 type="text"
-                value={singleForm.description}
-                onChange={(e) => setSingleForm({...singleForm, description: e.target.value})}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Promo code description"
               />
             </div>
             
-            <div className="form-group">
-              <label>Max Uses (leave empty for unlimited)</label>
-              <input
-                type="number"
-                value={singleForm.maxUses || ''}
-                onChange={(e) => setSingleForm({...singleForm, maxUses: e.target.value ? parseInt(e.target.value) : null})}
-                min="1"
-              />
+            <div className="form-actions">
+              <button type="submit" className="btn-submit" disabled={loading}>
+                {loading ? 'Creating...' : 'Create'}
+              </button>
+              <button type="button" onClick={() => setShowCreateForm(false)} className="btn-cancel">
+                Cancel
+              </button>
             </div>
-            
-            <div className="form-row">
-              <div className="form-group">
-                <label>Start Date (optional)</label>
-                <input
-                  type="date"
-                  value={singleForm.startDate}
-                  onChange={(e) => setSingleForm({...singleForm, startDate: e.target.value})}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Expiry Date (optional)</label>
-                <input
-                  type="date"
-                  value={singleForm.expiryDate}
-                  onChange={(e) => setSingleForm({...singleForm, expiryDate: e.target.value})}
-                />
-              </div>
-            </div>
-            
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Promo Code'}
-            </button>
           </form>
         </div>
       )}
 
-      {activeTab === 'bulk' && (
-        <div className="coupon-form">
-          <h3>Bulk Create Promo Codes (220 for Launch)</h3>
-          <form onSubmit={createBulkPromoCodes}>
+      {showBulkForm && (
+        <div className="form-card">
+          <h3>Bulk Create Promo Codes</h3>
+          <form onSubmit={handleBulkCreate}>
             <div className="form-group">
-              <label>Count *</label>
-              <input
-                type="number"
-                value={bulkForm.count}
-                onChange={(e) => setBulkForm({...bulkForm, count: parseInt(e.target.value) || 220})}
-                min="1"
-                max="1000"
-                required
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Code Name (Prefix) *</label>
+              <label>Base Code *</label>
               <input
                 type="text"
-                value={bulkForm.prefix}
-                onChange={(e) => setBulkForm({...bulkForm, prefix: e.target.value.toUpperCase()})}
-                placeholder="PROMO10 or FREEAD"
+                value={bulkFormData.code}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, code: e.target.value })}
                 required
+                placeholder="PROMO10"
               />
-              <small style={{color: '#666', display: 'block', marginTop: '0.25rem'}}>
-                All {bulkForm.count} codes will use this exact name. Users can enter "{bulkForm.prefix || 'PROMO10'}" and the system will find the first unused code.
-              </small>
             </div>
             
             <div className="form-row">
               <div className="form-group">
-                <label>Discount Type</label>
+                <label>Count *</label>
+                <input
+                  type="number"
+                  value={bulkFormData.count || ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    setBulkFormData({ ...bulkFormData, count: isNaN(val) ? '' : val });
+                  }}
+                  required
+                  min="1"
+                  max="1000"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Use Same Code Name</label>
+                <input
+                  type="checkbox"
+                  checked={bulkFormData.useSameCodeName}
+                  onChange={(e) => setBulkFormData({ ...bulkFormData, useSameCodeName: e.target.checked })}
+                />
+                <small>If checked, all codes will have the same name (e.g., "PROMO10")</small>
+              </div>
+            </div>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label>Discount Type *</label>
                 <select
-                  value={bulkForm.discountType}
-                  onChange={(e) => setBulkForm({...bulkForm, discountType: e.target.value})}
+                  value={bulkFormData.discountType}
+                  onChange={(e) => setBulkFormData({ ...bulkFormData, discountType: e.target.value })}
+                  required
                 >
                   <option value="percentage">Percentage</option>
                   <option value="fixed">Fixed Amount</option>
-                  <option value="free">Free</option>
                   <option value="free_days">Free Days</option>
+                  <option value="free">Free (100% off)</option>
                 </select>
               </div>
               
               <div className="form-group">
-                <label>Discount Value</label>
+                <label>Discount Value *</label>
                 <input
                   type="number"
-                  value={bulkForm.discountValue}
-                  onChange={(e) => setBulkForm({...bulkForm, discountValue: parseFloat(e.target.value) || 0})}
+                  value={bulkFormData.discountValue || ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                    setBulkFormData({ ...bulkFormData, discountValue: isNaN(val) ? '' : val });
+                  }}
+                  required
                   min="0"
                   step="0.01"
                 />
               </div>
             </div>
             
-            <div className="form-group">
-              <label>Free Days</label>
-              <input
-                type="number"
-                value={bulkForm.freeDays}
-                onChange={(e) => setBulkForm({...bulkForm, freeDays: parseInt(e.target.value) || 0})}
-                min="0"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Description</label>
-              <input
-                type="text"
-                value={bulkForm.description}
-                onChange={(e) => setBulkForm({...bulkForm, description: e.target.value})}
-                placeholder="Bulk promo codes description"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Max Uses Per Code *</label>
-              <input
-                type="number"
-                value={bulkForm.maxUses || 1}
-                onChange={(e) => setBulkForm({...bulkForm, maxUses: parseInt(e.target.value) || 1})}
-                min="1"
-                required
-              />
-              <small style={{color: '#666', display: 'block', marginTop: '0.25rem'}}>
-                Recommended: 1 (each code can only be used once). Total uses available: {bulkForm.count * (bulkForm.maxUses || 1)}
-              </small>
-            </div>
-            
             <div className="form-row">
               <div className="form-group">
-                <label>Start Date (optional)</label>
+                <label>Max Uses *</label>
                 <input
-                  type="date"
-                  value={bulkForm.startDate}
-                  onChange={(e) => setBulkForm({...bulkForm, startDate: e.target.value})}
+                  type="number"
+                  value={bulkFormData.maxUses || ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    setBulkFormData({ ...bulkFormData, maxUses: isNaN(val) ? '' : val });
+                  }}
+                  required
+                  min="1"
                 />
               </div>
               
               <div className="form-group">
-                <label>Expiry Date (optional)</label>
+                <label>Expires At (optional)</label>
                 <input
-                  type="date"
-                  value={bulkForm.expiryDate}
-                  onChange={(e) => setBulkForm({...bulkForm, expiryDate: e.target.value})}
+                  type="datetime-local"
+                  value={bulkFormData.expiresAt}
+                  onChange={(e) => setBulkFormData({ ...bulkFormData, expiresAt: e.target.value })}
                 />
               </div>
             </div>
             
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Creating...' : `Create ${bulkForm.count} Promo Codes`}
-            </button>
+            <div className="form-group">
+              <label>Description (optional)</label>
+              <input
+                type="text"
+                value={bulkFormData.description}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, description: e.target.value })}
+                placeholder="Promo code description"
+              />
+            </div>
+            
+            <div className="form-actions">
+              <button type="submit" className="btn-submit" disabled={loading}>
+                {loading ? 'Creating...' : `Create ${bulkFormData.count} Codes`}
+              </button>
+              <button type="button" onClick={() => setShowBulkForm(false)} className="btn-cancel">
+                Cancel
+              </button>
+            </div>
           </form>
+        </div>
+      )}
+
+      <div className="coupon-list-header">
+        <h3>Promo Codes ({promoCodes.length})</h3>
+        <button onClick={loadPromoCodes} className="btn-refresh" disabled={loading}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {loading && promoCodes.length === 0 ? (
+        <div className="loading">Loading promo codes...</div>
+      ) : promoCodes.length === 0 ? (
+        <div className="empty-state">No promo codes found. Create your first one!</div>
+      ) : (
+        <div className="coupon-table-container">
+          <table className="coupon-table">
+            <thead>
+              <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selectedCodes.size === promoCodes.length && promoCodes.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th>Code</th>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Uses</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {promoCodes.map((promo) => (
+                <tr key={promo.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedCodes.has(promo.id)}
+                      onChange={() => toggleSelect(promo.id)}
+                    />
+                  </td>
+                  <td className="code-cell">{promo.code}</td>
+                  <td>{promo.discountType}</td>
+                  <td>
+                    {promo.discountType === 'percentage' ? `${promo.discountValue}%` :
+                     promo.discountType === 'free_days' ? `${promo.discountValue} days` :
+                     promo.discountType === 'free' ? '100%' :
+                     `£${promo.discountValue}`}
+                  </td>
+                  <td>{promo.currentUses} / {promo.maxUses}</td>
+                  <td>
+                    <span className={`status-badge status-${promo.status}`}>
+                      {promo.status}
+                    </span>
+                  </td>
+                  <td>{formatDate(promo.createdAt)}</td>
+                  <td>
+                    <button
+                      onClick={() => handleDelete(promo.id)}
+                      className="btn-delete"
+                      disabled={loading}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
