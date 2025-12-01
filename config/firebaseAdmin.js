@@ -43,53 +43,94 @@ if (!admin.apps.length) {
         console.log('🔑 Project ID:', serviceAccount.project_id);
       } catch (fileError) {
         console.error('❌ Error loading service account file:', fileError.message);
-        // Priority 3: Use individual environment variables (only if all required fields are present and valid)
-        const hasProjectId = process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PROJECT_ID.trim().length > 0;
-        const hasClientEmail = process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_CLIENT_EMAIL.trim().length > 0;
-        const hasPrivateKey = process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PRIVATE_KEY.trim().length > 0;
         
-        if (hasProjectId && hasClientEmail && hasPrivateKey) {
-          try {
-            const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
-            // Additional validation: ensure private key looks valid (starts with -----BEGIN)
+        // Priority 3: Use individual environment variables (only if all required fields are present and valid)
+        // Use try-catch to safely check environment variables
+        let useIndividualEnvVars = false;
+        let projectId = process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
+        let clientEmail = null;
+        let privateKey = null;
+        
+        try {
+          // Safely check and validate environment variables
+          const envProjectId = process.env.FIREBASE_PROJECT_ID;
+          const envClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+          const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+          
+          const hasProjectId = envProjectId && typeof envProjectId === 'string' && envProjectId.trim().length > 0;
+          const hasClientEmail = envClientEmail && typeof envClientEmail === 'string' && envClientEmail.trim().length > 0;
+          const hasPrivateKey = envPrivateKey && typeof envPrivateKey === 'string' && envPrivateKey.trim().length > 0;
+          
+          if (hasProjectId && hasClientEmail && hasPrivateKey) {
+            // Process private key
+            privateKey = envPrivateKey.replace(/\\n/g, '\n').trim();
+            
+            // Validate private key format - must contain BEGIN marker
             if (!privateKey.includes('BEGIN PRIVATE KEY') && !privateKey.includes('BEGIN RSA PRIVATE KEY')) {
-              throw new Error('Private key format appears invalid');
+              console.warn('⚠️ Private key format validation failed - missing BEGIN marker');
+              useIndividualEnvVars = false;
+            } else if (privateKey.length < 100) {
+              console.warn('⚠️ Private key appears too short to be valid');
+              useIndividualEnvVars = false;
+            } else {
+              // All validations passed
+              projectId = envProjectId.trim();
+              clientEmail = envClientEmail.trim();
+              useIndividualEnvVars = true;
             }
+          }
+        } catch (validationError) {
+          console.error('❌ Error validating environment variables:', validationError.message);
+          useIndividualEnvVars = false;
+        }
+        
+        // Try Priority 3 if validation passed
+        if (useIndividualEnvVars) {
+          try {
             admin.initializeApp({
               credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                projectId: projectId,
+                clientEmail: clientEmail,
                 privateKey: privateKey
               }),
-              projectId: process.env.FIREBASE_PROJECT_ID
+              projectId: projectId
             });
             console.log('✅ Firebase Admin initialized from environment variables');
-            console.log('🔑 Project ID:', process.env.FIREBASE_PROJECT_ID);
+            console.log('🔑 Project ID:', projectId);
           } catch (credError) {
             console.error('❌ Error initializing with individual env vars:', credError.message);
+            console.error('❌ Error code:', credError.code || 'unknown');
             // Fall through to Priority 4
-            const projectId = process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
+            useIndividualEnvVars = false;
+          }
+        }
+        
+        // Priority 4: Fallback to default credentials (with explicit project ID)
+        // Only initialize if Priority 3 didn't succeed
+        if (!useIndividualEnvVars && !admin.apps.length) {
+          try {
             admin.initializeApp({
               projectId: projectId
             });
-            console.log('✅ Firebase Admin initialized with default credentials (fallback)');
+            console.log('✅ Firebase Admin initialized with default credentials');
             console.log('🔑 Project ID:', projectId);
-            console.warn('⚠️ Individual env vars incomplete or invalid, using default credentials');
-          }
-        } 
-        // Priority 4: Fallback to default credentials (with explicit project ID)
-        else {
-          // Always set projectId - use environment variable or default to known project ID
-          const projectId = process.env.FIREBASE_PROJECT_ID || 'clickalinks-frontend';
-          admin.initializeApp({
-            projectId: projectId // ALWAYS set projectId explicitly
-          });
-          console.log('✅ Firebase Admin initialized with default credentials');
-          console.log('🔑 Project ID:', projectId);
-          if (!process.env.FIREBASE_PROJECT_ID) {
-            console.warn('⚠️ Using default project ID. Set FIREBASE_PROJECT_ID on Render.com for production.');
-          } else {
-            console.warn('⚠️ Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY, using default credentials');
+            if (!process.env.FIREBASE_PROJECT_ID) {
+              console.warn('⚠️ Using default project ID. Set FIREBASE_PROJECT_ID on Render.com for production.');
+            } else {
+              console.warn('⚠️ Using default credentials - individual env vars were missing or invalid');
+            }
+          } catch (defaultError) {
+            console.error('❌ Critical: Failed to initialize Firebase Admin with default credentials:', defaultError.message);
+            // Last resort: try without projectId (only if still not initialized)
+            if (!admin.apps.length) {
+              try {
+                admin.initializeApp();
+                console.log('✅ Firebase Admin initialized with minimal configuration');
+              } catch (lastResortError) {
+                console.error('❌ CRITICAL: Complete Firebase Admin initialization failure');
+                throw lastResortError;
+              }
+            }
           }
         }
       }
