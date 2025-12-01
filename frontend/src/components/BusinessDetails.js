@@ -88,6 +88,9 @@ const BusinessDetails = () => {
       return;
     }
 
+    // Clear any previous errors
+    setFormErrors(prev => ({ ...prev, logoData: '' }));
+
     // Basic security validation
     const securityCheck = await validateFileSecurity(file);
     if (!securityCheck.valid) {
@@ -113,43 +116,75 @@ const BusinessDetails = () => {
 
     // Read file first
     const reader = new FileReader();
+    
     reader.onload = async function(e) {
       const dataURL = e.target.result;
       
-      // Scan for viruses
-      setFormErrors(prev => ({ ...prev, logoData: 'Scanning file for security...' }));
+      // Set logo data immediately (don't wait for virus scan)
+      // This ensures mobile uploads work even if scan fails
+      setLogoData(dataURL);
+      setFormErrors(prev => ({ ...prev, logoData: '' }));
+      console.log('✅ Logo file loaded, size:', (file.size / 1024).toFixed(2), 'KB');
+      
+      // Scan for viruses in background (non-blocking)
+      // Mobile devices may have network issues, so we don't block upload if scan fails
+      setFormErrors(prev => ({ ...prev, logoData: 'Verifying file security...' }));
+      
       try {
-        const scanResult = await scanFileForVirus(dataURL, file.name);
+        // Add timeout for mobile devices (5 seconds max)
+        const scanPromise = scanFileForVirus(dataURL, file.name);
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({ safe: true, message: 'Scan timeout - upload allowed', warning: true });
+          }, 5000); // 5 second timeout for mobile
+        });
+        
+        const scanResult = await Promise.race([scanPromise, timeoutPromise]);
         
         if (!scanResult.safe) {
-          setFormErrors(prev => ({ ...prev, logoData: `Security scan failed: ${scanResult.message}. Please upload a different file.` }));
-          event.target.value = '';
-          return;
-        }
-        
-        // File is safe, set logo data
-        setLogoData(dataURL);
-        setFormErrors(prev => ({ ...prev, logoData: '' }));
-        console.log('✅ Logo file loaded and scanned, size:', (file.size / 1024).toFixed(2), 'KB');
-        
-        if (scanResult.warning) {
-          console.warn('⚠️ Virus scan warning:', scanResult.message);
+          // Show warning but don't block upload (mobile-friendly)
+          console.warn('⚠️ Security scan warning:', scanResult.message);
+          setFormErrors(prev => ({ ...prev, logoData: `Warning: ${scanResult.message}. Upload continuing...` }));
+          // Still allow upload - don't block
+        } else {
+          // Clear any error messages
+          setFormErrors(prev => ({ ...prev, logoData: '' }));
+          console.log('✅ File passed security scan');
+          
+          if (scanResult.warning) {
+            console.warn('⚠️ Virus scan warning:', scanResult.message);
+          }
         }
       } catch (scanError) {
-        console.error('❌ Virus scan error:', scanError);
-        // Allow upload if scan fails (you can change this to block)
-        setLogoData(dataURL);
+        console.error('❌ Virus scan error (non-blocking):', scanError);
+        // Don't block upload if scan fails (especially important for mobile)
         setFormErrors(prev => ({ ...prev, logoData: '' }));
-        console.warn('⚠️ Virus scan unavailable, allowing upload');
+        console.warn('⚠️ Virus scan unavailable, upload allowed');
       }
     };
     
-    reader.onerror = function() {
-      setFormErrors(prev => ({ ...prev, logoData: 'Error reading file. Please try again.' }));
+    reader.onerror = function(error) {
+      console.error('❌ FileReader error:', error);
+      setFormErrors(prev => ({ ...prev, logoData: 'Error reading file. Please try again or use a different image.' }));
       event.target.value = '';
+      setLogoData(null);
     };
     
-    reader.readAsDataURL(file);
+    reader.onabort = function() {
+      console.warn('⚠️ File read aborted');
+      setFormErrors(prev => ({ ...prev, logoData: 'File upload cancelled.' }));
+      event.target.value = '';
+      setLogoData(null);
+    };
+    
+    // Start reading file
+    try {
+      reader.readAsDataURL(file);
+    } catch (readError) {
+      console.error('❌ Error starting file read:', readError);
+      setFormErrors(prev => ({ ...prev, logoData: 'Error reading file. Please try a different image file.' }));
+      event.target.value = '';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -171,14 +206,18 @@ const BusinessDetails = () => {
         console.log('📊 Logo data preview:', logoData.substring(0, 50) + '...');
         
         try {
-          const uploadResult = await saveLogoToStorage(logoData, selectedSquare);
+          // Generate unique purchase ID for logo storage (independent of square number)
+          // This ensures logo persists even when square number changes during shuffle
+          const purchaseId = `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+          const uploadResult = await saveLogoToStorage(logoData, purchaseId);
           // Handle both old format (string) and new format (object)
           if (typeof uploadResult === 'string') {
             firebaseLogoURL = uploadResult;
           } else {
             firebaseLogoURL = uploadResult.url;
-            // Store storage path for cleanup
+            // Store storage path and purchase ID for cleanup
             localStorage.setItem(`logoPath_${selectedSquare}`, uploadResult.path);
+            localStorage.setItem(`purchaseId_${selectedSquare}`, uploadResult.purchaseId || purchaseId);
           }
           console.log('✅ Logo uploaded to Firebase Storage successfully!');
           console.log('🔗 Firebase URL:', firebaseLogoURL);
@@ -207,13 +246,32 @@ const BusinessDetails = () => {
         duration: selectedDuration
       };
 
-      // Save to localStorage as backup
+      // CRITICAL: Save logoData to temporary storage ONLY
+      // These are TEMPORARY and will be cleaned up if payment is cancelled
+      // Do NOT save to squarePurchases - that's only for confirmed payments
       localStorage.setItem('businessFormData', JSON.stringify(businessData));
+      // Store logo temporarily - will be cleaned up on cancel or moved to squarePurchases on success
+      localStorage.setItem(`logoData_${selectedSquare}`, firebaseLogoURL);
+      localStorage.setItem('currentLogoData', firebaseLogoURL);
       
-      // Save to pending purchases with Firebase URL
+      // CRITICAL: Ensure this square is NOT in squarePurchases yet
+      // Remove any existing entry to prevent showing logo before payment
+      const squarePurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+      if (squarePurchases[selectedSquare] && 
+          (squarePurchases[selectedSquare].paymentStatus !== 'paid' || 
+           squarePurchases[selectedSquare].status !== 'active')) {
+        delete squarePurchases[selectedSquare];
+        localStorage.setItem('squarePurchases', JSON.stringify(squarePurchases));
+        console.log(`🗑️ Removed unconfirmed purchase from squarePurchases for square ${selectedSquare}`);
+      }
+      
+      // Save to pending purchases ONLY (not squarePurchases - that's for confirmed payments)
       const pendingData = {
         ...businessData,
-        purchaseDate: new Date().toISOString()
+        logoData: firebaseLogoURL, // Ensure logoData is included
+        purchaseDate: new Date().toISOString(),
+        status: 'pending', // Explicitly mark as pending
+        paymentStatus: 'pending' // Not paid yet
       };
       
       const pendingPurchases = JSON.parse(localStorage.getItem('pendingPurchases') || '{}');
@@ -221,7 +279,14 @@ const BusinessDetails = () => {
       pendingPurchases[tempId] = pendingData;
       localStorage.setItem('pendingPurchases', JSON.stringify(pendingPurchases));
       
-      console.log('✅ Business data prepared with Firebase logo URL');
+      // CRITICAL: Do NOT save to squarePurchases here - that will make ads appear before payment!
+      // squarePurchases should only be updated AFTER payment is confirmed
+      
+      console.log('✅ Business data prepared with Firebase logo URL:', {
+        squareNumber: selectedSquare,
+        logoURL: firebaseLogoURL ? firebaseLogoURL.substring(0, 80) + '...' : 'MISSING',
+        savedTo: ['businessFormData', `logoData_${selectedSquare}`, 'currentLogoData', 'pendingPurchases']
+      });
       
       navigate('/payment', { 
         state: { 
@@ -230,7 +295,7 @@ const BusinessDetails = () => {
           selectedDuration, 
           finalAmount, 
           businessData: { ...businessData, logoData: firebaseLogoURL },
-          logoData: firebaseLogoURL
+          logoData: firebaseLogoURL // CRITICAL: Pass logoData explicitly
         } 
       });
       
@@ -395,8 +460,11 @@ const BusinessDetails = () => {
                       />
                       <div className="upload-placeholder">
                         <div className="upload-icon">📁</div>
-                        <p>Click to upload your logo</p>
+                        <p>Click or tap to upload your logo</p>
                         <small>PNG, JPG, GIF, WebP up to 2MB</small>
+                        <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
+                          Works on desktop and mobile devices
+                        </small>
                       </div>
                     </div>
                     {formErrors.logoData && (

@@ -1,58 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Test Firestore Connection</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Firestore - ClickaLinks</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 600px;
             margin: 50px auto;
             padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
         }
         button {
-            background: #4CAF50;
+            background: #007bff;
             color: white;
-            padding: 15px 30px;
             border: none;
-            border-radius: 5px;
+            padding: 12px 24px;
             font-size: 16px;
+            border-radius: 4px;
             cursor: pointer;
-            margin: 10px 0;
+            margin: 10px 5px;
         }
         button:hover {
-            background: #45a049;
+            background: #0056b3;
         }
-        #result {
-            margin-top: 20px;
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .info {
+            background: #e7f3ff;
             padding: 15px;
-            border-radius: 5px;
-            white-space: pre-wrap;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
         }
         .success {
             background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
         }
         .error {
             background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            max-height: 300px;
+            overflow-y: auto;
         }
     </style>
 </head>
 <body>
-    <h1>🔥 Firestore Connection Test</h1>
-    <p>This will test if Firestore is properly configured and can write/read data.</p>
-    
-    <button onclick="testFirestore()">Test Firestore Write & Read</button>
-    
-    <div id="result"></div>
-    
-    <script type="module">
-        // Import Firebase from CDN
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, doc, setDoc, getDocs, collection } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    <div class="container">
+        <h1>🧪 Test Firestore Connection</h1>
         
+        <div class="info">
+            <strong>What this does:</strong><br>
+            Tests if your Firestore database is properly configured and accessible.
+            This will create a test document and then read it back.
+        </div>
+
+        <button onclick="testFirestore()">Test Firestore Write & Read</button>
+        <button onclick="clearTestData()">Clear Test Data</button>
+        
+        <div id="status"></div>
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        // Import Firebase SDK
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase configuration (from your firebase.js)
         const firebaseConfig = {
             apiKey: "XsxVvIS4mIRSzDzG2RtsbJ_I1p25-rjuupbwWCffz6g",
             authDomain: "clickalinks-frontend.firebaseapp.com",
@@ -61,81 +108,128 @@
             messagingSenderId: "568043553622",
             appId: "1:568043553622:web:d8e928c8b26e2847e50cf7"
         };
-        
+
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        window.testFirestore = async () => {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '🔄 Testing Firestore connection...';
-            resultDiv.className = '';
+
+        window.testFirestore = async function() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
             
+            statusDiv.innerHTML = '<div class="info">🔄 Testing Firestore connection...</div>';
+            resultsDiv.innerHTML = '';
+
             try {
-                console.log('🧪 Testing Firestore write...');
+                // Test 1: Write a test document
+                const testDocId = 'test-' + Date.now();
+                const testRef = doc(db, 'purchasedSquares', testDocId);
                 
-                // Try to write a test document
-                const testDocRef = doc(db, 'purchasedSquares', '999');
-                await setDoc(testDocRef, {
+                const testData = {
                     status: 'active',
                     businessName: 'Test Business',
-                    logoData: 'https://test.com/logo.png',
                     squareNumber: 999,
+                    pageNumber: 1,
+                    logoData: 'https://via.placeholder.com/150',
+                    dealLink: 'https://example.com',
+                    contactEmail: 'test@example.com',
+                    paymentStatus: 'paid',
+                    startDate: new Date().toISOString(),
                     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
                     test: true,
-                    createdAt: new Date().toISOString()
-                });
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                };
+
+                resultsDiv.innerHTML += '<div>📝 Writing test document...</div>';
+                await setDoc(testRef, testData);
+                resultsDiv.innerHTML += '<div style="color: green;">✅ Document written successfully!</div>';
+
+                // Test 2: Read the document back
+                resultsDiv.innerHTML += '<div>📖 Reading document back...</div>';
+                const docSnapshot = await getDoc(testRef);
                 
-                console.log('✅ Test document written successfully!');
-                
-                // Wait a moment
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // Try to read it back
-                const snapshot = await getDocs(collection(db, 'purchasedSquares'));
-                console.log(`📊 Total documents: ${snapshot.size}`);
-                
-                let resultText = '✅ Firestore test successful!\n\n';
-                resultText += `📊 Total documents in collection: ${snapshot.size}\n\n`;
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    resultText += `📄 Document ID: ${doc.id}\n`;
-                    resultText += `   Status: ${data.status}\n`;
-                    resultText += `   Business: ${data.businessName}\n`;
-                    resultText += `   Square: ${data.squareNumber}\n\n`;
-                });
-                
-                resultDiv.innerHTML = resultText;
-                resultDiv.className = 'success';
-                
-                alert('✅ Firestore test successful! Check the result box below and browser console (F12) for details.');
-                
-            } catch (error) {
-                console.error('❌ Firestore test failed:', error);
-                
-                let errorText = '❌ Firestore test failed!\n\n';
-                errorText += `Error Code: ${error.code}\n`;
-                errorText += `Error Message: ${error.message}\n\n`;
-                
-                if (error.code === 'permission-denied') {
-                    errorText += '🚨 PERMISSION DENIED\n\n';
-                    errorText += 'This means Firestore security rules are blocking writes.\n';
-                    errorText += 'Please:\n';
-                    errorText += '1. Go to Firebase Console\n';
-                    errorText += '2. Firestore Database > Rules\n';
-                    errorText += '3. Set rules to allow writes\n';
-                    errorText += '4. Click Publish\n';
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    resultsDiv.innerHTML += `
+                        <div style="color: green;">✅ Document read successfully!</div>
+                        <div style="margin-top: 10px;">
+                            <strong>Document ID:</strong> <code>${docSnapshot.id}</code><br>
+                            <strong>Business Name:</strong> ${data.businessName}<br>
+                            <strong>Square Number:</strong> ${data.squareNumber}<br>
+                            <strong>Status:</strong> ${data.status}
+                        </div>
+                    `;
                 } else {
-                    errorText += 'Check browser console (F12) for more details.';
+                    resultsDiv.innerHTML += '<div style="color: red;">❌ Document not found after write!</div>';
                 }
+
+                // Test 3: Query collection
+                resultsDiv.innerHTML += '<div>🔍 Querying collection...</div>';
+                const querySnapshot = await getDocs(collection(db, 'purchasedSquares'));
+                resultsDiv.innerHTML += `<div style="color: green;">✅ Collection query successful! Found ${querySnapshot.size} document(s)</div>`;
+
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        ✅ <strong>All tests passed!</strong><br>
+                        Firestore is properly configured and working.<br>
+                        <small>Test document ID: <code>${testDocId}</code></small>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Firestore test error:', error);
+                statusDiv.innerHTML = `
+                    <div class="error">
+                        ❌ <strong>Test failed!</strong><br>
+                        Error: ${error.code || 'Unknown'}<br>
+                        Message: ${error.message}<br><br>
+                        <strong>Common fixes:</strong><br>
+                        1. Check Firestore Rules are published<br>
+                        2. Verify Firebase config is correct<br>
+                        3. Make sure Firestore Database is enabled
+                    </div>
+                `;
+                resultsDiv.innerHTML += `<div style="color: red;">❌ Error: ${error.message}</div>`;
+            }
+        };
+
+        window.clearTestData = async function() {
+            if (!confirm('Delete all test documents from Firestore?')) {
+                return;
+            }
+
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            statusDiv.innerHTML = '<div class="info">🗑️ Clearing test data...</div>';
+            resultsDiv.innerHTML = '';
+
+            try {
+                const q = query(collection(db, 'purchasedSquares'), where('test', '==', true));
+                const querySnapshot = await getDocs(q);
                 
-                resultDiv.innerHTML = errorText;
-                resultDiv.className = 'error';
-                
-                alert(`❌ Error: ${error.code} - ${error.message}`);
+                let deleted = 0;
+                for (const docSnapshot of querySnapshot.docs) {
+                    await deleteDoc(docSnapshot.ref);
+                    deleted++;
+                }
+
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Cleared ${deleted} test document(s)!
+                    </div>
+                `;
+                resultsDiv.innerHTML = `<div>🗑️ Deleted ${deleted} test document(s)</div>`;
+
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Error clearing test data: ${error.message}
+                    </div>
+                `;
             }
         };
     </script>
 </body>
 </html>
-

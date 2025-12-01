@@ -1,0 +1,27 @@
+# Render Cron Job Configuration
+# This file configures the automatic shuffle cron job on Render
+# 
+# Setup Instructions:
+# 1. Go to Render Dashboard > Cron Jobs
+# 2. Create new cron job
+# 3. Set schedule: "0 */2 * * *" (every 2 hours) or "0 * * * *" (every hour)
+# 4. Set command: "cd Backend && node cron-shuffle.js"
+# 5. Set environment variables:
+#    - FIREBASE_SERVICE_ACCOUNT: Your Firebase service account JSON
+#    - ADMIN_SECRET_KEY: Your admin secret key (optional)
+# 6. Deploy
+
+services:
+  - type: cron
+    name: clickalinks-shuffle
+    schedule: "0 */2 * * *"  # Every 2 hours at minute 0
+    buildCommand: "cd Backend && npm install"
+    startCommand: "cd Backend && node cron-shuffle.js"
+    envVars:
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false  # Set manually in Render dashboard
+      - key: ADMIN_SECRET_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: NODE_ENV
+        value: production
+

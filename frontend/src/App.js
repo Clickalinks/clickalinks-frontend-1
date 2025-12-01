@@ -1,24 +1,37 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import Header from './components/Header';
 import RunningStrip from './components/RunningStrip';
-import AutoShuffleTimer from './components/AutoShuffleTimer';
 import AdGrid from './components/AdGrid';
 import Footer from './components/Footer';
-import Success from './components/Success';
-import Cancel from './components/Cancel';
-import CampaignSelection from './components/CampaignSelection';
-import BusinessDetails from './components/BusinessDetails';
-import AdminPanel from './components/AdminPanel';
-import Payment from './components/Payment';
-import About from './components/About';
-import HowItWorks from './components/HowItWorks';
-import Terms from './components/Terms';
-import ContactForm from './components/ContactForm';
-import PrivacyPolicy from './components/PrivacyPolicy';
-import AdminDashboard from './components/AdminDashboard';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// PERFORMANCE: Lazy load heavy components
+const Success = lazy(() => import('./components/Success'));
+const Cancel = lazy(() => import('./components/Cancel'));
+const CampaignSelection = lazy(() => import('./components/CampaignSelection'));
+const BusinessDetails = lazy(() => import('./components/BusinessDetails'));
+const Payment = lazy(() => import('./components/Payment'));
+const About = lazy(() => import('./components/About'));
+const HowItWorks = lazy(() => import('./components/HowItWorks'));
+const Terms = lazy(() => import('./components/Terms'));
+const ContactForm = lazy(() => import('./components/ContactForm'));
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    minHeight: '50vh' 
+  }}>
+    <div className="loading-spinner"></div>
+  </div>
+);
 
 function App() {
   // Create page routes dynamically
@@ -37,11 +50,17 @@ function App() {
   };
 
   return (
-    <Router>
-      <ScrollToTop />
-      <div className="App">
-        <Header />
-        <RunningStrip />
+    <ErrorBoundary>
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
+        <ScrollToTop />
+        <div className="App">
+          <Header />
+          <RunningStrip />
 
         <Routes>
           {/* Home route - Page 1 */}
@@ -56,27 +75,105 @@ function App() {
             />
           ))}
 
-          {/* Purchase Flow Routes */}
-          <Route path="/campaign" element={<CampaignSelection />} />
-          <Route path="/business-details" element={<BusinessDetails />} />
-          <Route path="/payment" element={<Payment />} />
-          <Route path="/success" element={<Success />} />
-          <Route path="/cancel" element={<Cancel />} />
+          {/* Purchase Flow Routes - Lazy loaded */}
+          <Route 
+            path="/campaign" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <CampaignSelection />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/business-details" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <BusinessDetails />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/payment" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <Payment />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/success" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <Success />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/cancel" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <Cancel />
+              </Suspense>
+            } 
+          />
          
-          {/* Information Pages */}
-          <Route path="/about" element={<About />} />
-          <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/contact" element={<ContactForm />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
+          {/* Information Pages - Lazy loaded */}
+          <Route 
+            path="/about" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <About />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/how-it-works" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <HowItWorks />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/terms" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <Terms />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/contact" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <ContactForm />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/privacy" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <PrivacyPolicy />
+              </Suspense>
+            } 
+          />
 
-          {/* Admin Route - FIXED: Only one route for /admin */}
-          <Route path="/admin" element={<AdminDashboard />} />
+          {/* Admin Route - Lazy loaded */}
+          <Route 
+            path="/admin" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <AdminDashboard />
+              </Suspense>
+            } 
+          />
         </Routes>
 
-        <Footer />
-      </div>
-    </Router>
+          <Footer />
+        </div>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

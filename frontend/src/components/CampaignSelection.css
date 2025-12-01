@@ -223,13 +223,17 @@
 
 .plan-badge {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 10px;
+  top: 10px;
+  right: 10px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
 }
 
 .plan-badge--popular {
@@ -243,14 +247,21 @@
       #ec4899 48px, #ec4899 60px,
       #fbbf24 60px, #fbbf24 72px
     ),
-    linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    linear-gradient(115deg, #1e40af 0%, #3b82f6 100%);
   background-blend-mode: overlay;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .plan-badge--best-value {
   background: #48bb78;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
+.badge-icon {
+  font-size: 10px;
+  line-height: 1;
+  display: inline-block;
 }
 
 .plan-icon {
@@ -433,10 +444,7 @@
 .total-amount {
   font-size: 20px;
   font-weight: 700;
-  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #000000 !important; /* Black color for visibility */
 }
 
 .features-included {

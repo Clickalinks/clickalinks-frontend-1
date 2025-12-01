@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Orphaned Ads - ClickaLinks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #c82333;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+        #results {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+        .result-item {
+            padding: 5px;
+            margin: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Delete Orphaned Ads</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Warning:</strong><br>
+            This will delete all Firestore documents that have business data but no valid logos.
+            This action cannot be undone!
+        </div>
+
+        <div class="info">
+            <strong>What this does:</strong><br>
+            <ul>
+                <li>Fetches all documents from Firestore</li>
+                <li>Checks if logo URLs are valid (not 404)</li>
+                <li>Deletes documents with broken/missing logos</li>
+                <li>Keeps documents with valid logos</li>
+            </ul>
+        </div>
+
+        <button id="checkBtn" onclick="checkOrphanedAds()">Check for Orphaned Ads</button>
+        <button id="deleteBtn" onclick="deleteOrphanedAds()" disabled>Delete Orphaned Ads</button>
+        <button onclick="clearIndexedDB()">Clear IndexedDB Cache</button>
+        
+        <div id="status"></div>
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        // Import Firebase (you'll need to adjust the path)
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, doc, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // You'll need to add your Firebase config here
+        // For security, you might want to load this from a config file
+        const firebaseConfig = {
+            // Add your config here - check firebase.js in your project
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let orphanedDocs = [];
+
+        window.checkOrphanedAds = async function() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            const checkBtn = document.getElementById('checkBtn');
+            const deleteBtn = document.getElementById('deleteBtn');
+
+            checkBtn.disabled = true;
+            statusDiv.innerHTML = '<div class="info">🔍 Checking for orphaned ads...</div>';
+            resultsDiv.innerHTML = '';
+            orphanedDocs = [];
+
+            try {
+                // Get all active purchases
+                const q = query(collection(db, 'purchasedSquares'), where('status', '==', 'active'));
+                const querySnapshot = await getDocs(q);
+
+                statusDiv.innerHTML = `<div class="info">📊 Found ${querySnapshot.size} active documents. Checking logos...</div>`;
+
+                let checked = 0;
+                let orphaned = 0;
+
+                for (const docSnapshot of querySnapshot.docs) {
+                    checked++;
+                    const data = docSnapshot.data();
+                    const logoData = data.logoData;
+
+                    // Check if logo exists
+                    let isValid = false;
+                    if (logoData && typeof logoData === 'string' && logoData.trim() !== '') {
+                        if (logoData.startsWith('http://') || logoData.startsWith('https://')) {
+                            try {
+                                const response = await fetch(logoData, { method: 'HEAD' });
+                                isValid = response.ok;
+                            } catch (e) {
+                                isValid = false;
+                            }
+                        } else if (logoData.startsWith('data:')) {
+                            isValid = true; // Data URLs are valid
+                        }
+                    }
+
+                    if (!isValid) {
+                        orphaned++;
+                        orphanedDocs.push({
+                            id: docSnapshot.id,
+                            squareNumber: data.squareNumber || docSnapshot.id,
+                            businessName: data.businessName || 'Unknown',
+                            logoData: logoData || 'MISSING'
+                        });
+
+                        resultsDiv.innerHTML += `
+                            <div class="result-item">
+                                <strong>Square ${data.squareNumber || docSnapshot.id}</strong><br>
+                                Business: ${data.businessName || 'Unknown'}<br>
+                                Logo: ${logoData ? 'Broken URL' : 'MISSING'}<br>
+                                Document ID: <code>${docSnapshot.id}</code>
+                            </div>
+                        `;
+                    }
+                }
+
+                statusDiv.innerHTML = `
+                    <div class="${orphaned > 0 ? 'warning' : 'success'}">
+                        ✅ Check complete!<br>
+                        Total documents: ${checked}<br>
+                        Valid logos: ${checked - orphaned}<br>
+                        <strong>Orphaned ads (no valid logo): ${orphaned}</strong>
+                    </div>
+                `;
+
+                if (orphaned > 0) {
+                    deleteBtn.disabled = false;
+                } else {
+                    statusDiv.innerHTML += '<div class="success">✅ No orphaned ads found! All logos are valid.</div>';
+                }
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                console.error('Error checking orphaned ads:', error);
+            } finally {
+                checkBtn.disabled = false;
+            }
+        };
+
+        window.deleteOrphanedAds = async function() {
+            if (orphanedDocs.length === 0) {
+                alert('No orphaned ads to delete. Run check first.');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete ${orphanedDocs.length} orphaned ads? This cannot be undone!`)) {
+                return;
+            }
+
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            const deleteBtn = document.getElementById('deleteBtn');
+
+            deleteBtn.disabled = true;
+            statusDiv.innerHTML = '<div class="info">🗑️ Deleting orphaned ads...</div>';
+
+            let deleted = 0;
+            let errors = 0;
+
+            for (const docData of orphanedDocs) {
+                try {
+                    await deleteDoc(doc(db, 'purchasedSquares', docData.id));
+                    deleted++;
+                    resultsDiv.innerHTML += `
+                        <div class="result-item" style="color: green;">
+                            ✅ Deleted: Square ${docData.squareNumber} (${docData.businessName})
+                        </div>
+                    `;
+                } catch (error) {
+                    errors++;
+                    resultsDiv.innerHTML += `
+                        <div class="result-item" style="color: red;">
+                            ❌ Error deleting ${docData.squareNumber}: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+
+            statusDiv.innerHTML = `
+                <div class="success">
+                    ✅ Deletion complete!<br>
+                    Deleted: ${deleted}<br>
+                    Errors: ${errors}
+                </div>
+            `;
+
+            orphanedDocs = [];
+            deleteBtn.disabled = true;
+        };
+
+        window.clearIndexedDB = async function() {
+            if (!confirm('Clear IndexedDB cache? This will force a fresh load from Firestore.')) {
+                return;
+            }
+
+            try {
+                const dbName = 'clickalinks-cache';
+                const deleteReq = indexedDB.deleteDatabase(dbName);
+                
+                deleteReq.onsuccess = () => {
+                    document.getElementById('status').innerHTML = '<div class="success">✅ IndexedDB cache cleared!</div>';
+                };
+                
+                deleteReq.onerror = () => {
+                    document.getElementById('status').innerHTML = '<div class="error">❌ Error clearing IndexedDB</div>';
+                };
+            } catch (error) {
+                document.getElementById('status').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>
+

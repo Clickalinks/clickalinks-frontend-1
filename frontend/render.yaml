@@ -9,4 +9,4 @@ services:
       - key: REACT_APP_STRIPE_PUBLISHABLE_KEY
         value: your_stripe_publishable_key_here
       - key: REACT_APP_BACKEND_URL
-        value: https://clickalinks-backend-1.onrender.com
+        value: https://clickalinks-backend-2.onrender.com

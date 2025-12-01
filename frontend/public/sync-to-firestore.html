@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync localStorage to Firestore</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+            padding: 20px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        p {
+            margin-bottom: 25px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 50px;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .info {
+            color: #007bff;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #007bff;
+            padding-left: 10px;
+        }
+        .log-entry.success {
+            border-left-color: #28a745;
+        }
+        .log-entry.error {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sync localStorage to Firestore</h1>
+        <p>This tool will sync all purchases from your browser's localStorage to Firestore database.</p>
+        <p><strong>Current Status:</strong> <span id="localStorageStatus">Checking...</span></p>
+        
+        <button id="syncButton" onclick="syncToFirestore()">Sync All Purchases to Firestore</button>
+        <button onclick="checkFirestore()">Check Firestore Status</button>
+        <button onclick="clearLocalStorage()">Clear localStorage</button>
+        
+        <div id="status"></div>
+        <div id="log" class="log" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        // IMPORTANT: Replace with your actual Firebase config from frontend/src/firebase.js
+        const firebaseConfig = {
+            apiKey: "XsxVvIS4mIRSzDzG2RtsbJ_I1p25-rjuupbwWCffz6g",
+            authDomain: "clickalinks-frontend.firebaseapp.com",
+            projectId: "clickalinks-frontend",
+            storageBucket: "clickalinks-frontend.firebasestorage.app",
+            messagingSenderId: "568043553622",
+            appId: "1:568043553622:web:d8e928c8b26e2847e50cf7"
+        };
+
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, query, where, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const log = (message, type = 'info') => {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        };
+
+        const updateStatus = (message, type = 'info') => {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = type;
+            statusDiv.textContent = message;
+        };
+
+        // Check localStorage status
+        const checkLocalStorage = () => {
+            const squarePurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+            const pendingPurchases = JSON.parse(localStorage.getItem('pendingPurchases') || '{}');
+            const businessFormData = JSON.parse(localStorage.getItem('businessFormData') || '{}');
+
+            const statusDiv = document.getElementById('localStorageStatus');
+            const count = Object.keys(squarePurchases).length;
+            
+            if (count > 0) {
+                statusDiv.textContent = `Found ${count} purchase(s) in localStorage`;
+                statusDiv.style.color = '#28a745';
+            } else {
+                statusDiv.textContent = 'No purchases found in localStorage';
+                statusDiv.style.color = '#6c757d';
+            }
+
+            log(`Found ${count} purchases in squarePurchases`);
+            log(`Found ${Object.keys(pendingPurchases).length} pending purchases`);
+            log(`Business form data: ${businessFormData.businessName || businessFormData.name || 'none'}`);
+        };
+
+        window.checkFirestore = async () => {
+            updateStatus('Checking Firestore...', 'info');
+            log('=== CHECKING FIRESTORE ===');
+            
+            try {
+                const snapshot = await getDocs(collection(db, 'purchasedSquares'));
+                const count = snapshot.size;
+                
+                log(`Found ${count} document(s) in Firestore`);
+                
+                if (count > 0) {
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        log(`  - Square ${data.squareNumber}: ${data.businessName || 'Unknown'} (${data.paymentStatus || 'unknown'})`, 'success');
+                    });
+                    updateStatus(`✅ Found ${count} purchase(s) in Firestore`, 'success');
+                } else {
+                    updateStatus('⚠️ Firestore is empty', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error checking Firestore: ${error.message}`, 'error');
+                updateStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        };
+
+        window.syncToFirestore = async () => {
+            const button = document.getElementById('syncButton');
+            button.disabled = true;
+            updateStatus('Syncing...', 'info');
+            log('=== SYNCING TO FIRESTORE ===');
+            
+            try {
+                const squarePurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+                const businessFormData = JSON.parse(localStorage.getItem('businessFormData') || '{}');
+                
+                let syncedCount = 0;
+                let skippedCount = 0;
+                let errorCount = 0;
+
+                for (const [squareNumber, purchase] of Object.entries(squarePurchases)) {
+                    const squareNum = parseInt(squareNumber);
+                    if (!squareNum) {
+                        log(`⏭️ Skipping invalid square number: ${squareNumber}`, 'error');
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // Only sync confirmed purchases
+                    const isActive = purchase.status === 'active';
+                    const hasConfirmedPayment = purchase.paymentStatus === 'paid';
+                    
+                    if (!isActive || !hasConfirmedPayment) {
+                        log(`⏭️ Skipping square ${squareNum} (status: ${purchase.status}, payment: ${purchase.paymentStatus})`, 'error');
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // Check if already exists
+                    try {
+                        const checkSnapshot = await getDocs(
+                            query(collection(db, 'purchasedSquares'), where('squareNumber', '==', squareNum))
+                        );
+
+                        if (!checkSnapshot.empty) {
+                            log(`⏭️ Square ${squareNum} already exists in Firestore, skipping`, 'info');
+                            skippedCount++;
+                            continue;
+                        }
+
+                        // Generate purchase ID
+                        const purchaseId = purchase.purchaseId || `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+
+                        // Prepare data
+                        const dataToSave = {
+                            purchaseId: purchaseId,
+                            status: 'active',
+                            businessName: purchase.businessName || businessFormData.name || businessFormData.businessName,
+                            logoData: purchase.logoData || businessFormData.logoData,
+                            dealLink: purchase.website || purchase.dealLink || businessFormData.website || '',
+                            contactEmail: purchase.contactEmail || businessFormData.email || '',
+                            startDate: purchase.startDate || purchase.purchaseDate || new Date().toISOString(),
+                            endDate: purchase.endDate || new Date(Date.now() + (purchase.duration || 30) * 24 * 60 * 60 * 1000).toISOString(),
+                            amount: purchase.amount || purchase.finalAmount || 10,
+                            duration: purchase.duration || purchase.selectedDuration || 30,
+                            transactionId: purchase.transactionId || purchase.sessionId || '',
+                            purchaseDate: purchase.purchaseDate || new Date().toISOString(),
+                            paymentStatus: 'paid',
+                            storageType: purchase.logoData && purchase.logoData.includes('firebasestorage') ? 'firebase' : 'local',
+                            storagePath: purchase.storagePath || localStorage.getItem(`logoPath_${squareNum}`) || null,
+                            squareNumber: squareNum,
+                            pageNumber: purchase.pageNumber || Math.ceil(squareNum / 200),
+                            clickCount: 0,
+                            createdAt: serverTimestamp(),
+                            updatedAt: serverTimestamp()
+                        };
+
+                        // Save to Firestore
+                        const docRef = doc(db, 'purchasedSquares', purchaseId);
+                        await setDoc(docRef, dataToSave);
+                        
+                        log(`✅ Synced square ${squareNum}: ${dataToSave.businessName}`, 'success');
+                        syncedCount++;
+                    } catch (error) {
+                        log(`❌ Error syncing square ${squareNum}: ${error.message}`, 'error');
+                        errorCount++;
+                    }
+                }
+
+                updateStatus(`✅ Sync complete! Synced: ${syncedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`, syncedCount > 0 ? 'success' : 'info');
+                log(`=== SYNC COMPLETE ===`);
+                log(`Synced: ${syncedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+
+            } catch (error) {
+                log(`❌ Sync error: ${error.message}`, 'error');
+                updateStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        };
+
+        window.clearLocalStorage = () => {
+            if (confirm('Are you sure you want to clear all localStorage data? This cannot be undone.')) {
+                localStorage.clear();
+                log('✅ localStorage cleared');
+                updateStatus('✅ localStorage cleared', 'success');
+                checkLocalStorage();
+            }
+        };
+
+        // Check localStorage on load
+        checkLocalStorage();
+        
+        // Auto-check Firestore on load
+        setTimeout(() => {
+            checkFirestore();
+        }, 500);
+    </script>
+</body>
+</html>
+

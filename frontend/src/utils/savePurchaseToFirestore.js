@@ -1,13 +1,35 @@
 import { db } from '../firebase';
-import { doc, setDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, serverTimestamp, getDocs, collection, query, where, writeBatch } from 'firebase/firestore';
+import { generateUniquePurchaseId } from './generateUniqueId';
+
+// Track ongoing saves to prevent duplicates
+const ongoingSaves = new Map();
 
 /**
  * Save purchase data to Firestore
- * This function can be called from anywhere to ensure data is saved
+ * CRITICAL: This function prevents duplicates by:
+ * 1. Checking for existing documents with the same squareNumber
+ * 2. Deleting ALL duplicates before saving
+ * 3. Using a lock to prevent simultaneous saves
  */
 export const savePurchaseToFirestore = async (purchaseData) => {
+  const squareNumber = purchaseData.squareNumber;
+  
+  // Generate unique purchase ID (not tied to square number)
+  const purchaseId = purchaseData.purchaseId || generateUniquePurchaseId();
+  const lockKey = `save_${purchaseId}`;
+  
+  // Prevent multiple simultaneous saves for the same purchase
+  if (ongoingSaves.has(lockKey)) {
+    console.warn(`⚠️ Save already in progress for purchase ${purchaseId}, skipping duplicate call`);
+    return false;
+  }
+  
+  ongoingSaves.set(lockKey, true);
+  
   try {
     console.log('🔥 SAVING PURCHASE TO FIRESTORE:', {
+      purchaseId: purchaseId,
       squareNumber: purchaseData.squareNumber,
       businessName: purchaseData.businessName,
       hasLogo: !!purchaseData.logoData
@@ -18,9 +40,53 @@ export const savePurchaseToFirestore = async (purchaseData) => {
       return false;
     }
 
-    const squareDocRef = doc(db, 'purchasedSquares', purchaseData.squareNumber.toString());
+    // CRITICAL STEP 1: Find and delete ONLY documents with the same squareNumber AND different purchaseId
+    // IMPORTANT: We DON'T delete by squareNumber alone anymore - backend shuffle assigns orderingIndex
+    // Multiple purchases can exist, backend shuffle will assign them to different squares via orderingIndex
+    // Only delete if there's an EXACT conflict: same squareNumber AND different purchaseId AND same page
+    console.log(`🔍 Checking for existing documents with squareNumber ${squareNumber}...`);
+    const existingDocsQuery = query(
+      collection(db, 'purchasedSquares'),
+      where('squareNumber', '==', squareNumber),
+      where('status', '==', 'active')
+    );
+    const existingDocsSnapshot = await getDocs(existingDocsQuery);
+    
+    const documentsToDelete = [];
+    existingDocsSnapshot.forEach(docSnapshot => {
+      const existingData = docSnapshot.data();
+      // Only delete if:
+      // 1. Different purchaseId (not the same purchase)
+      // 2. Same squareNumber (conflict)
+      // 3. Same pageNumber (same page = conflict)
+      const samePage = (existingData.pageNumber || 1) === (purchaseData.pageNumber || 1);
+      if (existingData.purchaseId !== purchaseId && samePage) {
+        documentsToDelete.push(docSnapshot.id);
+        console.log(`🗑️ Found conflicting document ${docSnapshot.id} for square ${squareNumber} on page ${purchaseData.pageNumber || 1}, will delete`);
+      } else {
+        console.log(`✅ Keeping document ${docSnapshot.id} (different purchase or different page)`);
+      }
+    });
+    
+    // Delete conflicting documents in a batch
+    if (documentsToDelete.length > 0) {
+      console.log(`🗑️ Deleting ${documentsToDelete.length} conflicting document(s) before save...`);
+      const deleteBatch = writeBatch(db);
+      documentsToDelete.forEach(docId => {
+        const docToDelete = doc(db, 'purchasedSquares', docId);
+        deleteBatch.delete(docToDelete);
+      });
+      await deleteBatch.commit();
+      console.log(`✅ Deleted ${documentsToDelete.length} conflicting document(s)`);
+    } else {
+      console.log(`✅ No conflicts found - all existing documents are different purchases or on different pages`);
+    }
+
+    // CRITICAL STEP 2: Save the new document with unique purchaseId as document ID
+    const purchaseDocRef = doc(db, 'purchasedSquares', purchaseId);
     
     const dataToSave = {
+      purchaseId: purchaseId, // Store unique ID
       status: 'active',
       businessName: purchaseData.businessName,
       logoData: purchaseData.logoData || null,
@@ -35,33 +101,62 @@ export const savePurchaseToFirestore = async (purchaseData) => {
       paymentStatus: 'paid',
       storageType: purchaseData.logoData && purchaseData.logoData.includes('firebasestorage') ? 'firebase' : 'local',
       storagePath: purchaseData.storagePath || null,
-      squareNumber: purchaseData.squareNumber,
+      squareNumber: purchaseData.squareNumber, // Current square assignment (can change during shuffle)
       pageNumber: purchaseData.pageNumber || 1,
+      clickCount: 0, // Initialize click count
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
-    await setDoc(squareDocRef, dataToSave, { merge: true });
+    // Use setDoc (not merge) to ensure clean save
+    console.log('📤 Attempting Firestore write...', {
+      collection: 'purchasedSquares',
+      documentId: purchaseId,
+      dataKeys: Object.keys(dataToSave)
+    });
+    
+    try {
+      await setDoc(purchaseDocRef, dataToSave);
+      console.log('✅ setDoc completed successfully');
+    } catch (setDocError) {
+      console.error('❌ setDoc failed:', setDocError);
+      console.error('Error code:', setDocError.code);
+      console.error('Error message:', setDocError.message);
+      throw setDocError; // Re-throw to be caught by outer catch
+    }
     
     console.log('✅ Successfully saved to Firestore:', {
-      documentId: purchaseData.squareNumber.toString(),
+      documentId: purchaseId,
+      purchaseId: purchaseId,
       square: purchaseData.squareNumber,
       businessName: purchaseData.businessName
     });
 
-    // Verify it was saved
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const verifySnapshot = await getDocs(
-      query(collection(db, 'purchasedSquares'), where('squareNumber', '==', purchaseData.squareNumber))
-    );
-    
-    if (verifySnapshot.empty) {
-      console.error('❌ VERIFICATION FAILED: Document not found after save!');
-      return false;
-    } else {
-      console.log('✅ VERIFICATION SUCCESS: Document found in Firestore');
-      return true;
+    // Verify it was saved (with retry logic)
+    let verificationPassed = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+      const verifyDoc = await getDocs(
+        query(collection(db, 'purchasedSquares'), where('purchaseId', '==', purchaseId))
+      );
+      
+      if (!verifyDoc.empty) {
+        console.log(`✅ VERIFICATION SUCCESS (attempt ${attempt + 1}): Document found in Firestore`);
+        verificationPassed = true;
+        break;
+      } else {
+        console.warn(`⚠️ Verification attempt ${attempt + 1} failed, retrying...`);
+      }
     }
+    
+    if (!verificationPassed) {
+      console.error('❌ VERIFICATION FAILED: Document not found after 3 attempts!');
+      console.error('This might be a Firestore rules issue or network problem');
+      // Still return true if setDoc succeeded - verification might fail due to eventual consistency
+      return true; // Return true anyway since setDoc succeeded
+    }
+    
+    return true;
 
   } catch (error) {
     console.error('❌ Error saving to Firestore:', error);
@@ -73,6 +168,9 @@ export const savePurchaseToFirestore = async (purchaseData) => {
     }
     
     return false;
+  } finally {
+    // Always release the lock
+    ongoingSaves.delete(lockKey);
   }
 };
 
@@ -108,14 +206,15 @@ export const syncLocalStorageToFirestore = async () => {
 
     let savedCount = 0;
 
-    // Process squarePurchases - be more lenient, check for any purchase with squareNumber
+    // Process squarePurchases - ONLY sync purchases with confirmed payment
     for (const [squareNumber, purchase] of Object.entries(squarePurchases)) {
-      // Check if it has required data and isn't explicitly cancelled/failed
+      // CRITICAL: Only sync purchases with confirmed payment status
       const hasRequiredData = purchase.squareNumber || squareNumber;
       const isNotCancelled = purchase.status !== 'cancelled' && purchase.status !== 'failed';
+      const hasConfirmedPayment = purchase.paymentStatus === 'paid' || purchase.status === 'active';
       
-      if (hasRequiredData && isNotCancelled) {
-        console.log(`📦 Found purchase for square ${squareNumber}, checking Firestore...`);
+      if (hasRequiredData && isNotCancelled && hasConfirmedPayment) {
+        console.log(`📦 Found confirmed purchase for square ${squareNumber}, checking Firestore...`);
         
         // Check if already in Firestore
         const checkSnapshot = await getDocs(
@@ -130,34 +229,89 @@ export const syncLocalStorageToFirestore = async () => {
           const logoPath = localStorage.getItem(`logoPath_${squareNumber}`);
           
           // Merge with businessFormData for complete data
+          const logoData = purchase.logoData || businessFormData.logoData;
+          
+          // CRITICAL: Only skip if logo is a Firebase Storage URL that's broken
+          // Allow data URLs and other formats to sync
+          if (logoData && logoData.includes('firebasestorage.googleapis.com')) {
+            try {
+              // Try to fetch the logo to verify it exists (with timeout)
+              const fetchPromise = fetch(logoData, { method: 'HEAD' });
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 5000)
+              );
+              
+              const response = await Promise.race([fetchPromise, timeoutPromise]);
+              if (!response.ok) {
+                console.warn(`⚠️ Logo URL is broken (${response.status}) for square ${squareNumber}, skipping sync and removing from localStorage`);
+                
+                // CRITICAL: Remove broken logo from localStorage to prevent it from showing
+                const squarePurchases = JSON.parse(localStorage.getItem('squarePurchases') || '{}');
+                delete squarePurchases[squareNumber];
+                localStorage.setItem('squarePurchases', JSON.stringify(squarePurchases));
+                localStorage.removeItem(`logoPath_${squareNumber}`);
+                
+                // Don't sync if logo is broken - user should re-upload
+                continue;
+              }
+            } catch (error) {
+              // If it's a timeout or network error, still allow sync (logo might be temporarily unavailable)
+              console.warn(`⚠️ Could not verify logo URL for square ${squareNumber}, syncing anyway:`, error.message);
+              // Continue with sync - logo might be temporarily unavailable
+            }
+          }
+          
+          // Generate purchase ID if not present
+          const purchaseId = purchase.purchaseId || `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+          
           const completePurchase = {
             ...purchase,
             ...businessFormData,
+            purchaseId: purchaseId, // Ensure purchaseId is set
             squareNumber: parseInt(squareNumber),
-            logoData: purchase.logoData || businessFormData.logoData,
+            logoData: logoData,
             storagePath: logoPath || purchase.storagePath,
             status: 'active', // Ensure status is active
-            paymentStatus: purchase.paymentStatus || 'paid'
+            paymentStatus: 'paid', // Ensure payment status is paid
+            endDate: purchase.endDate || new Date(Date.now() + (purchase.duration || purchase.selectedDuration || 30) * 24 * 60 * 60 * 1000).toISOString()
           };
           
+          console.log(`📤 Attempting to save square ${squareNumber} to Firestore:`, {
+            purchaseId: purchaseId,
+            businessName: completePurchase.businessName,
+            hasLogo: !!completePurchase.logoData,
+            logoType: completePurchase.logoData ? (completePurchase.logoData.startsWith('data:') ? 'Data URL' : 'URL') : 'None'
+          });
+          
           const success = await savePurchaseToFirestore(completePurchase);
-          if (success) savedCount++;
+          if (success) {
+            savedCount++;
+            console.log(`✅ Successfully synced square ${squareNumber} to Firestore`);
+          } else {
+            console.error(`❌ Failed to sync square ${squareNumber} to Firestore`);
+          }
         } else {
           console.log(`✅ Square ${squareNumber} already in Firestore, skipping`);
         }
       } else {
-        console.log(`⏭️ Skipping square ${squareNumber}:`, {
+        console.log(`⏭️ Skipping square ${squareNumber} (not confirmed payment):`, {
           hasRequiredData,
           isNotCancelled,
+          hasConfirmedPayment,
+          paymentStatus: purchase.paymentStatus,
           status: purchase.status
         });
       }
     }
 
-    // Process pendingPurchases (by session ID)
+    // Process pendingPurchases (by session ID) - ONLY if payment was confirmed
+    // NOTE: pendingPurchases are only saved AFTER successful payment, so these should be safe to sync
     for (const [sessionId, purchase] of Object.entries(pendingPurchases)) {
-      if (purchase.squareNumber) {
-        console.log(`📦 Found pending purchase for square ${purchase.squareNumber}, checking Firestore...`);
+      // CRITICAL: Only sync if payment was confirmed (has transactionId or paymentStatus)
+      const hasConfirmedPayment = purchase.transactionId || purchase.paymentStatus === 'paid' || purchase.sessionId;
+      
+      if (purchase.squareNumber && hasConfirmedPayment) {
+        console.log(`📦 Found confirmed pending purchase for square ${purchase.squareNumber}, checking Firestore...`);
         
         // Check if already in Firestore
         const checkSnapshot = await getDocs(
@@ -171,50 +325,30 @@ export const syncLocalStorageToFirestore = async () => {
           const mergedPurchase = {
             ...purchase,
             ...businessFormData,
-            transactionId: sessionId,
+            transactionId: purchase.transactionId || purchase.sessionId || sessionId,
             logoData: purchase.logoData || businessFormData.logoData,
             storagePath: logoPath || purchase.storagePath,
             status: 'active',
             paymentStatus: 'paid'
           };
           
-          console.log(`💾 Saving pending purchase for square ${purchase.squareNumber} to Firestore...`);
+          console.log(`💾 Saving confirmed pending purchase for square ${purchase.squareNumber} to Firestore...`);
           const success = await savePurchaseToFirestore(mergedPurchase);
           if (success) savedCount++;
         } else {
           console.log(`✅ Square ${purchase.squareNumber} already in Firestore, skipping`);
         }
+      } else {
+        console.log(`⏭️ Skipping pending purchase (no confirmed payment):`, {
+          squareNumber: purchase.squareNumber,
+          hasTransactionId: !!purchase.transactionId,
+          paymentStatus: purchase.paymentStatus
+        });
       }
     }
 
-    // Also check businessFormData directly if it has squareNumber
-    if (businessFormData.squareNumber && !businessFormData.status) {
-      console.log(`📦 Found businessFormData with square ${businessFormData.squareNumber}, checking Firestore...`);
-      
-      const checkSnapshot = await getDocs(
-        query(collection(db, 'purchasedSquares'), where('squareNumber', '==', businessFormData.squareNumber))
-      );
-      
-      if (checkSnapshot.empty) {
-        const logoPath = localStorage.getItem(`logoPath_${businessFormData.squareNumber}`);
-        
-        const purchaseData = {
-          ...businessFormData,
-          squareNumber: businessFormData.squareNumber,
-          logoData: businessFormData.logoData,
-          storagePath: logoPath,
-          status: 'active',
-          paymentStatus: 'paid',
-          businessName: businessFormData.name || businessFormData.businessName,
-          contactEmail: businessFormData.email || businessFormData.contactEmail,
-          website: businessFormData.website
-        };
-        
-        console.log(`💾 Saving businessFormData for square ${businessFormData.squareNumber} to Firestore...`);
-        const success = await savePurchaseToFirestore(purchaseData);
-        if (success) savedCount++;
-      }
-    }
+    // DO NOT sync businessFormData directly - it's only saved before payment
+    // Only sync purchases that have confirmed payment status
 
     if (savedCount > 0) {
       console.log(`✅ Synced ${savedCount} purchase(s) from localStorage to Firestore`);

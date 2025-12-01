@@ -27,17 +27,9 @@ body {
 }
 
 /* ===== HEADER & NAVIGATION ===== */
+/* Header styles are now in Header.css - keeping minimal override for compatibility */
 .header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem 1.5rem 0.5rem;
-  background: (none)linear-gradient(135deg, #6be9f38f 0%, #909a5140 50%, #4a8acb 100%);
-  box-shadow: 0 4px 20px rgba(31, 38, 135, 0.3);
-  gap: 8px;
-  position: relative;
-  z-index: 800;
-  width: 80%;
+  width: 100% !important; /* Ensure full width for proper alignment */
 }
 
 .page-navigation {

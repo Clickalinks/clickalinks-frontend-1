@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear localStorage - ClickaLinks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #c82333;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+            display: none;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Clear localStorage</h1>
+        
+        <div class="info">
+            <strong>What this does:</strong><br>
+            Clears all localStorage data including purchases, pending purchases, and logo paths.
+            This will stop the auto-sync from recreating Firestore documents.
+        </div>
+
+        <button onclick="clearAll()">Clear All localStorage</button>
+        <button onclick="clearPurchasesOnly()">Clear Purchases Only</button>
+        
+        <div id="result" class="success"></div>
+
+        <div style="margin-top: 30px;">
+            <h3>What will be cleared:</h3>
+            <ul>
+                <li><code>squarePurchases</code> - All purchase data</li>
+                <li><code>pendingPurchases</code> - Pending payment data</li>
+                <li><code>businessFormData</code> - Business form data</li>
+                <li><code>logoPath_*</code> - All logo paths</li>
+                <li><code>purchaseId_*</code> - All purchase IDs</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function showResult(message, isSuccess = true) {
+            const result = document.getElementById('result');
+            result.style.display = 'block';
+            result.style.background = isSuccess ? '#d4edda' : '#f8d7da';
+            result.style.borderLeftColor = isSuccess ? '#28a745' : '#dc3545';
+            result.textContent = message;
+            
+            setTimeout(() => {
+                if (isSuccess) {
+                    window.location.href = window.location.origin;
+                }
+            }, 2000);
+        }
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear ALL localStorage? This cannot be undone.')) {
+                try {
+                    localStorage.clear();
+                    console.log('✅ localStorage cleared successfully');
+                    showResult('✅ Successfully cleared all localStorage! Redirecting...', true);
+                } catch (error) {
+                    console.error('❌ Error clearing localStorage:', error);
+                    showResult('❌ Error clearing localStorage: ' + error.message, false);
+                }
+            }
+        }
+
+        function clearPurchasesOnly() {
+            if (confirm('Clear only purchase-related data? (Keeps other localStorage data)')) {
+                try {
+                    // Clear purchase-related keys
+                    localStorage.removeItem('squarePurchases');
+                    localStorage.removeItem('pendingPurchases');
+                    localStorage.removeItem('businessFormData');
+                    
+                    // Clear logo paths and purchase IDs
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (key.startsWith('logoPath_') || key.startsWith('purchaseId_'))) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                    
+                    console.log('✅ Purchase data cleared successfully');
+                    console.log(`Removed ${keysToRemove.length} logo/purchase ID keys`);
+                    showResult(`✅ Successfully cleared purchase data! (Removed ${keysToRemove.length} additional keys) Redirecting...`, true);
+                } catch (error) {
+                    console.error('❌ Error clearing purchase data:', error);
+                    showResult('❌ Error clearing purchase data: ' + error.message, false);
+                }
+            }
+        }
+
+        // Show current localStorage status
+        window.onload = function() {
+            const squarePurchases = localStorage.getItem('squarePurchases');
+            const pendingPurchases = localStorage.getItem('pendingPurchases');
+            const businessFormData = localStorage.getItem('businessFormData');
+            
+            let logoPathCount = 0;
+            let purchaseIdCount = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('logoPath_')) logoPathCount++;
+                if (key && key.startsWith('purchaseId_')) purchaseIdCount++;
+            }
+            
+            const hasData = squarePurchases || pendingPurchases || businessFormData || logoPathCount > 0 || purchaseIdCount > 0;
+            
+            if (hasData) {
+                const status = document.createElement('div');
+                status.className = 'info';
+                status.style.marginTop = '20px';
+                status.innerHTML = `
+                    <strong>Current localStorage status:</strong><br>
+                    ${squarePurchases ? '✅ squarePurchases found<br>' : '❌ No squarePurchases<br>'}
+                    ${pendingPurchases ? '✅ pendingPurchases found<br>' : '❌ No pendingPurchases<br>'}
+                    ${businessFormData ? '✅ businessFormData found<br>' : '❌ No businessFormData<br>'}
+                    ${logoPathCount > 0 ? `✅ ${logoPathCount} logoPath keys<br>` : '❌ No logoPath keys<br>'}
+                    ${purchaseIdCount > 0 ? `✅ ${purchaseIdCount} purchaseId keys` : '❌ No purchaseId keys'}
+                `;
+                document.querySelector('.container').insertBefore(status, document.getElementById('result'));
+            }
+        };
+    </script>
+</body>
+</html>
+

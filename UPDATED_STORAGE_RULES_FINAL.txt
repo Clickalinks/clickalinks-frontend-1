@@ -1,0 +1,21 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Logos folder - public read and write (no authentication required)
+    match /logos/{logoId} {
+      // Allow anyone to read logos (needed for displaying on website)
+      allow read: if true;
+      
+      // Allow anyone to write/delete logos (no authentication required)
+      // Max file size: 5MB to prevent abuse
+      allow write: if request.resource.size < 5 * 1024 * 1024;
+    }
+    
+    // Deny all other paths by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

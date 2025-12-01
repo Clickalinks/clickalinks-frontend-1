@@ -1,0 +1,38 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Logos folder - public read, origin-restricted write
+    match /logos/{logoId} {
+      // Allow anyone to read logos (needed for displaying on website)
+      allow read: if true;
+      
+      // Allow writes only from your app domains (no authentication required)
+      // This prevents unauthorized uploads while allowing your app to work
+      allow write: if request.resource.size < 5 * 1024 * 1024 // Max 5MB
+        && (
+          // Production domain
+          request.headers.origin == 'https://clickalinks-frontend.web.app' ||
+          request.headers.origin == 'https://clickalinks-frontend.firebaseapp.com' ||
+          // Development/localhost
+          request.headers.origin == 'http://localhost:3000' ||
+          request.headers.origin == 'http://localhost:3001' ||
+          request.headers.origin == 'http://127.0.0.1:3000' ||
+          // Alternative: Allow if no origin header (direct API calls from your backend)
+          !('origin' in request.headers)
+        );
+      
+      // Allow delete for cleanup (same restrictions as write)
+      allow delete: if request.headers.origin == 'https://clickalinks-frontend.web.app' ||
+                     request.headers.origin == 'https://clickalinks-frontend.firebaseapp.com' ||
+                     request.headers.origin == 'http://localhost:3000' ||
+                     !('origin' in request.headers);
+    }
+    
+    // Deny all other paths by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

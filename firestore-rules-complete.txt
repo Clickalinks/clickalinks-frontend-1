@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // purchasedSquares collection - stores all ad purchases
+    match /purchasedSquares/{purchaseId} {
+      // Public read access (needed to display ads on website)
+      // orderingIndex field is readable by all (set by backend shuffle)
+      allow read: if true;
+      
+      // Allow writes for new purchases (creates collection automatically on first save)
+      allow create: if true;
+      
+      // Allow updates for purchase data (but NOT orderingIndex - only backend can update that)
+      // Frontend can update: businessName, logoData, dealLink, contactEmail, clickCount, etc.
+      // Backend (via Admin SDK) can update: orderingIndex, lastShuffled
+      // Note: Firestore rules can't restrict specific fields, but backend enforces this
+      allow update: if true;
+      
+      // Allow delete (for cleanup)
+      allow delete: if true;
+      
+      // Note: orderingIndex and lastShuffled are managed by backend only
+      // Frontend cannot modify these fields (enforced by backend, not rules)
+    }
+    
+    // clickAnalytics collection - tracks ad clicks
+    match /clickAnalytics/{clickId} {
+      // Public read (for analytics dashboard)
+      allow read: if true;
+      
+      // Allow writes (for click tracking)
+      allow write: if true;
+    }
+    
+    // promoCodes collection - stores promotion codes
+    match /promoCodes/{promoId} {
+      // Public read access (frontend needs to validate codes)
+      allow read: if true;
+      
+      // Only backend can write (via Admin SDK)
+      // Frontend cannot create/update/delete promo codes
+      allow write: if false;
+    }
+    
+    // Default: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

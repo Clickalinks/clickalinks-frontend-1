@@ -10,26 +10,26 @@ const router = express.Router();
 
 /**
  * Middleware to verify admin authorization
- * Uses ADMIN_SECRET_KEY from environment variables
+ * Uses ADMIN_API_KEY from environment variables
  */
 function verifyAdminAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const adminSecret = process.env.ADMIN_SECRET_KEY;
+  // Check for API key in header (x-api-key) or Authorization header
+  const apiKey = req.headers['x-api-key'] || 
+                 req.headers['X-API-Key'] ||
+                 (req.headers.authorization ? req.headers.authorization.replace('Bearer ', '') : null);
   
-  if (!adminSecret) {
-    console.error('❌ ADMIN_SECRET_KEY not configured in environment variables');
+  // Use ADMIN_API_KEY or fallback to ADMIN_SECRET_KEY for backward compatibility
+  const adminKey = process.env.ADMIN_API_KEY || process.env.ADMIN_SECRET_KEY;
+  
+  if (!adminKey) {
+    console.error('❌ ADMIN_API_KEY or ADMIN_SECRET_KEY not configured in environment variables');
     return res.status(500).json({
       success: false,
       error: 'Admin authentication not configured'
     });
   }
   
-  // Check for Bearer token or direct secret in Authorization header
-  const providedSecret = authHeader 
-    ? authHeader.replace('Bearer ', '').replace('Secret ', '')
-    : req.query.secret || req.body.secret;
-  
-  if (!providedSecret || providedSecret !== adminSecret) {
+  if (!apiKey || apiKey !== adminKey) {
     console.warn('⚠️ Unauthorized shuffle attempt:', {
       ip: req.ip,
       userAgent: req.get('user-agent'),
@@ -38,7 +38,7 @@ function verifyAdminAuth(req, res, next) {
     
     return res.status(401).json({
       success: false,
-      error: 'Unauthorized: Invalid admin secret'
+      error: 'Unauthorized: Invalid admin API key'
     });
   }
   
@@ -61,7 +61,7 @@ router.post('/admin/shuffle', verifyAdminAuth, async (req, res) => {
         success: true,
         message: result.message,
         shuffledCount: result.shuffledCount,
-        batches: result.batches,
+        seed: result.seed,
         duration: result.duration,
         timestamp: result.timestamp
       });
@@ -89,12 +89,36 @@ router.post('/admin/shuffle', verifyAdminAuth, async (req, res) => {
 router.get('/admin/shuffle/stats', verifyAdminAuth, async (req, res) => {
   try {
     const stats = await getShuffleStats();
-    res.json(stats);
+    
+    // Ensure consistent response format
+    if (stats.success === false) {
+      return res.status(500).json({
+        success: false,
+        error: stats.error || 'Failed to load shuffle stats',
+        totalPurchases: 0,
+        shuffledPurchases: 0,
+        lastShuffle: null,
+        shuffleInterval: '2 hours'
+      });
+    }
+    
+    res.json({
+      success: true,
+      totalPurchases: stats.totalPurchases || 0,
+      shuffledPurchases: stats.shuffledPurchases || 0,
+      lastShuffle: stats.lastShuffle || null,
+      nextShuffleSeed: stats.nextShuffleSeed || null,
+      shuffleInterval: stats.shuffleInterval || '2 hours'
+    });
   } catch (error) {
     console.error('❌ Error getting shuffle stats:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message || 'Failed to load shuffle stats',
+      totalPurchases: 0,
+      shuffledPurchases: 0,
+      lastShuffle: null,
+      shuffleInterval: '2 hours'
     });
   }
 });
