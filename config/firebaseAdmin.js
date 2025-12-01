@@ -24,20 +24,31 @@ if (!admin.apps.length) {
         let jsonString = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
         
         // CRITICAL: Check for Base64 FIRST before trying to parse as JSON
-        // Base64 strings are typically long and contain only A-Z, a-z, 0-9, +, /, and = characters
+        // Base64 detection: If it doesn't start with { or [ and matches Base64 pattern, try decoding
         const base64Pattern = /^[A-Za-z0-9+/]+=*$/;
-        const looksLikeBase64 = base64Pattern.test(jsonString) && jsonString.length > 100 && !jsonString.startsWith('{');
+        const isNotJson = !jsonString.startsWith('{') && !jsonString.startsWith('[');
+        const matchesBase64Pattern = base64Pattern.test(jsonString);
+        const isLongEnough = jsonString.length > 50;
         
-        if (looksLikeBase64) {
+        // Try Base64 decode if it looks like Base64
+        if (isNotJson && matchesBase64Pattern && isLongEnough) {
           try {
+            console.log('🔍 Attempting Base64 decode (length:', jsonString.length, 'chars)');
             // Decode Base64
             const decoded = Buffer.from(jsonString, 'base64').toString('utf-8');
-            jsonString = decoded;
-            console.log('📦 Detected Base64 encoded JSON, decoded successfully');
+            // Verify it decoded to valid JSON-like content
+            if (decoded.trim().startsWith('{') || decoded.trim().startsWith('[')) {
+              jsonString = decoded;
+              console.log('📦 Detected Base64 encoded JSON, decoded successfully');
+            } else {
+              console.log('ℹ️ Base64 decode didn\'t produce JSON, treating as raw JSON');
+            }
           } catch (base64Error) {
-            console.error('❌ Failed to decode Base64:', base64Error.message);
-            throw new Error('Invalid Base64 encoding');
+            console.log('ℹ️ Base64 decode failed, treating as raw JSON:', base64Error.message);
+            // Continue with original string - might be raw JSON
           }
+        } else {
+          console.log('ℹ️ Not Base64 format, treating as raw JSON');
         }
         
         // Remove any surrounding quotes if present
@@ -73,9 +84,8 @@ if (!admin.apps.length) {
     
     // If Priority 1 failed or wasn't set, continue to Priority 2
     if (!admin.apps.length) {
-    } 
-    // Priority 2: Use service account JSON file (for local development)
-    else {
+      // Priority 2: Use service account JSON file (for local development)
+      try {
       try {
         const serviceAccountPath = join(__dirname, '..', 'firebase-service-account.json');
         console.log('📁 Looking for service account file at:', serviceAccountPath);
