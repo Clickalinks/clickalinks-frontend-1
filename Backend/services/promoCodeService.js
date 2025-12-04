@@ -103,7 +103,8 @@ export async function validatePromoCode(code, originalAmount) {
     let finalAmount = originalAmount;
     let freeDays = 0;
     
-    if (promoData.discountType === 'percentage') {
+    // Support both 'percentage' and legacy 'percent' for backward compatibility
+    if (promoData.discountType === 'percentage' || promoData.discountType === 'percent') {
       discountAmount = (originalAmount * promoData.discountValue) / 100;
       finalAmount = Math.max(0, originalAmount - discountAmount);
     } else if (promoData.discountType === 'fixed') {

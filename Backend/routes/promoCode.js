@@ -53,6 +53,12 @@ router.post('/validate',
       const sanitizedAmount = Math.max(0, parseFloat(originalAmount) || 0);
       
       const result = await validatePromoCode(sanitizedCode, sanitizedAmount);
+      
+      // Return appropriate HTTP status code based on validation result
+      if (!result.valid || !result.success) {
+        return res.status(400).json(result);
+      }
+      
       res.json(result);
     } catch (error) {
       console.error('❌ Error validating promo code:', error);
