@@ -626,7 +626,15 @@ const Payment = () => {
                   <button
                     type="button"
                     className="btn-promo-remove"
-                    onClick={removePromoCode}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removePromoCode();
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     disabled={isProcessing}
                   >
                     Remove
@@ -635,7 +643,15 @@ const Payment = () => {
                   <button
                     type="button"
                     className="btn-promo"
-                    onClick={handlePromoCode}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handlePromoCode();
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     disabled={isProcessing}
                   >
                     Apply
