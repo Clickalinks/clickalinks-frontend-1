@@ -69,7 +69,8 @@ const allowedOrigins = [
   'https://clickalinks-frontend.web.app',
   'https://clickalinks-frontend.firebaseapp.com',
   'https://clickalinks-frontend-1.onrender.com',
-  'https://www.clickalinks.com'
+  'https://clickalinks.com',  // Custom domain (without www)
+  'https://www.clickalinks.com'  // Custom domain (with www)
 ];
 
 app.use((req, res, next) => {
