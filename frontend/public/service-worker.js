@@ -61,6 +61,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip backend API requests (let them go to network, don't cache)
+  if (url.hostname.includes('onrender.com') || url.hostname.includes('clickalinks-backend')) {
+    return;
+  }
+
+  // Skip all API requests (any /api/* path)
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin/')) {
+    return;
+  }
+
   // Helper function to safely cache a response
   const safeCachePut = (cache, request, response) => {
     try {
