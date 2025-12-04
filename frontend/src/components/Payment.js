@@ -191,18 +191,26 @@ const Payment = () => {
         })
       });
 
-      if (!response.ok) {
-        // If response is not OK, try to get error text
-        let errorText = '';
-        try {
-          errorText = await response.text();
-        } catch (e) {
-          errorText = `HTTP ${response.status} ${response.statusText}`;
-        }
+      // Try to parse response as JSON first
+      let result;
+      try {
+        result = await response.json();
+      } catch (e) {
+        // If JSON parsing fails, try to get text
+        const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
         throw new Error(`Failed to validate promo code: ${errorText}`);
       }
       
-      const result = await response.json();
+      // If response is not OK, check if we have an error message in the JSON
+      if (!response.ok) {
+        // Backend returns JSON with error field even for 400 errors
+        const errorMessage = result.error || result.message || `HTTP ${response.status} ${response.statusText}`;
+        setErrors(prev => ({ ...prev, promo: errorMessage }));
+        setAppliedPromo(null);
+        setDiscountAmount(0);
+        setFinalAmountAfterDiscount(finalAmount || 10);
+        return; // Exit early, don't process as success
+      }
 
       if (result.valid && result.success) {
         // Promo code is valid
