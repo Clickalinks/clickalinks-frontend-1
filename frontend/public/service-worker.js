@@ -78,9 +78,13 @@ self.addEventListener('fetch', (event) => {
       if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
         return cache.put(request, response);
       }
+      // Return resolved promise if URL is not cacheable
+      return Promise.resolve();
     } catch (error) {
       // Silently ignore cache errors (e.g., chrome-extension URLs)
       console.warn('Service Worker: Cache put failed (non-critical):', error.message);
+      // Return resolved promise to prevent breaking the promise chain
+      return Promise.resolve();
     }
   };
 
