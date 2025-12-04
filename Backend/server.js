@@ -95,6 +95,9 @@ app.use((req, res, next) => {
       'x-api-key',  // Lowercase - most common
       'X-API-Key',
       'X-API-KEY',
+      'x-admin-token',  // Admin authentication token
+      'X-Admin-Token',
+      'X-ADMIN-TOKEN',
       'Accept',
       'Origin',
       'X-Requested-With'
