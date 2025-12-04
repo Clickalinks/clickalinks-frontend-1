@@ -67,7 +67,7 @@ node_modules/
 
 # Firebase service account (contains sensitive credentials)
 firebase-service-account.json
-*.json
+# Don't ignore package.json and package-lock.json
 !package.json
 !package-lock.json
 

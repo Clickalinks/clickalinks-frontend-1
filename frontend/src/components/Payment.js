@@ -207,13 +207,21 @@ const Payment = () => {
       if (result.valid && result.success) {
         // Promo code is valid
         let discount = result.discountAmount || 0;
-        let finalPrice = result.finalAmount || finalAmount || 10;
+        // CRITICAL: Use nullish coalescing to handle 0 correctly
+        // If result.finalAmount is 0, we want to use 0, not fall back
+        let finalPrice = result.finalAmount ?? finalAmount ?? 10;
         let freeDays = result.freeDays || 0;
 
         // Handle free_days discount type (extends duration instead of reducing price)
         if (result.discountType === 'free_days' && freeDays > 0) {
           discount = 0; // No price discount
-          finalPrice = finalAmount || 10; // Price unchanged
+          finalPrice = finalAmount ?? 10; // Price unchanged
+        }
+        
+        // CRITICAL: If discount type is 'free', ensure finalPrice is 0
+        if (result.discountType === 'free') {
+          finalPrice = 0;
+          discount = finalAmount ?? 10;
         }
 
         setAppliedPromo({
@@ -221,6 +229,7 @@ const Payment = () => {
           discountType: result.discountType,
           discountValue: result.discountValue,
           discount: discount,
+          finalAmount: finalPrice, // Store finalAmount in appliedPromo for reference
           description: result.description || 'Promo code applied',
           freeDays: freeDays,
           promoId: result.promoId
@@ -232,7 +241,9 @@ const Payment = () => {
           discountType: result.discountType,
           discount: discount,
           finalPrice: finalPrice,
-          freeDays: freeDays
+          freeDays: freeDays,
+          resultFinalAmount: result.finalAmount,
+          originalAmount: finalAmount
         });
       } else {
         // Invalid promo code
@@ -268,9 +279,39 @@ const Payment = () => {
     setErrors({});
 
     try {
-      // If promo code makes it free, skip Stripe and go directly to success
-      if (appliedPromo && finalAmountAfterDiscount === 0) {
-        console.log('🎉 Free purchase with promo code, skipping payment...');
+      // CRITICAL: Check if promo code makes it free
+      // Check both the calculated amount AND if appliedPromo exists with discountType 'free'
+      const isFreeFromPromo = appliedPromo && (
+        appliedPromo.discountType === 'free' || 
+        (appliedPromo.finalAmount !== undefined && appliedPromo.finalAmount === 0)
+      );
+      
+      // CRITICAL: Use nullish coalescing (??) instead of || to handle 0 correctly
+      // If finalAmountAfterDiscount is 0, we want to use 0, not fall back to finalAmount
+      const calculatedAmount = finalAmountAfterDiscount ?? finalAmount ?? 10;
+      const amountToCharge = Math.round(calculatedAmount * 100) / 100;
+      
+      console.log('🔍 Payment check:', {
+        finalAmountAfterDiscount,
+        finalAmount,
+        calculatedAmount,
+        amountToCharge,
+        appliedPromo: appliedPromo ? appliedPromo.code : 'None',
+        isFreeFromPromo,
+        discountType: appliedPromo?.discountType,
+        discountAmount: appliedPromo?.discount
+      });
+      
+      // If amount is zero or negative (from promo code or otherwise), skip Stripe and go directly to success
+      // Also check if promo code explicitly makes it free
+      if (amountToCharge <= 0 || isFreeFromPromo) {
+        console.log('🎉 Free purchase detected, skipping Stripe payment...');
+        console.log('📊 Amount details:', {
+          finalAmountAfterDiscount,
+          amountToCharge,
+          appliedPromo: appliedPromo ? appliedPromo.code : 'None',
+          originalAmount: finalAmount
+        });
         
         // Create a fake session ID for free purchases
         const fakeSessionId = `free_${Date.now()}_${selectedSquare}`;
@@ -348,8 +389,25 @@ const Payment = () => {
         return;
       }
 
+      // Double-check: Don't create Stripe session if amount is zero or negative
+      // CRITICAL: Use nullish coalescing (??) instead of || to handle 0 correctly
+      const amountToChargeForStripe = Math.round((finalAmountAfterDiscount ?? finalAmount ?? 10) * 100) / 100;
+      
+      console.log('🔍 Stripe check:', {
+        finalAmountAfterDiscount,
+        finalAmount,
+        amountToChargeForStripe
+      });
+      
+      if (amountToChargeForStripe <= 0) {
+        console.error('❌ ERROR: Attempted to create Stripe session with zero/negative amount:', amountToChargeForStripe);
+        setErrors({ payment: 'Invalid amount. Please contact support.' });
+        setIsProcessing(false);
+        return;
+      }
+
       const payload = {
-        amount: Math.round(finalAmountAfterDiscount || finalAmount || 10),
+        amount: amountToChargeForStripe,
         squareNumber: selectedSquare,
         pageNumber: pageNumber,
         duration: selectedDuration,
@@ -359,7 +417,7 @@ const Payment = () => {
         promoCode: appliedPromo ? promoCode.toUpperCase() : null
       };
 
-      console.log('💰 Creating Stripe session for square:', selectedSquare);
+      console.log('💰 Creating Stripe session for square:', selectedSquare, 'Amount: £' + amountToChargeForStripe);
       
       const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
         method: 'POST',

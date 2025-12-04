@@ -51,10 +51,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip chrome-extension:// URLs (cannot be cached)
+  if (url.protocol === 'chrome-extension:') {
+    return;
+  }
+
   // Skip Firebase/Firestore requests (let them go to network)
   if (url.hostname.includes('firebase') || url.hostname.includes('googleapis')) {
     return;
   }
+
+  // Helper function to safely cache a response
+  const safeCachePut = (cache, request, response) => {
+    try {
+      // Only cache http/https URLs
+      if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
+        return cache.put(request, response);
+      }
+    } catch (error) {
+      // Silently ignore cache errors (e.g., chrome-extension URLs)
+      console.warn('Service Worker: Cache put failed (non-critical):', error.message);
+    }
+  };
 
   // Cache strategy: Cache First for static assets, Network First for HTML
   if (request.destination === 'document') {
@@ -62,11 +80,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful responses
+          // Cache successful responses (only http/https)
           if (response.ok) {
             const clone = response.clone();
             caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, clone);
+              safeCachePut(cache, request, clone);
             });
           }
           return response;
@@ -83,11 +101,11 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
         return fetch(request).then((response) => {
-          // Cache successful responses
+          // Cache successful responses (only http/https)
           if (response.ok) {
             const clone = response.clone();
             caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, clone);
+              safeCachePut(cache, request, clone);
             });
           }
           return response;

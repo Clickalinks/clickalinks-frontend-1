@@ -100,16 +100,58 @@ export async function performGlobalShuffle() {
       };
     }
     
-    // Convert to array
-    const purchases = purchasesSnapshot.docs.map(doc => ({
-      docId: doc.id,
-      purchaseId: doc.data().purchaseId || doc.id,
-      squareNumber: doc.data().squareNumber,
-      pageNumber: doc.data().pageNumber,
-      ...doc.data()
-    }));
+    // Convert to array and filter valid purchases
+    const now = new Date();
+    const purchases = [];
+    const pageDistribution = {}; // Track purchases per page
     
-    console.log(`📊 Found ${purchases.length} active purchases to shuffle`);
+    purchasesSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const purchaseId = data.purchaseId || doc.id;
+      
+      // Filter expired purchases
+      if (data.endDate) {
+        const endDate = data.endDate.toDate ? data.endDate.toDate() : new Date(data.endDate);
+        if (endDate <= now) {
+          console.log(`⏭️ Skipping expired purchase: ${purchaseId} (expired: ${endDate.toISOString()})`);
+          return;
+        }
+      }
+      
+      // Filter unpaid purchases
+      if (data.paymentStatus && data.paymentStatus !== 'paid') {
+        console.log(`⏭️ Skipping unpaid purchase: ${purchaseId} (status: ${data.paymentStatus})`);
+        return;
+      }
+      
+      // Filter purchases without valid logos
+      const logoData = data.logoData;
+      let hasValidLogo = false;
+      if (logoData && typeof logoData === 'string' && logoData.trim() !== '') {
+        if (logoData.startsWith('http://') || logoData.startsWith('https://') || logoData.startsWith('data:')) {
+          hasValidLogo = true;
+        }
+      }
+      if (!hasValidLogo) {
+        console.log(`⏭️ Skipping purchase without valid logo: ${purchaseId}`);
+        return;
+      }
+      
+      const pageNum = data.pageNumber || Math.ceil((data.squareNumber || 1) / 200);
+      pageDistribution[pageNum] = (pageDistribution[pageNum] || 0) + 1;
+      
+      purchases.push({
+        docId: doc.id,
+        purchaseId: purchaseId,
+        squareNumber: data.squareNumber,
+        pageNumber: pageNum,
+        ...data
+      });
+    });
+    
+    console.log(`📊 Found ${purchases.length} valid active purchases to shuffle`);
+    console.log(`📄 Page distribution:`, pageDistribution);
+    console.log(`📋 Purchases by page:`, Object.entries(pageDistribution).map(([page, count]) => `Page ${page}: ${count}`).join(', '));
     
     // Limit to 2000 purchases (one per square)
     if (purchases.length > 2000) {
@@ -117,21 +159,62 @@ export async function performGlobalShuffle() {
       purchases.splice(2000);
     }
     
-    // STEP 2: Generate array of all available squares (1-2000)
+    // STEP 2: Generate array of ALL available squares (1-2000) - GLOBAL SHUFFLE
+    // This ensures purchases can move to ANY square across ALL 10 pages
     const allSquares = Array.from({ length: 2000 }, (_, i) => i + 1);
+    console.log(`🌍 GLOBAL SHUFFLE: Shuffling across ALL ${allSquares.length} squares (Pages 1-10)`);
     
-    // STEP 3: Shuffle squares using Fisher-Yates algorithm
+    // STEP 3: Shuffle ALL squares using Fisher-Yates algorithm
+    // This randomizes the order of squares 1-2000, allowing purchases to move anywhere
     const shuffledSquares = fisherYatesShuffle(allSquares, seed);
+    console.log(`✅ Shuffled ${shuffledSquares.length} squares globally`);
+    console.log(`📊 Sample shuffled squares: ${shuffledSquares.slice(0, 10).join(', ')}... (shows random distribution)`);
     
     // STEP 4: Assign purchases to shuffled squares
+    // CRITICAL: Each purchase gets assigned to a RANDOM square from the shuffled array
+    // This means purchases can move from any page to any other page
     const assignments = purchases.map((purchase, index) => ({
       docId: purchase.docId,
       purchaseId: purchase.purchaseId,
       oldSquareNumber: purchase.squareNumber,
-      newSquareNumber: shuffledSquares[index],
+      newSquareNumber: shuffledSquares[index], // Random square from 1-2000
       oldPageNumber: purchase.pageNumber,
-      newPageNumber: Math.ceil(shuffledSquares[index] / 200)
+      newPageNumber: Math.ceil(shuffledSquares[index] / 200) // Calculated from new square number
     }));
+    
+    console.log(`🌍 GLOBAL ASSIGNMENT: ${assignments.length} purchases assigned to random squares across all pages`);
+    
+    // Log page movement statistics - shows cross-page movement
+    const pageMovement = {};
+    let crossPageMoves = 0;
+    assignments.forEach(assignment => {
+      const key = `${assignment.oldPageNumber}→${assignment.newPageNumber}`;
+      pageMovement[key] = (pageMovement[key] || 0) + 1;
+      if (assignment.oldPageNumber !== assignment.newPageNumber) {
+        crossPageMoves++;
+      }
+    });
+    console.log(`🌍 GLOBAL SHUFFLE STATISTICS:`);
+    console.log(`   Total purchases shuffled: ${assignments.length}`);
+    console.log(`   Cross-page moves: ${crossPageMoves} (${Math.round((crossPageMoves / assignments.length) * 100)}%)`);
+    console.log(`   Same-page stays: ${assignments.length - crossPageMoves} (${Math.round(((assignments.length - crossPageMoves) / assignments.length) * 100)}%)`);
+    console.log(`📊 Page movement breakdown:`, pageMovement);
+    console.log(`📋 Sample cross-page assignments:`, assignments
+      .filter(a => a.oldPageNumber !== a.newPageNumber)
+      .slice(0, 10)
+      .map(a => 
+        `Square ${a.oldSquareNumber} (Page ${a.oldPageNumber}) → Square ${a.newSquareNumber} (Page ${a.newPageNumber})`
+      ));
+    
+    // Verify global distribution
+    const newSquareRange = {
+      min: Math.min(...assignments.map(a => a.newSquareNumber)),
+      max: Math.max(...assignments.map(a => a.newSquareNumber))
+    };
+    console.log(`🌍 Global square range after shuffle: ${newSquareRange.min} - ${newSquareRange.max} (should be 1-2000)`);
+    if (newSquareRange.min < 1 || newSquareRange.max > 2000) {
+      console.warn(`⚠️ WARNING: Square range outside expected bounds!`);
+    }
     
     // STEP 5: Verify no duplicates
     const squareNumbers = new Set();
@@ -151,7 +234,7 @@ export async function performGlobalShuffle() {
     console.log(`✅ Pre-commit verification: ${assignments.length} unique assignments`);
     
     // STEP 6: Batch update (Firestore limit: 500 operations per batch)
-    const db = getDb();
+    // Reuse db from STEP 1
     const MAX_BATCH = 500;
     const batches = [];
     let currentBatch = db.batch();
@@ -187,8 +270,79 @@ export async function performGlobalShuffle() {
       console.log(`✅ Batch ${i + 1}/${batches.length} committed`);
     }
     
+    // STEP 8: Verify updates were applied (especially for page 10)
+    console.log(`🔍 Verifying shuffle updates...`);
+    const verifyPage10 = assignments.filter(a => a.oldPageNumber === 10 || a.newPageNumber === 10);
+    if (verifyPage10.length > 0) {
+      console.log(`📄 Page 10 verification: ${verifyPage10.length} purchases affected`);
+      verifyPage10.forEach(a => {
+        console.log(`   - Purchase ${a.purchaseId.substring(0, 30)}...: Square ${a.oldSquareNumber} (Page ${a.oldPageNumber}) → Square ${a.newSquareNumber} (Page ${a.newPageNumber})`);
+      });
+      
+      // Verify a few updates in Firestore
+      const sampleDoc = await db.collection(COLLECTION_NAME).doc(verifyPage10[0].docId).get();
+      if (sampleDoc.exists) {
+        const data = sampleDoc.data();
+        console.log(`   ✅ Verified: Document ${verifyPage10[0].docId} updated correctly`);
+        console.log(`      Current squareNumber: ${data.squareNumber}, pageNumber: ${data.pageNumber}`);
+        console.log(`      Expected squareNumber: ${verifyPage10[0].newSquareNumber}, pageNumber: ${verifyPage10[0].newPageNumber}`);
+        if (data.squareNumber === verifyPage10[0].newSquareNumber && data.pageNumber === verifyPage10[0].newPageNumber) {
+          console.log(`      ✅ Update verified successfully!`);
+        } else {
+          console.log(`      ⚠️ Update mismatch - may need to refresh frontend`);
+        }
+      }
+    }
+    
     const duration = Date.now() - startTime;
+    
+    // Final statistics
+    const finalPageDistribution = {};
+    assignments.forEach(assignment => {
+      const page = assignment.newPageNumber;
+      finalPageDistribution[page] = (finalPageDistribution[page] || 0) + 1;
+    });
+    
     console.log(`✅ Shuffle completed: ${assignments.length} purchases shuffled in ${duration}ms`);
+    console.log(`📊 Final page distribution after shuffle:`, finalPageDistribution);
+    console.log(`📋 Final distribution by page:`, Object.entries(finalPageDistribution)
+      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+      .map(([page, count]) => `Page ${page}: ${count} logos`)
+      .join(', '));
+    
+    // VERIFICATION: Ensure shuffle is truly global (not page-by-page)
+    const pagesWithPurchases = Object.keys(finalPageDistribution).map(Number).sort((a, b) => a - b);
+    const pageSpread = pagesWithPurchases.length;
+    console.log(`🌍 GLOBAL SHUFFLE VERIFICATION:`);
+    console.log(`   Pages with purchases: ${pageSpread} out of 10 pages`);
+    console.log(`   Page range: ${Math.min(...pagesWithPurchases)} to ${Math.max(...pagesWithPurchases)}`);
+    if (pageSpread < 10 && assignments.length >= 10) {
+      console.warn(`   ⚠️ WARNING: Purchases not distributed across all pages! This suggests page-by-page shuffling.`);
+    } else if (pageSpread >= 10 || assignments.length < 10) {
+      console.log(`   ✅ GOOD: Purchases distributed across ${pageSpread} pages (global shuffle confirmed)`);
+    }
+    
+    // Check specifically for page 10
+    const page10Purchases = assignments.filter(a => a.newPageNumber === 10);
+    const page10OldPurchases = assignments.filter(a => a.oldPageNumber === 10);
+    console.log(`📄 Page 10 details:`);
+    console.log(`   Purchases that STARTED on page 10: ${page10OldPurchases.length}`);
+    console.log(`   Purchases that ENDED on page 10: ${page10Purchases.length}`);
+    if (page10Purchases.length > 0) {
+      console.log(`   Sample page 10 assignments:`, page10Purchases.slice(0, 5).map(a => 
+        `Square ${a.newSquareNumber} (from page ${a.oldPageNumber}, square ${a.oldSquareNumber})`
+      ));
+    }
+    
+    // Show examples of cross-page movement
+    const crossPageExamples = assignments
+      .filter(a => Math.abs(a.oldPageNumber - a.newPageNumber) >= 3) // Moves at least 3 pages
+      .slice(0, 5);
+    if (crossPageExamples.length > 0) {
+      console.log(`🌍 Examples of long-distance moves (3+ pages):`, crossPageExamples.map(a => 
+        `Square ${a.oldSquareNumber} (Page ${a.oldPageNumber}) → Square ${a.newSquareNumber} (Page ${a.newPageNumber})`
+      ));
+    }
     
     return {
       success: true,
@@ -196,7 +350,9 @@ export async function performGlobalShuffle() {
       message: `Successfully shuffled ${assignments.length} purchases`,
       seed: seed,
       duration: duration,
-      batches: batches.length
+      batches: batches.length,
+      pageDistribution: finalPageDistribution,
+      page10Count: page10Purchases.length
     };
     
   } catch (error) {
