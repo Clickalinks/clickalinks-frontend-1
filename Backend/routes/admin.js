@@ -211,18 +211,16 @@ export const verifyAdminToken = (req, res, next) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       
-      // Verify session exists
+      // JWT is valid - trust it even if session not in memory (server restart scenario)
+      // Optionally verify session exists (for token revocation), but don't require it
       if (!activeSessions.has(token)) {
-        // Fallback: Check if it's the old API key (for backward compatibility during migration)
-        const adminApiKey = process.env.ADMIN_API_KEY;
-        if (token === adminApiKey) {
-          console.warn('⚠️ Using legacy API key authentication. Please migrate to JWT tokens.');
-          return next();
-        }
-        return res.status(401).json({
-          success: false,
-          error: 'Session expired or invalid'
+        // Session not in memory (likely server restart) - but JWT is valid
+        // Add it back to active sessions for future checks
+        activeSessions.set(token, {
+          createdAt: decoded.timestamp || Date.now(),
+          ip: req.ip
         });
+        console.log('ℹ️ Token valid but session not in memory - restored to active sessions');
       }
 
       // Attach admin info to request
