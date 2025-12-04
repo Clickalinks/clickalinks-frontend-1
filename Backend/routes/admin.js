@@ -131,12 +131,12 @@ router.get('/verify', adminRateLimit, (req, res) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       
-      // Check if session exists (optional)
+      // JWT is valid - trust it even if session not in memory (server restart scenario)
+      // Restore session if not in memory
       if (!activeSessions.has(token)) {
-        return res.status(401).json({
-          success: false,
-          valid: false,
-          error: 'Session expired or invalid'
+        activeSessions.set(token, {
+          createdAt: decoded.timestamp || Date.now(),
+          ip: req.ip
         });
       }
 
