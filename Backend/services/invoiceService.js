@@ -165,11 +165,15 @@ export async function generateInvoicePDF(invoiceData) {
       yPos += 30;
 
       // Discount line (if applicable)
-      if (invoiceData.discountAmount > 0) {
+      if (invoiceData.discountAmount > 0 || invoiceData.promoCode) {
+        const discountText = invoiceData.promoCode 
+          ? `Discount (${invoiceData.promoCode})` 
+          : 'Discount';
+        
         doc.fontSize(9)
           .fillColor('#28a745')
-          .text(`Discount${invoiceData.promoCode ? ` (${invoiceData.promoCode})` : ''}`, 60, yPos, { width: 280 })
-          .text(`-£${invoiceData.discountAmount.toFixed(2)}`, 480, yPos, { align: 'right', width: 65 });
+          .text(discountText, 60, yPos, { width: 280 })
+          .text(`-£${(invoiceData.discountAmount || 0).toFixed(2)}`, 480, yPos, { align: 'right', width: 65 });
 
         doc.fillColor(darkGray);
         yPos += 25;
