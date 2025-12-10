@@ -9,6 +9,7 @@
  */
 
 import nodemailer from 'nodemailer';
+import { generateInvoicePDF, generateInvoiceNumber } from './invoiceService.js';
 
 /**
  * Create email transporter based on environment variables
@@ -92,8 +93,12 @@ export async function sendAdConfirmationEmail(purchaseData) {
     pageNumber = 1,
     selectedDuration = 30,
     finalAmount = 0,
+    originalAmount = finalAmount,
+    discountAmount = 0,
     transactionId,
-    logoData
+    promoCode,
+    logoData,
+    paymentStatus = 'paid'
   } = purchaseData;
 
   if (!contactEmail) {
@@ -101,9 +106,42 @@ export async function sendAdConfirmationEmail(purchaseData) {
     return { success: false, message: 'No email address provided' };
   }
 
-  // Calculate end date
+  // Calculate dates
   const startDate = new Date();
   const endDate = new Date(Date.now() + selectedDuration * 24 * 60 * 60 * 1000);
+  const invoiceDate = new Date();
+
+  // Generate invoice PDF
+  let invoicePDF = null;
+  let invoiceNumber = null;
+  
+  try {
+    invoiceNumber = generateInvoiceNumber();
+    console.log(`📄 Generating invoice PDF: ${invoiceNumber}`);
+    
+    invoicePDF = await generateInvoicePDF({
+      invoiceNumber,
+      businessName,
+      contactEmail,
+      website: purchaseData.website || '',
+      squareNumber,
+      pageNumber,
+      duration: selectedDuration,
+      originalAmount: originalAmount || finalAmount || 0,
+      discountAmount: discountAmount || 0,
+      finalAmount: finalAmount || 0,
+      transactionId,
+      promoCode,
+      invoiceDate,
+      startDate,
+      endDate
+    });
+    
+    console.log(`✅ Invoice PDF generated successfully (${invoicePDF.length} bytes)`);
+  } catch (error) {
+    console.error('❌ Error generating invoice PDF:', error);
+    // Continue without PDF attachment if generation fails
+  }
 
   // Email template
   const htmlContent = `
@@ -238,8 +276,19 @@ Need help? Contact us at ${process.env.SUPPORT_EMAIL || 'support@clickalinks.com
       to: contactEmail,
       subject: `🎉 Your ClickaLinks Ad is Live! - Square #${squareNumber}`,
       text: textContent,
-      html: htmlContent
+      html: htmlContent,
+      attachments: []
     };
+
+    // Attach invoice PDF if generated successfully
+    if (invoicePDF) {
+      mailOptions.attachments.push({
+        filename: `Invoice-${invoiceNumber}.pdf`,
+        content: invoicePDF,
+        contentType: 'application/pdf'
+      });
+      console.log(`📎 Invoice PDF attached: Invoice-${invoiceNumber}.pdf`);
+    }
 
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Confirmation email sent successfully:', info.messageId);
