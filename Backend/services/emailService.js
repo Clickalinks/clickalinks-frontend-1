@@ -405,19 +405,15 @@ ${userEmail ? `- User Email: ${userEmail}\n` : ''}
 }
 
 /**
- * Send confirmation email when ad is uploaded
+ * Generate invoice HTML from purchase data
+ * @param {Object} purchaseData - Purchase data including businessName, contactEmail, squareNumber, etc.
+ * @param {string} invoiceNumber - Invoice number to use (will generate if not provided)
+ * @returns {string} HTML string of the invoice
  */
-export async function sendAdConfirmationEmail(purchaseData) {
-  const transporter = createTransporter();
-  
-  if (!transporter) {
-    console.log('📧 Email service not configured - skipping email');
-    return { success: false, message: 'Email service not configured' };
-  }
-
+export function generateInvoiceHTML(purchaseData, invoiceNumber = null) {
   const {
-    contactEmail,
     businessName,
+    contactEmail,
     squareNumber,
     pageNumber = 1,
     selectedDuration = 30,
@@ -426,41 +422,26 @@ export async function sendAdConfirmationEmail(purchaseData) {
     discountAmount = 0,
     transactionId,
     promoCode,
-    logoData,
-    paymentStatus = 'paid'
+    website
   } = purchaseData;
-
-  if (!contactEmail) {
-    console.warn('⚠️ No email address provided - skipping email');
-    return { success: false, message: 'No email address provided' };
-  }
 
   // Calculate dates
   const startDate = new Date();
   const endDate = new Date(Date.now() + selectedDuration * 24 * 60 * 60 * 1000);
   const invoiceDate = new Date();
 
-  // Generate invoice number
-  const generateInvoiceNumber = () => {
+  // Generate invoice number if not provided
+  if (!invoiceNumber) {
     const date = new Date();
     const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
     const random = Math.random().toString(36).substring(2, 7).toUpperCase();
-    return `INV-${dateStr}-${random}`;
-  };
-  
-  const invoiceNumber = generateInvoiceNumber();
-  
+    invoiceNumber = `INV-${dateStr}-${random}`;
+  }
+
   // Calculate amounts correctly
   const originalAmt = originalAmount !== undefined ? originalAmount : (finalAmount || 10);
   const discountAmt = discountAmount || 0;
   const totalAmount = Math.max(0, originalAmt - discountAmt);
-  
-  console.log('📧 Invoice data calculation:', {
-    originalAmount: originalAmt,
-    discountAmount: discountAmt,
-    totalAmount: totalAmount,
-    invoiceNumber: invoiceNumber
-  });
 
   // Generate downloadable HTML invoice
   const invoiceHTML = `
@@ -758,7 +739,7 @@ export async function sendAdConfirmationEmail(purchaseData) {
         <h3>Bill To</h3>
         <p><strong>${businessName || 'N/A'}</strong></p>
         <p>${contactEmail || ''}</p>
-        ${purchaseData.website ? `<p>${purchaseData.website}</p>` : ''}
+        ${website ? `<p>${website}</p>` : ''}
       </div>
 
       <table class="invoice-table">
@@ -823,106 +804,144 @@ export async function sendAdConfirmationEmail(purchaseData) {
     <div class="invoice-footer">
       <p>Thank you for choosing ClickaLinks!</p>
       <p><a href="mailto:support@clickalinks.com">support@clickalinks.com</a> | <a href="https://clickalinks.com">https://clickalinks.com</a></p>
+      <p style="margin-top: 15px;"><strong>Clicado Media UK Ltd</strong></p>
+      <p style="margin-top: 5px; font-size: 12px;">Registered in England & Wales, Registration Number: 16904433</p>
       <p style="margin-top: 10px;">&copy; ${new Date().getFullYear()} Clicado Media UK Ltd. All rights reserved.</p>
     </div>
   </div>
 </body>
 </html>`;
 
-  // Email template with downloadable invoice
+  return invoiceHTML;
+}
+
+/**
+ * Send welcome email (first email - no invoice)
+ */
+async function sendWelcomeEmail(purchaseData) {
+  const transporter = createTransporter();
+  
+  if (!transporter) {
+    return { success: false, message: 'Email service not configured' };
+  }
+
+  const {
+    contactEmail,
+    businessName,
+    squareNumber,
+    pageNumber = 1,
+    selectedDuration = 30,
+    finalAmount = 0,
+    transactionId
+  } = purchaseData;
+
+  if (!contactEmail) {
+    return { success: false, message: 'No email address provided' };
+  }
+
+  // Calculate dates
+  const startDate = new Date();
+  const endDate = new Date(Date.now() + selectedDuration * 24 * 60 * 60 * 1000);
+  const totalAmount = finalAmount || 0;
+
+  // Welcome email template - Exciting and colorful!
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-        .success-icon { font-size: 48px; margin-bottom: 10px; }
-        .info-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #667eea; }
-        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); }
+        .email-wrapper { background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); padding: 30px 10px; min-height: 100vh; }
+        .container { max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .header { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 25%, #c44569 50%, #8e44ad 75%, #667eea 100%); color: white; padding: 50px 30px; text-align: center; position: relative; }
+        .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="3" fill="rgba(255,255,255,0.3)"/><circle cx="80" cy="40" r="2" fill="rgba(255,255,255,0.3)"/><circle cx="40" cy="70" r="2.5" fill="rgba(255,255,255,0.3)"/><circle cx="90" cy="80" r="2" fill="rgba(255,255,255,0.3)"/></svg>'); opacity: 0.3; }
+        .header-content { position: relative; z-index: 1; }
+        .header h1 { margin: 0; font-size: 42px; font-weight: 800; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); letter-spacing: -1px; }
+        .header p { margin: 15px 0 0 0; font-size: 20px; opacity: 0.95; font-weight: 500; }
+        .success-icon { font-size: 80px; margin-bottom: 20px; display: inline-block; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .content { padding: 45px 35px; background: #ffffff; }
+        .greeting { font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 25px; }
+        .intro-text { font-size: 18px; color: #4a5568; line-height: 2; margin-bottom: 35px; font-weight: 400; }
+        .info-box { background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%); border: 3px solid #667eea; border-radius: 15px; padding: 30px; margin: 35px 0; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.15); }
+        .info-box h3 { margin: 0 0 25px 0; font-size: 22px; font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; display: flex; align-items: center; gap: 10px; }
+        .info-row { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 2px solid #e2e8f0; }
         .info-row:last-child { border-bottom: none; }
-        .label { font-weight: bold; color: #666; }
-        .value { color: #333; }
-        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-        .invoice-section { background: white; padding: 30px; margin: 30px 0; border-radius: 8px; border: 2px solid #e2e8f0; }
-        .invoice-section h3 { color: #667eea; margin-bottom: 20px; }
-        .download-btn { display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: 600; margin-top: 15px; }
-        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+        .label { font-weight: 700; color: #667eea; font-size: 15px; }
+        .value { color: #1a202c; font-size: 15px; font-weight: 600; text-align: right; }
+        .whats-next { margin-top: 50px; padding: 30px; background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%); border-radius: 15px; border-left: 5px solid #ff6b6b; }
+        .whats-next h3 { font-size: 26px; font-weight: 700; color: #ff6b6b; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; }
+        .whats-next ul { list-style: none; padding: 0; margin: 0; }
+        .whats-next li { padding: 15px 0; color: #4a5568; font-size: 16px; line-height: 1.9; border-left: 4px solid #ff6b6b; padding-left: 20px; margin-bottom: 10px; background: white; border-radius: 8px; padding: 15px 20px; }
+        .whats-next li strong { color: #ff6b6b; font-weight: 700; }
+        .button-container { text-align: center; margin: 45px 0; }
+        .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 50px; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 18px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; }
+        .button:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5); }
+        .footer { background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); padding: 35px; text-align: center; }
+        .footer p { margin: 10px 0; color: #a0aec0; font-size: 14px; }
+        .footer a { color: #667eea; text-decoration: none; font-weight: 600; }
+        .celebrate { text-align: center; font-size: 40px; margin: 20px 0; }
       </style>
     </head>
     <body>
-      <div class="container">
-        <div class="header">
-          <div class="success-icon">🎉</div>
-          <h1>Welcome to ClickaLinks!</h1>
-          <p>Your advertising campaign is now live!</p>
-        </div>
-        <div class="content">
-          <h2>Hello ${businessName || 'Valued Customer'}!</h2>
-          <p>Thank you for choosing ClickaLinks. Your advertising campaign has been successfully activated and is now live on our platform.</p>
-          
-          <div class="info-box">
-            <h3 style="margin-top: 0;">📋 Campaign Details</h3>
-            <div class="info-row">
-              <span class="label">Business Name:</span>
-              <span class="value">${businessName || 'N/A'}</span>
+      <div class="email-wrapper">
+        <div class="container">
+          <div class="header">
+            <div class="header-content">
+              <div class="success-icon">🎉</div>
+              <h1>Welcome to ClickaLinks!</h1>
+              <p>Your advertising campaign is now LIVE! 🚀</p>
             </div>
-            <div class="info-row">
-              <span class="label">Advertising Square:</span>
-              <span class="value">#${squareNumber} (Page ${pageNumber})</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Campaign Duration:</span>
-              <span class="value">${selectedDuration} days</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Start Date:</span>
-              <span class="value">${startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">End Date:</span>
-              <span class="value">${endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-            </div>
-            ${totalAmount > 0 ? `
-            <div class="info-row">
-              <span class="label">Total Paid:</span>
-              <span class="value" style="font-weight: bold; color: #667eea;">£${totalAmount.toFixed(2)}</span>
-            </div>
-            ` : `
-            <div class="info-row">
-              <span class="label">Total:</span>
-              <span class="value" style="font-weight: bold; color: #10b981;">£0.00 (FREE)</span>
-            </div>
-            `}
-            ${transactionId ? `
-            <div class="info-row">
-              <span class="label">Transaction ID:</span>
-              <span class="value" style="font-family: monospace; font-size: 12px;">${transactionId}</span>
-            </div>
-            ` : ''}
           </div>
+          <div class="content">
+            <div class="celebrate">✨ 🎊 🎈 ✨</div>
+            <div class="greeting">Hello ${businessName || 'Valued Customer'}! 👋</div>
+            <p class="intro-text">🎉 <strong>Congratulations!</strong> Thank you for choosing ClickaLinks! We're absolutely <strong>thrilled</strong> to have you on board! Your advertising campaign has been successfully activated and is now <strong>live on our platform</strong>, ready to attract customers and drive traffic to your business. This is going to be amazing! 🌟</p>
+            
+            <div class="info-box">
+              <h3>📋 <span>Your Campaign Details</span></h3>
+              <div class="info-row">
+                <span class="label">Business Name:</span>
+                <span class="value">${businessName || 'N/A'}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Advertising Square:</span>
+                <span class="value">#${squareNumber} (Page ${pageNumber})</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Campaign Duration:</span>
+                <span class="value">${selectedDuration} days</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Start Date:</span>
+                <span class="value">${startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">End Date:</span>
+                <span class="value">${endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
+              ${transactionId ? `
+              <div class="info-row">
+                <span class="label">Transaction ID:</span>
+                <span class="value" style="font-family: monospace; font-size: 12px;">${transactionId}</span>
+              </div>
+              ` : ''}
+            </div>
 
-          <div class="invoice-section">
-            <h3>📄 Your Invoice</h3>
-            <p>Your invoice is ready to download. Click the button below to save it as an HTML file that you can open, print, or save for your records.</p>
-            <p style="margin-top: 10px; color: #666; font-size: 14px;"><strong>Invoice #:</strong> ${invoiceNumber}</p>
-            <a href="data:text/html;charset=utf-8,${encodeURIComponent(invoiceHTML)}" download="Invoice-${invoiceNumber}.html" class="download-btn">📥 Download Invoice</a>
-            <p style="margin-top: 15px; color: #666; font-size: 13px;">💡 <strong>Tip:</strong> Right-click the button and select "Save link as..." to save the invoice file.</p>
-          </div>
+            <div class="whats-next">
+              <h3>✨ <span>What Happens Next?</span></h3>
+              <ul>
+                <li><strong>🎯 Your ad is live:</strong> Your logo is now visible on square #${squareNumber} and ready to attract customers!</li>
+                <li><strong>🔗 Clickable link:</strong> Visitors can click your logo to visit your website directly.</li>
+                <li><strong>⚖️ Fair placement:</strong> Your position may change during regular shuffles, ensuring fair visibility for all businesses.</li>
+                <li><strong>⏰ Active duration:</strong> Your ad will remain active for ${selectedDuration} days from today.</li>
+              </ul>
+            </div>
 
-          <h3>✨ What Happens Next?</h3>
-          <ul>
-            <li><strong>Your ad is live:</strong> Your logo is now visible on square #${squareNumber} and ready to attract customers!</li>
-            <li><strong>Clickable link:</strong> Visitors can click your logo to visit your website.</li>
-            <li><strong>Fair placement:</strong> Your position may change during shuffles, ensuring fair visibility for all businesses.</li>
-            <li><strong>Active duration:</strong> Your ad will remain active for ${selectedDuration} days.</li>
-          </ul>
-
-          <div style="text-align: center;">
-            <a href="${(process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app').replace('www.clickalinks-frontend.web.app', 'clickalinks-frontend.web.app')}/page${pageNumber}" class="button">View Your Live Ad</a>
+            <div class="button-container">
+              <a href="${(process.env.FRONTEND_URL || 'https://clickalinks-frontend.web.app').replace('www.clickalinks-frontend.web.app', 'clickalinks-frontend.web.app')}/page${pageNumber}" class="button">🚀 View Your Live Ad</a>
+            </div>
           </div>
 
           <div class="footer">
@@ -935,13 +954,12 @@ export async function sendAdConfirmationEmail(purchaseData) {
     </html>
   `;
 
-  // Plain text version (for email clients that don't support HTML)
   const textContent = `
 Welcome to ClickaLinks!
 
 Hello ${businessName || 'Valued Customer'}!
 
-Thank you for choosing ClickaLinks. Your advertising campaign has been successfully activated and is now live on our platform.
+Thank you for choosing ClickaLinks. We're thrilled to have you on board! Your advertising campaign has been successfully activated and is now live on our platform.
 
 Campaign Details:
 - Business Name: ${businessName || 'N/A'}
@@ -949,7 +967,6 @@ Campaign Details:
 - Campaign Duration: ${selectedDuration} days
 - Start Date: ${startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
 - End Date: ${endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-${finalAmount > 0 ? `- Total Paid: £${finalAmount.toFixed(2)}\n` : ''}
 ${transactionId ? `- Transaction ID: ${transactionId}\n` : ''}
 
 What Happens Next?
@@ -968,62 +985,346 @@ Need help? Contact us at ${process.env.SUPPORT_EMAIL || 'support@clickalinks.com
   try {
     const fromEmail = process.env.EMAIL_FROM || `"ClickaLinks" <${process.env.SMTP_USER || 'noreply@clickalinks.com'}>`;
     
-    console.log(`📧 Attempting to send confirmation email:`);
-    console.log(`   From: ${fromEmail}`);
-    console.log(`   To: ${contactEmail}`);
-    console.log(`   Subject: 🎉 Your ClickaLinks Ad is Live! - Square #${squareNumber}`);
-    console.log(`   Business: ${businessName}`);
-    console.log(`   Amount: £${finalAmount.toFixed(2)}`);
-    console.log(`   Promo Code: ${promoCode || 'None'}`);
-    console.log(`   Transaction ID: ${transactionId || 'N/A'}`);
+    const mailOptions = {
+      from: fromEmail,
+      to: contactEmail,
+      subject: `🎉 Welcome to ClickaLinks! Your Ad is Live - Square #${squareNumber}`,
+      text: textContent,
+      html: htmlContent
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Welcome email sent successfully:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Error sending welcome email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Send invoice email (second email - professional invoice)
+ */
+async function sendInvoiceEmail(purchaseData, invoiceNumber) {
+  const transporter = createTransporter();
+  
+  if (!transporter) {
+    return { success: false, message: 'Email service not configured' };
+  }
+
+  const {
+    contactEmail,
+    businessName,
+    squareNumber,
+    pageNumber = 1,
+    selectedDuration = 30,
+    finalAmount = 0,
+    originalAmount = finalAmount,
+    discountAmount = 0,
+    transactionId,
+    promoCode,
+    website
+  } = purchaseData;
+
+  if (!contactEmail) {
+    return { success: false, message: 'No email address provided' };
+  }
+
+  // Calculate amounts correctly
+  const originalAmt = originalAmount !== undefined ? originalAmount : (finalAmount || 10);
+  const discountAmt = discountAmount || 0;
+  const totalAmount = Math.max(0, originalAmt - discountAmt);
+
+  // Professional invoice email template
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f7fa; }
+        .email-wrapper { background-color: #f5f7fa; padding: 40px 20px; }
+        .container { max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+        .header p { margin: 8px 0 0 0; font-size: 15px; opacity: 0.95; }
+        .invoice-icon { font-size: 48px; margin-bottom: 15px; }
+        .content { padding: 40px 30px; }
+        .intro-text { font-size: 16px; color: #4a5568; line-height: 1.8; margin-bottom: 30px; }
+        .invoice-box { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 30px; margin: 30px 0; }
+        .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+        .invoice-info h3 { margin: 0 0 10px 0; font-size: 14px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 1px; }
+        .invoice-info p { margin: 5px 0; color: #2d3748; font-size: 15px; }
+        .invoice-number { font-size: 20px; font-weight: 700; color: #2563eb; }
+        .invoice-table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+        .invoice-table thead { background: #f1f5f9; }
+        .invoice-table th { padding: 15px; text-align: left; font-weight: 600; color: #475569; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .invoice-table td { padding: 15px; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 15px; }
+        .invoice-table .text-right { text-align: right; }
+        .discount-row { background: #f0fdf4; }
+        .discount-row td { color: #10b981; font-weight: 600; }
+        .totals-section { margin-top: 25px; padding-top: 25px; border-top: 2px solid #e2e8f0; }
+        .total-row { display: flex; justify-content: space-between; padding: 10px 0; }
+        .total-label { font-weight: 600; color: #475569; font-size: 15px; }
+        .total-amount { font-weight: 600; color: #1e293b; font-size: 15px; }
+        .grand-total { margin-top: 20px; padding: 20px; background: #f8fafc; border: 2px solid #2563eb; border-radius: 6px; }
+        .grand-total .total-label { font-size: 18px; color: #1e293b; }
+        .grand-total .total-amount { font-size: 24px; color: #2563eb; font-weight: 700; }
+        .free-total { background: #f0fdf4; border-color: #10b981; }
+        .free-total .total-amount { color: #10b981; font-size: 28px; }
+        .download-section { margin: 30px 0; padding: 25px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; }
+        .download-section h3 { margin: 0 0 15px 0; font-size: 18px; font-weight: 600; color: #92400e; }
+        .download-section p { margin: 10px 0; color: #78350f; font-size: 14px; line-height: 1.6; }
+        .download-btn { display: inline-block; background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; margin-top: 10px; transition: background 0.3s; }
+        .download-btn:hover { background: #059669; }
+        .footer { background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; }
+        .footer p { margin: 8px 0; color: #64748b; font-size: 13px; }
+        .footer a { color: #2563eb; text-decoration: none; }
+      </style>
+    </head>
+    <body>
+      <div class="email-wrapper">
+        <div class="container">
+          <div class="header">
+            <div class="invoice-icon">📄</div>
+            <h1>Your Invoice</h1>
+            <p>Invoice #${invoiceNumber}</p>
+          </div>
+          <div class="content">
+            <p class="intro-text">Dear ${businessName || 'Valued Customer'},</p>
+            <p class="intro-text">Please find your invoice attached below. You can download it as an HTML file for your records.</p>
+            
+            <div class="invoice-box">
+              <div class="invoice-header">
+                <div class="invoice-info">
+                  <h3>Invoice To</h3>
+                  <p><strong>${businessName || 'N/A'}</strong></p>
+                  <p>${contactEmail || ''}</p>
+                  ${website ? `<p>${website}</p>` : ''}
+                </div>
+                <div class="invoice-info" style="text-align: right;">
+                  <h3>Invoice Details</h3>
+                  <p class="invoice-number">#${invoiceNumber}</p>
+                  <p>Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  ${transactionId ? `<p style="font-size: 12px; color: #64748b;">Transaction: ${transactionId}</p>` : ''}
+                </div>
+              </div>
+
+              <table class="invoice-table">
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th>Duration</th>
+                    <th class="text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Advertising Campaign - Square #${squareNumber} (Page ${pageNumber})</td>
+                    <td>${selectedDuration} days</td>
+                    <td class="text-right">£${originalAmt.toFixed(2)}</td>
+                  </tr>
+                  ${discountAmt > 0 ? `
+                  <tr class="discount-row">
+                    <td>Discount${promoCode ? ` (${promoCode})` : ''}</td>
+                    <td></td>
+                    <td class="text-right">-£${discountAmt.toFixed(2)}</td>
+                  </tr>
+                  ` : ''}
+                </tbody>
+              </table>
+
+              <div class="totals-section">
+                <div class="total-row">
+                  <span class="total-label">Subtotal:</span>
+                  <span class="total-amount">£${originalAmt.toFixed(2)}</span>
+                </div>
+                ${discountAmt > 0 ? `
+                <div class="total-row">
+                  <span class="total-label" style="color: #10b981;">Discount:</span>
+                  <span class="total-amount" style="color: #10b981;">-£${discountAmt.toFixed(2)}</span>
+                </div>
+                ` : ''}
+                <div class="grand-total ${totalAmount === 0 ? 'free-total' : ''}">
+                  <div class="total-row">
+                    <span class="total-label">${totalAmount === 0 ? 'Total Amount:' : 'Total:'}</span>
+                    <span class="total-amount">${totalAmount === 0 ? 'FREE' : `£${totalAmount.toFixed(2)}`}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="download-section">
+              <h3>📥 Download Your Invoice</h3>
+              <p>Click the button below to download your invoice as an HTML file. You can save it, print it, or forward it to your accounting department.</p>
+              <a href="${process.env.BACKEND_URL || 'https://clickalinks-backend-2.onrender.com'}/api/invoice/download?tx=${encodeURIComponent(transactionId || '')}&inv=${encodeURIComponent(invoiceNumber)}&businessName=${encodeURIComponent(businessName || '')}&contactEmail=${encodeURIComponent(contactEmail || '')}&squareNumber=${squareNumber}&pageNumber=${pageNumber}&duration=${selectedDuration}&originalAmount=${originalAmt}&discountAmount=${discountAmt}&finalAmount=${totalAmount}${promoCode ? `&promoCode=${encodeURIComponent(promoCode)}` : ''}${website ? `&website=${encodeURIComponent(website)}` : ''}" class="download-btn" target="_blank">📥 Download Invoice</a>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p><strong>Clicado Media UK Ltd</strong></p>
+            <p style="font-size: 12px; color: #94a3b8;">Registered in England & Wales, Registration Number: 16904433</p>
+            <p style="margin-top: 15px;">Thank you for your business with ClickaLinks!</p>
+            <p>Questions about your invoice? Contact us at <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}">${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}</a></p>
+            <p style="margin-top: 15px;">&copy; ${new Date().getFullYear()} ClickaLinks. All rights reserved.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `
+Your Invoice - ${invoiceNumber}
+
+Dear ${businessName || 'Valued Customer'},
+
+Please find your invoice details below.
+
+Invoice #: ${invoiceNumber}
+Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+${transactionId ? `Transaction ID: ${transactionId}\n` : ''}
+
+Invoice To:
+${businessName || 'N/A'}
+${contactEmail || ''}
+${website ? `${website}\n` : ''}
+
+Description: Advertising Campaign - Square #${squareNumber} (Page ${pageNumber})
+Duration: ${selectedDuration} days
+Amount: £${originalAmt.toFixed(2)}
+${discountAmt > 0 ? `Discount${promoCode ? ` (${promoCode})` : ''}: -£${discountAmt.toFixed(2)}\n` : ''}
+Subtotal: £${originalAmt.toFixed(2)}
+${discountAmt > 0 ? `Discount: -£${discountAmt.toFixed(2)}\n` : ''}
+Total: ${totalAmount === 0 ? 'FREE' : `£${totalAmount.toFixed(2)}`}
+
+Download your invoice: ${process.env.BACKEND_URL || 'https://clickalinks-backend-2.onrender.com'}/api/invoice/download?tx=${encodeURIComponent(transactionId || '')}&inv=${encodeURIComponent(invoiceNumber)}&businessName=${encodeURIComponent(businessName || '')}&contactEmail=${encodeURIComponent(contactEmail || '')}&squareNumber=${squareNumber}&pageNumber=${pageNumber}&duration=${selectedDuration}&originalAmount=${originalAmt}&discountAmount=${discountAmt}&finalAmount=${totalAmount}${promoCode ? `&promoCode=${encodeURIComponent(promoCode)}` : ''}${website ? `&website=${encodeURIComponent(website)}` : ''}
+
+Questions about your invoice? Contact us at ${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}
+
+© ${new Date().getFullYear()} ClickaLinks. All rights reserved.
+  `;
+
+  try {
+    const fromEmail = process.env.EMAIL_FROM || `"ClickaLinks" <${process.env.SMTP_USER || 'noreply@clickalinks.com'}>`;
     
     const mailOptions = {
       from: fromEmail,
       to: contactEmail,
-      subject: `🎉 Your ClickaLinks Ad is Live! - Square #${squareNumber}`,
+      subject: `📄 Your Invoice #${invoiceNumber} - ClickaLinks`,
       text: textContent,
-      html: htmlContent,
-      attachments: []
+      html: htmlContent
     };
-
-    // Invoice is now embedded as downloadable HTML in the email body
-    console.log(`📄 Invoice HTML generated: Invoice-${invoiceNumber}.html`);
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Confirmation email sent successfully:', info.messageId);
-    console.log(`   Response: ${info.response}`);
-    console.log(`   Accepted: ${info.accepted}`);
-    console.log(`   Rejected: ${info.rejected}`);
-    return { 
-      success: true, 
-      messageId: info.messageId,
-      message: 'Email sent successfully'
-    };
+    console.log('✅ Invoice email sent successfully:', info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending confirmation email:', error);
-    console.error('   Error code:', error.code);
-    console.error('   Error command:', error.command);
-    console.error('   Error response:', error.response);
-    console.error('   Error responseCode:', error.responseCode);
-    console.error('   Error message:', error.message);
-    console.error('   Full error:', JSON.stringify(error, null, 2));
-    
-    // Provide more detailed error message
-    let errorMessage = error.message || 'Failed to send email';
-    if (error.code === 'EAUTH') {
-      errorMessage = 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS.';
-    } else if (error.code === 'ECONNECTION') {
-      errorMessage = `Cannot connect to SMTP server ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`;
-    } else if (error.code === 'ETIMEDOUT') {
-      errorMessage = 'SMTP connection timeout. Check SMTP_HOST and network.';
-    }
-    
-    return { 
-      success: false, 
-      error: errorMessage,
-      errorCode: error.code,
-      message: 'Failed to send email'
-    };
+    console.error('❌ Error sending invoice email:', error);
+    return { success: false, error: error.message };
   }
 }
 
+/**
+ * Send confirmation email when ad is uploaded
+ * Now sends two separate emails: welcome email first, then invoice email
+ */
+export async function sendAdConfirmationEmail(purchaseData) {
+  const transporter = createTransporter();
+  
+  if (!transporter) {
+    console.log('📧 Email service not configured - skipping email');
+    return { success: false, message: 'Email service not configured' };
+  }
+
+  const {
+    contactEmail,
+    businessName,
+    squareNumber,
+    pageNumber = 1,
+    selectedDuration = 30,
+    finalAmount = 0,
+    originalAmount = finalAmount,
+    discountAmount = 0,
+    transactionId,
+    promoCode,
+    logoData,
+    paymentStatus = 'paid'
+  } = purchaseData;
+
+  if (!contactEmail) {
+    console.warn('⚠️ No email address provided - skipping email');
+    return { success: false, message: 'No email address provided' };
+  }
+
+  // Calculate amounts correctly
+  const originalAmt = originalAmount !== undefined ? originalAmount : (finalAmount || 10);
+  const discountAmt = discountAmount || 0;
+  const totalAmount = Math.max(0, originalAmt - discountAmt);
+  
+  // Generate invoice number (used for both emails)
+  const generateInvoiceNumber = () => {
+    const date = new Date();
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    const random = Math.random().toString(36).substring(2, 7).toUpperCase();
+    return `INV-${dateStr}-${random}`;
+  };
+  
+  const invoiceNumber = generateInvoiceNumber();
+  
+  console.log('📧 Invoice data calculation:', {
+    originalAmount: originalAmt,
+    discountAmount: discountAmt,
+    totalAmount: totalAmount,
+    invoiceNumber: invoiceNumber
+  });
+
+  // Send welcome email first (without invoice)
+  console.log('📧 Sending welcome email...');
+  const welcomeResult = await sendWelcomeEmail(purchaseData);
+  
+  if (!welcomeResult.success) {
+    console.error('❌ Failed to send welcome email:', welcomeResult.error);
+    // Continue anyway to try sending invoice email
+  } else {
+    console.log('✅ Welcome email sent successfully');
+  }
+
+  // Wait a moment before sending invoice email (professional spacing)
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // Send invoice email second (professional invoice)
+  console.log('📧 Sending invoice email...');
+  const invoiceResult = await sendInvoiceEmail({
+    ...purchaseData,
+    website: purchaseData.website,
+    originalAmount: originalAmt,
+    discountAmount: discountAmt,
+    finalAmount: totalAmount
+  }, invoiceNumber);
+
+  if (!invoiceResult.success) {
+    console.error('❌ Failed to send invoice email:', invoiceResult.error);
+    // Return result based on which emails succeeded
+    return {
+      success: welcomeResult.success,
+      message: welcomeResult.success ? 'Welcome email sent, but invoice email failed' : 'Both emails failed',
+      welcomeEmailSent: welcomeResult.success,
+      invoiceEmailSent: false,
+      welcomeMessageId: welcomeResult.messageId
+    };
+  }
+
+  console.log('✅ Invoice email sent successfully');
+
+  // Both emails sent successfully
+  return {
+    success: true,
+    message: 'Both welcome and invoice emails sent successfully',
+    welcomeEmailSent: true,
+    invoiceEmailSent: true,
+    welcomeMessageId: welcomeResult.messageId,
+    invoiceMessageId: invoiceResult.messageId,
+    invoiceNumber: invoiceNumber
+  };
+}
