@@ -11,7 +11,7 @@ const Footer = () => {
         <div className="footer-cta">
           <h2 className="footer-cta-title">Ready to Boost Your Visibility?</h2>
           <p className="footer-cta-subtitle">Join hundreds of businesses already growing with our advertising platform</p>
-          <a href="/campaign" className="footer-cta-button">Start Your Campaign Today</a>
+          <Link to="/" className="footer-cta-button">Start Your Campaign Today</Link>
         </div>
         
         {/* Main Footer Content */}
@@ -26,9 +26,6 @@ const Footer = () => {
               </Link>
               <Link to="/about" className="footer-link">
                 About Us
-              </Link>
-              <Link to="/contact" className="footer-link">
-                Contact
               </Link>
               <Link to="/privacy" className="footer-link">
                 Privacy Policy
@@ -59,6 +56,22 @@ const Footer = () => {
               <div className="payment-icon amex" title="American Express">
                 <span className="payment-text">Amex</span>
               </div>
+            </div>
+          </div>
+
+          {/* Support & Contact Section */}
+          <div className="footer-section">
+            <h4 className="footer-title">Support</h4>
+            <div className="footer-links">
+              <a href="mailto:support@clickalinks.com" className="footer-link">
+                support@clickalinks.com
+              </a>
+              <Link to="/contact" className="footer-link">
+                Contact Form
+              </Link>
+              <Link to="/help" className="footer-link">
+                Help Center
+              </Link>
             </div>
           </div>
 
@@ -105,6 +118,12 @@ const Footer = () => {
         <div className="footer-bottom">
           <div className="footer-copyright">
             <p>&copy; 2025 CLICKALINKS. All rights reserved.</p>
+            <p style={{marginTop: '0.5rem', fontSize: '0.85rem', opacity: '0.9'}}>
+              Clicado Media UK Ltd trading as clickalinks.com
+            </p>
+            <p style={{marginTop: '0.25rem', fontSize: '0.8rem', opacity: '0.85'}}>
+              Registered in England & Wales, Registration Number: 16904433
+            </p>
           </div>
         </div>
 

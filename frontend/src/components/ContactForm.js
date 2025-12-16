@@ -20,7 +20,7 @@ const ContactForm = () => {
     e.preventDefault();
     
     const { name, email, subject, message } = formData;
-    const mailtoLink = `mailto:info@clickalinks.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
+    const mailtoLink = `mailto:support@clickalinks.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
       `Name: ${name}\nEmail: ${email}\n\nMessage: ${message}`
     )}`;
     
@@ -109,7 +109,7 @@ const ContactForm = () => {
                 <div className="contact-icon">📧</div>
                 <div className="contact-details">
                   <strong>Email Us</strong>
-                  <p>info@clickalinks.com</p>
+                  <p><a href="mailto:support@clickalinks.com" style={{ color: 'inherit', textDecoration: 'none' }}>support@clickalinks.com</a></p>
                   <small>We typically reply within 24 hours</small>
                 </div>
               </div>
@@ -143,6 +143,19 @@ const ContactForm = () => {
                   <li>✅ Secure payment processing</li>
                   <li>✅ Premium visibility for your business</li>
                 </ul>
+              </div>
+
+              <div className="contact-method" style={{marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0'}}>
+                <div className="contact-icon">🏢</div>
+                <div className="contact-details">
+                  <strong>Company Information</strong>
+                  <p style={{fontSize: '0.9rem', marginTop: '0.5rem'}}>
+                    <strong>Clicado Media UK Ltd</strong> trading as <strong>clickalinks.com</strong>
+                  </p>
+                  <p style={{fontSize: '0.85rem', marginTop: '0.25rem', color: '#666'}}>
+                    Registered in England & Wales, Registration Number: 16904433
+                  </p>
+                </div>
               </div>
             </div>
           </div>

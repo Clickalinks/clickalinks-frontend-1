@@ -31,35 +31,36 @@ function createTransporter() {
   // Option 2: SMTP (Gmail, Outlook, custom - including IONOS)
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const port = parseInt(process.env.SMTP_PORT || '465');
-    const isSecure = process.env.SMTP_SECURE === 'true';
+    // Default to secure=true for port 465 (SSL/TLS direct connection)
+    // Set SMTP_SECURE=false explicitly if you need STARTTLS instead
+    const isSecure = process.env.SMTP_SECURE !== 'false'; // Default to true unless explicitly set to 'false'
     
     console.log(`📧 Creating SMTP transporter: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure})`);
     console.log(`📧 SMTP User: ${process.env.SMTP_USER}`);
+    console.log(`📧 SMTP_SECURE env var: ${process.env.SMTP_SECURE || 'not set (defaulting to true)'}`);
     
-    // IONOS requires TLS for port 465 (STARTTLS)
-    // secure: false means use STARTTLS (upgrade connection to TLS)
-    // secure: true means use direct SSL/TLS connection (for port 465)
+    // secure: true = direct SSL/TLS connection (recommended for port 465)
+    // secure: false = STARTTLS (upgrade connection to TLS)
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: port,
-      secure: isSecure, // true for 465 (SSL), false for 465 (STARTTLS/TLS)
+      secure: isSecure, // true for 465 (direct SSL/TLS), false for STARTTLS
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
       },
       tls: {
-        // IONOS requires TLS to be activated for port 465
         // rejectUnauthorized: false allows self-signed certificates
         rejectUnauthorized: false,
         // Use modern TLS (IONOS supports TLS 1.2+)
         minVersion: 'TLSv1.2'
       },
-      // IONOS-specific: Connection settings
+      // Connection settings
       connectionTimeout: 15000, // 15 seconds (increased for reliability)
       greetingTimeout: 10000,
       socketTimeout: 15000,
-      // Require TLS upgrade for port 465 (IONOS requirement)
-      requireTLS: port === 465 ? true : false
+      // Require TLS for secure connections
+      requireTLS: !isSecure // Only require TLS upgrade if not using direct SSL
     });
   }
 
@@ -78,7 +79,15 @@ function createTransporter() {
   }
 
   // Fallback: No email configured - return null (emails will be skipped)
+  console.warn('⚠️ ⚠️ ⚠️ EMAIL SERVICE NOT CONFIGURED ⚠️ ⚠️ ⚠️');
   console.warn('⚠️ No email service configured. Emails will not be sent.');
+  console.warn('⚠️ Checked for:');
+  console.warn('   - SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'SET' : 'NOT SET');
+  console.warn('   - SMTP_HOST:', process.env.SMTP_HOST || 'NOT SET');
+  console.warn('   - SMTP_USER:', process.env.SMTP_USER || 'NOT SET');
+  console.warn('   - SMTP_PASS:', process.env.SMTP_PASS ? 'SET (hidden)' : 'NOT SET');
+  console.warn('   - GMAIL_CLIENT_ID:', process.env.GMAIL_CLIENT_ID ? 'SET' : 'NOT SET');
+  console.warn('⚠️ Please configure email service in Render environment variables.');
   return null;
 }
 
@@ -844,7 +853,7 @@ async function sendWelcomeEmail(purchaseData) {
   const endDate = new Date(Date.now() + selectedDuration * 24 * 60 * 60 * 1000);
   const totalAmount = finalAmount || 0;
 
-  // Professional Welcome Email - NO INVOICE CONTENT
+  // Modern Professional Welcome Email - NO INVOICE CONTENT
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -1122,8 +1131,11 @@ async function sendWelcomeEmail(purchaseData) {
           </div>
 
           <div class="footer">
-            <p>Need help? Contact us at <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}">${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}</a></p>
-            <p>&copy; ${new Date().getFullYear()} ClickaLinks. All rights reserved.</p>
+            <p><strong>Clicado Media UK Ltd</strong> trading as <strong>clickalinks.com</strong></p>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 8px;">Registered in England & Wales, Registration Number: 16904433</p>
+            <p style="font-size: 12px; color: #94a3b8;">Clicado Media UK Ltd is an advertisement company registered in England and Wales</p>
+            <p style="margin-top: 20px;">Need help? Contact us at <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}">${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}</a></p>
+            <p style="margin-top: 15px;">&copy; ${new Date().getFullYear()} ClickaLinks. All rights reserved.</p>
           </div>
         </div>
       </div>
@@ -1170,12 +1182,24 @@ Need help? Contact us at ${process.env.SUPPORT_EMAIL || 'support@clickalinks.com
       html: htmlContent
     };
 
+    console.log('📧 Attempting to send welcome email...');
+    console.log('📧 From:', fromEmail);
+    console.log('📧 To:', contactEmail);
+    console.log('📧 Subject:', `🎉 Welcome to ClickaLinks! Your Ad is Live - Square #${squareNumber}`);
+    
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Welcome email sent successfully:', info.messageId);
+    console.log('✅ Welcome email sent successfully!');
+    console.log('✅ Message ID:', info.messageId);
+    console.log('✅ Response:', info.response || 'N/A');
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending welcome email:', error);
-    return { success: false, error: error.message };
+    console.error('❌ ❌ ❌ ERROR SENDING WELCOME EMAIL ❌ ❌ ❌');
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error response:', error.response || 'N/A');
+    console.error('❌ Error command:', error.command || 'N/A');
+    console.error('❌ Full error:', error);
+    return { success: false, error: error.message, code: error.code, details: error.response };
   }
 }
 
@@ -1212,7 +1236,7 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
   const discountAmt = discountAmount || 0;
   const totalAmount = Math.max(0, originalAmt - discountAmt);
 
-  // Professional Invoice Email - Clean and Business-Focused
+  // Modern Professional Invoice Email - Invoice Only, Clean Design
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -1539,8 +1563,9 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
           </div>
 
           <div class="footer">
-            <p><strong>Clicado Media UK Ltd</strong></p>
-            <p style="font-size: 12px; color: #94a3b8;">Registered in England & Wales, Registration Number: 16904433</p>
+            <p><strong>Clicado Media UK Ltd</strong> trading as <strong>clickalinks.com</strong></p>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 8px;">Registered in England & Wales, Registration Number: 16904433</p>
+            <p style="font-size: 12px; color: #94a3b8;">Clicado Media UK Ltd is an advertisement company registered in England and Wales</p>
             <p style="margin-top: 20px;">Thank you for your business with ClickaLinks!</p>
             <p>Questions about your invoice? Contact us at <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}">${process.env.SUPPORT_EMAIL || 'support@clickalinks.com'}</a></p>
             <p style="margin-top: 15px;">&copy; ${new Date().getFullYear()} ClickaLinks. All rights reserved.</p>
@@ -1593,12 +1618,24 @@ Questions about your invoice? Contact us at ${process.env.SUPPORT_EMAIL || 'supp
       html: htmlContent
     };
 
+    console.log('📧 Attempting to send invoice email...');
+    console.log('📧 From:', fromEmail);
+    console.log('📧 To:', contactEmail);
+    console.log('📧 Subject:', `📄 Your Invoice #${invoiceNumber} - ClickaLinks`);
+    
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Invoice email sent successfully:', info.messageId);
+    console.log('✅ Invoice email sent successfully!');
+    console.log('✅ Message ID:', info.messageId);
+    console.log('✅ Response:', info.response || 'N/A');
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending invoice email:', error);
-    return { success: false, error: error.message };
+    console.error('❌ ❌ ❌ ERROR SENDING INVOICE EMAIL ❌ ❌ ❌');
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error response:', error.response || 'N/A');
+    console.error('❌ Error command:', error.command || 'N/A');
+    console.error('❌ Full error:', error);
+    return { success: false, error: error.message, code: error.code, details: error.response };
   }
 }
 
@@ -1607,12 +1644,19 @@ Questions about your invoice? Contact us at ${process.env.SUPPORT_EMAIL || 'supp
  * Now sends two separate emails: welcome email first, then invoice email
  */
 export async function sendAdConfirmationEmail(purchaseData) {
+  console.log('📧 ===== EMAIL SERVICE CALLED =====');
+  console.log('📧 Attempting to send confirmation emails...');
+  
   const transporter = createTransporter();
   
   if (!transporter) {
-    console.log('📧 Email service not configured - skipping email');
+    console.error('❌ ❌ ❌ EMAIL SERVICE NOT CONFIGURED ❌ ❌ ❌');
+    console.error('❌ Email service not configured - skipping email');
+    console.error('❌ Check Render environment variables for SMTP configuration');
     return { success: false, message: 'Email service not configured' };
   }
+  
+  console.log('✅ Email transporter created successfully');
 
   const {
     contactEmail,
@@ -1630,9 +1674,16 @@ export async function sendAdConfirmationEmail(purchaseData) {
   } = purchaseData;
 
   if (!contactEmail) {
-    console.warn('⚠️ No email address provided - skipping email');
+    console.error('❌ No email address provided - skipping email');
+    console.error('❌ Purchase data:', {
+      hasContactEmail: !!contactEmail,
+      businessName: businessName,
+      squareNumber: squareNumber
+    });
     return { success: false, message: 'No email address provided' };
   }
+  
+  console.log('✅ Contact email found:', contactEmail);
 
   // Calculate amounts correctly
   const originalAmt = originalAmount !== undefined ? originalAmount : (finalAmount || 10);

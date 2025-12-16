@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import FormData from 'form-data';
-import { sendAdConfirmationEmail, sendAdminNotificationEmail } from './services/emailService.js';
+import { sendAdConfirmationEmail, sendAdminNotificationEmail, generateInvoiceHTML } from './services/emailService.js';
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
 import adminRoutes from './routes/admin.js';
@@ -469,6 +469,55 @@ app.post('/api/sync-purchase', async (req, res) => {
   }
 });
 
+// Test email configuration endpoint (for debugging)
+app.get('/api/test-email-config', async (req, res) => {
+  try {
+    const hasSendGrid = !!process.env.SENDGRID_API_KEY;
+    const hasSMTP = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+    const hasGmail = !!(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN);
+    
+    const config = {
+      sendGrid: {
+        configured: hasSendGrid,
+        apiKey: hasSendGrid ? 'SET (hidden)' : 'NOT SET'
+      },
+      smtp: {
+        configured: hasSMTP,
+        host: process.env.SMTP_HOST || 'NOT SET',
+        user: process.env.SMTP_USER || 'NOT SET',
+        pass: process.env.SMTP_PASS ? 'SET (hidden)' : 'NOT SET',
+        port: process.env.SMTP_PORT || '465 (default)',
+        secure: process.env.SMTP_SECURE || 'false (default)'
+      },
+      gmail: {
+        configured: hasGmail,
+        clientId: process.env.GMAIL_CLIENT_ID ? 'SET' : 'NOT SET',
+        refreshToken: process.env.GMAIL_REFRESH_TOKEN ? 'SET (hidden)' : 'NOT SET'
+      },
+      emailFrom: process.env.EMAIL_FROM || `"ClickaLinks" <${process.env.SMTP_USER || 'noreply@clickalinks.com'}>`,
+      supportEmail: process.env.SUPPORT_EMAIL || 'support@clickalinks.com',
+      adminEmail: process.env.ADMIN_NOTIFICATION_EMAIL || 'NOT SET'
+    };
+    
+    const hasAnyConfig = hasSendGrid || hasSMTP || hasGmail;
+    
+    res.json({
+      success: hasAnyConfig,
+      configured: hasAnyConfig,
+      message: hasAnyConfig ? 'Email service is configured' : '⚠️ NO EMAIL SERVICE CONFIGURED',
+      config: config,
+      recommendation: hasAnyConfig 
+        ? 'Email service is configured. Check logs for sending errors.' 
+        : 'Please configure SMTP_HOST, SMTP_USER, SMTP_PASS in Render environment variables.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Send confirmation email endpoint
 app.post('/api/send-confirmation-email', async (req, res) => {
   try {
@@ -699,6 +748,103 @@ app.post('/api/scan-file', async (req, res) => {
       message: 'Scan service unavailable - upload allowed',
       warning: true
     });
+  }
+});
+
+// Invoice download endpoint
+app.get('/api/invoice/download', async (req, res) => {
+  try {
+    const {
+      tx: transactionId,
+      inv: invoiceNumber,
+      businessName,
+      contactEmail,
+      squareNumber,
+      pageNumber,
+      duration,
+      originalAmount,
+      discountAmount,
+      finalAmount,
+      promoCode,
+      website
+    } = req.query;
+
+    console.log('📄 Invoice download requested:', {
+      transactionId,
+      invoiceNumber,
+      businessName,
+      squareNumber
+    });
+
+    // Validate required fields
+    if (!transactionId && !invoiceNumber) {
+      return res.status(400).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+            <h1>Invoice Not Found</h1>
+            <p>Transaction ID or Invoice Number is required.</p>
+          </body>
+        </html>
+      `);
+    }
+
+    // Prepare purchase data for invoice generation
+    const purchaseData = {
+      businessName: businessName || 'N/A',
+      contactEmail: contactEmail || '',
+      squareNumber: parseInt(squareNumber) || 1,
+      pageNumber: parseInt(pageNumber) || 1,
+      selectedDuration: parseInt(duration) || 30,
+      originalAmount: parseFloat(originalAmount) || 0,
+      discountAmount: parseFloat(discountAmount) || 0,
+      finalAmount: parseFloat(finalAmount) || 0,
+      transactionId: transactionId || '',
+      promoCode: promoCode || null,
+      website: website || ''
+    };
+
+    // Generate invoice number if not provided (deterministic from transactionId)
+    let finalInvoiceNumber = invoiceNumber;
+    if (!finalInvoiceNumber && transactionId) {
+      // Generate deterministic invoice number from transactionId
+      const date = new Date();
+      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+      // Use a hash of transactionId for consistency
+      const hash = transactionId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const random = hash.toString(36).substring(0, 5).toUpperCase();
+      finalInvoiceNumber = `INV-${dateStr}-${random}`;
+    } else if (!finalInvoiceNumber) {
+      // Fallback: generate random invoice number
+      const date = new Date();
+      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+      const random = Math.random().toString(36).substring(2, 7).toUpperCase();
+      finalInvoiceNumber = `INV-${dateStr}-${random}`;
+    }
+
+    // Generate invoice HTML
+    const invoiceHTML = generateInvoiceHTML(purchaseData, finalInvoiceNumber);
+
+    // Set headers for HTML file download
+    const fileName = `Invoice-${finalInvoiceNumber}.html`;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    
+    // Send invoice HTML
+    res.send(invoiceHTML);
+
+    console.log('✅ Invoice downloaded:', fileName);
+
+  } catch (error) {
+    console.error('❌ Error generating invoice:', error);
+    res.status(500).send(`
+      <html>
+        <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+          <h1>Error Generating Invoice</h1>
+          <p>An error occurred while generating your invoice. Please contact support.</p>
+          <p style="color: #666; font-size: 12px;">${isDevelopment ? error.message : 'Error ID: ' + Date.now()}</p>
+        </body>
+      </html>
+    `);
   }
 });
 

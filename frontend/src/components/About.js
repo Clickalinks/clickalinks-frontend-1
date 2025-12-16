@@ -2,34 +2,34 @@ import React from 'react';
 import './About.css';
 
 const About = () => {
-  const features = [
-    { icon: '💰', title: 'Affordable', description: 'Only £1 per day for premium ad space' },
-    { icon: '⚡', title: 'Simple', description: 'No complex contracts or hidden fees' },
-    { icon: '🎯', title: 'Effective', description: 'Direct click-through to your deals' },
-    { icon: '🔄', title: 'Flexible', description: 'Choose 10, 20, or 30-day campaigns' }
-  ];
-
   return (
     <div className="about-page">
       {/* Hero Section */}
       <div className="about-hero">
         <div className="container">
           <h1>About CLICKaLINKS</h1>
-          <p className="subtitle">Directing Businesses to Customers, One Click at a Time</p>
+          <p className="subtitle">Connecting Trusted Businesses with Shoppers Looking to Save</p>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="about-content">
         <div className="container">
-          {/* Mission Section */}
+          {/* About CLICKaLINKS Section */}
           <div className="content-section">
             <div className="section-card">
-              <h2>Our Mission</h2>
+              <h2>About CLICKaLINKS</h2>
               <p>
-                <strong>CLICKaLINKS</strong> was founded with a simple mission: to connect amazing businesses 
-                with customers looking for great deals. We provide an affordable advertising platform where 
-                businesses of all sizes can showcase their offers directly to engaged shoppers.
+                <strong>CLICKaLINKS</strong> is a UK-based deals and promotions platform created to help customers 
+                find genuine savings and to give businesses an affordable, effective way to advertise their offers. 
+                We connect trusted businesses with people who actively want to save money — not just during major 
+                sale events, but all year round.
+              </p>
+              <p>
+                Founded in 2025, CLICKaLINKS was built with simplicity, fairness, and accessibility at its core. 
+                We believe that great deals shouldn't be hidden behind expensive advertising campaigns or limited 
+                to a few days on the calendar. Our platform gives businesses of all sizes — from local independents 
+                to growing online brands — the opportunity to showcase their offers directly to engaged shoppers.
               </p>
             </div>
           </div>
@@ -39,40 +39,85 @@ const About = () => {
             <div className="section-card">
               <h2>Why We Started</h2>
               <p>
-                Founded in 2025, CLICKaLINKS was created to make finding real deals simple again. We realized 
-                that searching for everyday discounts had become a mission. Most businesses only promote 
-                seasonal offers around holidays like Valentine's Day, Halloween, or Christmas. Meanwhile, 
-                the great discounts on daily essentials often go unnoticed. Our goal is to change that by 
-                giving businesses an affordable way to advertise their everyday deals, and helping customers 
-                easily discover genuine savings all year round.
+                CLICKaLINKS began with a simple observation: finding real online deals outside of major holiday 
+                sales had become unnecessarily difficult. Most discounts are heavily promoted during events like 
+                Christmas, Black Friday, or Valentine's Day, while everyday savings often go unnoticed.
               </p>
-            </div>
-          </div>
-
-          {/* Features Grid */}
-          <div className="content-section">
-            <div className="section-card">
-              <h2>What Makes Us Different</h2>
-              <div className="features-grid">
-                {features.map((feature, index) => (
-                  <div key={index} className="feature-card">
-                    <div className="feature-icon">{feature.icon}</div>
-                    <h3>{feature.title}</h3>
-                    <p>{feature.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Values Section */}
-          <div className="content-section">
-            <div className="section-card">
-              <h2>Our Values</h2>
               <p>
-                We believe in transparency, fairness, and creating win-win situations for both businesses 
-                and customers. Every square on our platform represents an opportunity for growth and discovery.
+                The idea came from real conversations. As a taxi driver in Devon, I speak with customers daily — 
+                working families, retirees, students, and business owners. A common topic kept coming up: the rising 
+                cost of living and how hard it is to find reliable discounts on everyday products and services. Like 
+                many others, I personally experienced the pressure of living bill to bill, maintaining a road-worthy 
+                vehicle, and covering increasing expenses.
               </p>
+              <p>
+                Those conversations inspired CLICKaLINKS. The platform was created to support people facing real 
+                financial pressures, while also helping businesses reach customers without paying high advertising fees. 
+                Our mission is simple: make everyday deals easier to find and more accessible for everyone.
+              </p>
+            </div>
+          </div>
+
+          {/* A Local Idea with a National Vision */}
+          <div className="content-section">
+            <div className="section-card">
+              <h2>A Local Idea with a National Vision</h2>
+              <p>
+                CLICKaLINKS was founded in Devon, but our vision reaches across the UK. What started as a local idea 
+                driven by everyday struggles has grown into a platform designed to benefit communities nationwide.
+              </p>
+              <p>
+                We are proud of our roots and the honest, hardworking values that shaped the business. By supporting 
+                local and online businesses alike, CLICKaLINKS helps strengthen communities while giving shoppers smarter 
+                ways to save money — no matter where they live.
+              </p>
+            </div>
+          </div>
+
+          {/* Founder's Note */}
+          <div className="content-section">
+            <div className="section-card">
+              <h2>Founder's Note</h2>
+              <blockquote style={{fontStyle: 'italic', borderLeft: '4px solid #667eea', paddingLeft: '20px', margin: '20px 0', fontSize: '1.1em', color: '#4a5568'}}>
+                "CLICKaLINKS wasn't created in a boardroom — it was created on the road. After years of speaking to 
+                customers and experiencing the same financial challenges myself, I realised there had to be a better way 
+                for people to find real deals throughout the year. This platform is built for everyday people, everyday 
+                businesses, and everyday savings."
+              </blockquote>
+            </div>
+          </div>
+
+          {/* What Makes CLICKaLINKS Different */}
+          <div className="content-section">
+            <div className="section-card">
+              <h2>What Makes CLICKaLINKS Different</h2>
+              <div className="features-grid">
+                <div className="feature-card">
+                  <div className="feature-icon">💰</div>
+                  <h3>Affordable Advertising for Businesses</h3>
+                  <p>Low-cost advertising solutions that work for businesses of all sizes</p>
+                </div>
+                <div className="feature-card">
+                  <div className="feature-icon">🎯</div>
+                  <h3>Real Deals Promoted All Year Round</h3>
+                  <p>Not just seasonal — genuine savings available throughout the year</p>
+                </div>
+                <div className="feature-card">
+                  <div className="feature-icon">📱</div>
+                  <h3>Easy-to-Use Platform for Shoppers</h3>
+                  <p>Simple navigation to find the deals you're looking for</p>
+                </div>
+                <div className="feature-card">
+                  <div className="feature-icon">🏪</div>
+                  <h3>Support for Local and Independent Businesses</h3>
+                  <p>Helping local businesses reach customers without breaking the bank</p>
+                </div>
+                <div className="feature-card">
+                  <div className="feature-icon">🇬🇧</div>
+                  <h3>UK-Focused, Community-Driven Approach</h3>
+                  <p>Built in the UK, for UK businesses and shoppers</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -105,6 +150,19 @@ const About = () => {
                   <div className="stat-description">Extended visibility period</div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Company Information */}
+          <div className="content-section">
+            <div className="section-card">
+              <h2>Company Information</h2>
+              <p>
+                <strong>Clicado Media UK Ltd</strong> is an advertisement company registered in England and Wales, registration number is 16904433.
+              </p>
+              <p style={{marginTop: '0.5rem'}}>
+                <strong>Clicado Media UK Ltd</strong> trading as <strong>clickalinks.com</strong>
+              </p>
             </div>
           </div>
 

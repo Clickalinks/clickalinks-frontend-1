@@ -8,7 +8,7 @@ const Terms = () => {
       <div className="terms-container">
         <div className="terms-content">
           <h1>📄 Terms & Conditions</h1>
-          <p className="last-updated">Last Updated: December 2024</p>
+          <p className="last-updated">Last Updated: December 2025</p>
           
           <div className="terms-section">
             <h2>✅ 1. Agreement to Terms</h2>
@@ -100,6 +100,16 @@ const Terms = () => {
             <p>For questions about these terms or our service:</p>
             <p>📧 Email: <a href="mailto:support@clickalinks.com" className="contact-link">support@clickalinks.com</a></p>
             <p>Response time: Within 24 hours during business days</p>
+          </div>
+          
+          <div className="terms-section" style={{marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid #e2e8f0'}}>
+            <h2>🏢 Company Information</h2>
+            <p>
+              <strong>Clicado Media UK Ltd</strong> is an advertisement company registered in England and Wales, registration number is 16904433.
+            </p>
+            <p style={{marginTop: '0.5rem'}}>
+              <strong>Clicado Media UK Ltd</strong> trading as <strong>clickalinks.com</strong>
+            </p>
           </div>
         </div>
       </div>
