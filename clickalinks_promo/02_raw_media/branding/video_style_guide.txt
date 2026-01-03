@@ -1,0 +1,436 @@
+==========================================
+CLICKALINKS VIDEO STYLE GUIDE FOR CAPCUT
+==========================================
+
+This guide ensures all ClickaLinks videos maintain consistent branding,
+professional appearance, and maximum impact across all platforms.
+
+==========================================
+TEXT OVERLAYS
+==========================================
+
+FONT SELECTION:
+---------------
+Primary Font: Montserrat Bold (or similar sans-serif bold)
+Secondary Font: Open Sans (or similar clean sans-serif)
+Display Font: Bebas Neue (for large numbers/stats only)
+
+Font Sizes:
+- Headlines: 48-72px (adjust for platform)
+- Subheadlines: 32-48px
+- Body Text: 24-32px
+- Small Text/CTAs: 18-24px
+- Stats/Numbers: 60-96px (use display font)
+
+Font Weights:
+- Headlines: Bold (700)
+- Subheadlines: Semi-bold (600)
+- Body: Regular (400)
+- Emphasis: Bold (700)
+
+TEXT COLORS:
+-----------
+Primary Text (on light backgrounds):
+- Dark: #1e293b (Dark Slate)
+- Medium: #333333 (Dark Gray)
+- For readability: #000000 (Black)
+
+Primary Text (on dark/gradient backgrounds):
+- White: #ffffff
+- Light: #f8fafc (off-white for subtle contrast)
+
+Accent Text (for emphasis):
+- Use brand gradient colors (see below)
+- Orange: #ff6b35
+- Cyan: #06b6d4
+- Blue: #3b82f6
+- Green: #10b981
+
+TEXT STYLES:
+-----------
+Headlines:
+- Bold, uppercase or title case
+- Letter spacing: 2-4px
+- Line height: 1.2
+- Maximum 2 lines
+- Center or left-aligned
+
+Subheadlines:
+- Semi-bold, sentence case
+- Letter spacing: 1-2px
+- Line height: 1.4
+- Maximum 3 lines
+
+Body Text:
+- Regular weight, sentence case
+- Letter spacing: 0-1px
+- Line height: 1.6
+- Left or center-aligned
+
+TEXT ANIMATIONS:
+--------------
+Entrance Animations:
+- Fade In (0.3-0.5 seconds)
+- Slide In from bottom (0.4-0.6 seconds)
+- Scale Up (0.3-0.5 seconds)
+- Typewriter effect (for key phrases)
+
+Exit Animations:
+- Fade Out (0.3-0.5 seconds)
+- Slide Out (0.4-0.6 seconds)
+
+Emphasis Animations:
+- Pulse (subtle, for CTAs)
+- Glow (for important text)
+- Color shift (for gradient text)
+
+TEXT POSITIONING:
+---------------
+Safe Zones:
+- Keep text within center 80% of frame
+- Avoid edges (especially on mobile)
+- Leave breathing room (padding: 20-40px)
+
+Alignment:
+- Center for headlines/CTAs
+- Left for body text (if readable)
+- Right for stats/numbers (occasionally)
+
+Layering:
+- Text should be above visuals
+- Use semi-transparent backgrounds if needed
+- Ensure contrast for readability
+
+==========================================
+COLORS
+==========================================
+
+BRAND GRADIENT COLORS:
+---------------------
+Primary Colors (use in gradients):
+- Orange: #ff6b35
+- Cyan: #06b6d4
+- Blue: #3b82f6
+- Green: #10b981
+- Pink: #ec4899
+- Yellow: #fbbf24
+
+Base Gradient:
+- Deep Blue: #1e40af
+- Bright Blue: #3b82f6
+
+GRADIENT APPLICATIONS:
+---------------------
+Text Gradients:
+- Apply to headlines and important text
+- Use 2-3 colors from brand palette
+- Direction: Left to right or diagonal (135deg)
+
+Background Gradients:
+- Use for full backgrounds or sections
+- Combine 2-4 brand colors
+- Apply overlay/blend mode if needed
+
+Accent Gradients:
+- Use for buttons, highlights, borders
+- Smaller areas, more vibrant
+- 2-color gradients work best
+
+SOLID COLORS:
+------------
+Backgrounds:
+- Light: #f8fafc (Light Gray)
+- White: #ffffff
+- Dark: #1e293b (for contrast)
+
+Text Backgrounds (for readability):
+- White with 80-90% opacity
+- Dark with 70-80% opacity
+- Brand gradient with 50-60% opacity
+
+Borders/Outlines:
+- Use brand colors for emphasis
+- 2-4px thickness
+- Rounded corners (8-12px radius)
+
+==========================================
+VISUAL ELEMENTS
+==========================================
+
+SHAPES & GRAPHICS:
+-----------------
+Shapes:
+- Rounded rectangles (12-20px radius)
+- Circles for icons/badges
+- Arrows for direction/flow
+- Lines for separation
+
+Icons:
+- Simple, bold line icons
+- Match brand colors
+- Consistent style throughout
+- Size: 24-48px typically
+
+Badges/Labels:
+- Rounded rectangles
+- Brand gradient background
+- White or dark text
+- Padding: 8-16px
+
+ANIMATIONS & TRANSITIONS:
+------------------------
+Transitions Between Clips:
+- Fade (0.3-0.5 seconds) - Professional
+- Slide (0.4-0.6 seconds) - Dynamic
+- Zoom (0.3-0.5 seconds) - Energetic
+- Glitch (0.2-0.3 seconds) - Trendy (use sparingly)
+
+Object Animations:
+- Scale: 1.0 to 1.1 (subtle emphasis)
+- Rotate: -5deg to 5deg (playful)
+- Bounce: Subtle (for CTAs)
+- Shimmer: For highlights
+
+Screen Recording Effects:
+- Zoom/Pan: Add movement to static screens
+- Highlight boxes: Circle important areas
+- Cursor trails: Show interaction
+- Blur/Unblur: Reveal information
+
+OVERLAYS & EFFECTS:
+-----------------
+Overlays:
+- Semi-transparent brand gradient (20-40% opacity)
+- Dark overlay for text readability (50-70% opacity)
+- Light overlay for dark backgrounds (30-50% opacity)
+
+Effects:
+- Subtle glow on important elements
+- Drop shadows for depth (2-4px blur)
+- Border glow for emphasis
+- Particle effects (sparingly, for special moments)
+
+==========================================
+CAPCUT SPECIFIC SETTINGS
+==========================================
+
+PROJECT SETTINGS:
+----------------
+Aspect Ratio:
+- TikTok/Reels: 9:16 (1080x1920px)
+- YouTube/Website: 16:9 (1920x1080px)
+- Instagram Square: 1:1 (1080x1080px)
+- Facebook: 16:9 or 9:16
+
+Frame Rate: 30fps (standard)
+Resolution: 1080p minimum (1920x1080 or 1080x1920)
+
+TEXT TOOLS IN CAPCUT:
+--------------------
+Text Style Presets:
+- Create custom presets with brand colors
+- Save font, size, color combinations
+- Name them: "Headline", "Subheadline", "Body", "CTA"
+
+Animation Presets:
+- Save common animations
+- "Fade In", "Slide Up", "Scale", "Pulse"
+- Apply consistently across videos
+
+Color Picker:
+- Save brand colors as favorites
+- Hex codes: #ff6b35, #06b6d4, #3b82f6, #10b981, #ec4899, #fbbf24
+- Quick access for consistent coloring
+
+OVERLAY TOOLS:
+-------------
+Shape Overlays:
+- Use for backgrounds, highlights, borders
+- Apply brand gradient fills
+- Adjust opacity for subtlety
+
+Image Overlays:
+- Logo placement (consistent position)
+- Icons and graphics
+- Ensure high resolution
+
+VIDEO EFFECTS:
+-------------
+Filters:
+- Use sparingly, maintain natural colors
+- Slight color correction only
+- Enhance brand colors if needed
+
+Speed:
+- Normal speed for voiceover
+- 2x-3x for screen recordings (boring parts)
+- Slow motion for emphasis (0.5x)
+
+AUDIO SETTINGS:
+--------------
+Music:
+- Volume: 20-30% (background)
+- Fade in/out: 1-2 seconds
+- Match tempo to video pace
+
+Voiceover:
+- Volume: 100% (foreground)
+- Clear, crisp audio
+- Remove background noise
+
+Sound Effects:
+- Subtle, professional
+- Match action on screen
+- Don't overpower voiceover
+
+==========================================
+PLATFORM-SPECIFIC GUIDELINES
+==========================================
+
+TIKTOK (9:16):
+-------------
+- Text: Larger (60-80px for headlines)
+- Fast cuts: 1-2 seconds
+- Trendy transitions
+- Bold, eye-catching text
+- Top/bottom text safe zones
+- Music: Trending audio preferred
+
+INSTAGRAM REELS (9:16):
+----------------------
+- Text: Medium-large (50-70px)
+- Clean, professional
+- Brand colors prominent
+- Subtle animations
+- Music: Instagram audio library
+
+FACEBOOK (16:9 or 9:16):
+------------------------
+- Text: Readable on mobile (40-60px)
+- Professional tone
+- Clear CTAs
+- Brand colors
+- Music: Corporate-friendly
+
+YOUTUBE (16:9):
+--------------
+- Text: Standard sizes (40-60px)
+- Professional, polished
+- Thumbnail: High contrast, readable
+- Brand colors in thumbnail
+- Music: Background, subtle
+
+LINKEDIN (16:9 or 1:1):
+----------------------
+- Text: Professional, clear (40-60px)
+- Corporate-friendly
+- Subtle animations
+- Brand colors (professional)
+- Music: Minimal or none
+
+==========================================
+QUALITY CHECKLIST
+==========================================
+
+Before Exporting, Check:
+------------------------
+[ ] All text is readable on mobile
+[ ] Brand colors used correctly
+[ ] Text overlays don't cover important visuals
+[ ] Audio levels balanced (voiceover clear, music background)
+[ ] Transitions are smooth
+[ ] No spelling/grammar errors
+[ ] CTA is clear and visible
+[ ] Website URL is readable
+[ ] Logo is visible (if included)
+[ ] Duration matches platform requirements
+[ ] Export quality is high (1080p minimum)
+[ ] File size is reasonable
+[ ] Brand voice is consistent
+
+==========================================
+QUICK REFERENCE
+==========================================
+
+Text Overlay Template:
+- Font: Montserrat Bold
+- Size: 60px (headline)
+- Color: White (on dark) or #1e293b (on light)
+- Position: Center, safe zone
+- Animation: Fade in 0.4s
+- Background: Semi-transparent if needed
+
+Color Palette Quick Access:
+- Orange: #ff6b35
+- Cyan: #06b6d4
+- Blue: #3b82f6
+- Green: #10b981
+- Pink: #ec4899
+- Yellow: #fbbf24
+
+Common Animations:
+- Fade In: 0.3-0.5s
+- Slide Up: 0.4-0.6s
+- Scale: 0.3-0.5s
+- Pulse: Subtle, continuous
+
+Export Settings:
+- Format: MP4
+- Resolution: 1080p
+- Frame Rate: 30fps
+- Quality: High
+
+==========================================
+TIPS & BEST PRACTICES
+==========================================
+
+1. Consistency is Key:
+   - Use same fonts, colors, styles across all videos
+   - Create templates for common elements
+   - Save presets in CapCut
+
+2. Mobile First:
+   - Test on mobile device before finalizing
+   - Ensure text is readable on small screens
+   - Keep important info in center 80%
+
+3. Less is More:
+   - Don't overcrowd with text
+   - One main message per video
+   - Clear hierarchy (headline > subheadline > body)
+
+4. Brand Colors:
+   - Use gradient for excitement/energy
+   - Use solid colors for professionalism
+   - Maintain color consistency
+
+5. Animation Timing:
+   - Match animation speed to video pace
+   - Fast videos = quick animations
+   - Slow videos = smooth animations
+
+6. Readability:
+   - High contrast between text and background
+   - Use text backgrounds if needed
+   - Test on different devices
+
+7. Professional Polish:
+   - Smooth transitions
+   - Consistent spacing
+   - Clean, uncluttered design
+   - High-quality assets
+
+==========================================
+CONTACT & UPDATES
+==========================================
+
+For questions or style updates:
+- Refer to brand_colors.txt for color reference
+- Check video_generation_prompts.md for editing guides
+- Maintain consistency with this style guide
+
+Last Updated: December 2025
+Version: 1.0
+
+==========================================
+

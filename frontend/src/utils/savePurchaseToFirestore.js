@@ -1,6 +1,8 @@
 import { db } from '../firebase';
-import { doc, setDoc, deleteDoc, serverTimestamp, getDocs, collection, query, where, writeBatch } from 'firebase/firestore';
+import { doc, getDocs, collection, query, where } from 'firebase/firestore';
 import { generateUniquePurchaseId } from './generateUniqueId';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
 
 // Track ongoing saves to prevent duplicates
 const ongoingSaves = new Map();
@@ -40,132 +42,76 @@ export const savePurchaseToFirestore = async (purchaseData) => {
       return false;
     }
 
-    // CRITICAL STEP 1: Find and delete ONLY documents with the same squareNumber AND different purchaseId
-    // IMPORTANT: We DON'T delete by squareNumber alone anymore - backend shuffle assigns orderingIndex
-    // Multiple purchases can exist, backend shuffle will assign them to different squares via orderingIndex
-    // Only delete if there's an EXACT conflict: same squareNumber AND different purchaseId AND same page
-    console.log(`🔍 Checking for existing documents with squareNumber ${squareNumber}...`);
-    const existingDocsQuery = query(
-      collection(db, 'purchasedSquares'),
-      where('squareNumber', '==', squareNumber),
-      where('status', '==', 'active')
-    );
-    const existingDocsSnapshot = await getDocs(existingDocsQuery);
+    // SECURITY: Use backend API instead of direct Firestore writes
+    // Backend uses Admin SDK which bypasses security rules
+    console.log(`📤 Saving purchase via secure backend API...`);
     
-    const documentsToDelete = [];
-    existingDocsSnapshot.forEach(docSnapshot => {
-      const existingData = docSnapshot.data();
-      // Only delete if:
-      // 1. Different purchaseId (not the same purchase)
-      // 2. Same squareNumber (conflict)
-      // 3. Same pageNumber (same page = conflict)
-      const samePage = (existingData.pageNumber || 1) === (purchaseData.pageNumber || 1);
-      if (existingData.purchaseId !== purchaseId && samePage) {
-        documentsToDelete.push(docSnapshot.id);
-        console.log(`🗑️ Found conflicting document ${docSnapshot.id} for square ${squareNumber} on page ${purchaseData.pageNumber || 1}, will delete`);
-      } else {
-        console.log(`✅ Keeping document ${docSnapshot.id} (different purchase or different page)`);
-      }
-    });
-    
-    // Delete conflicting documents in a batch
-    if (documentsToDelete.length > 0) {
-      console.log(`🗑️ Deleting ${documentsToDelete.length} conflicting document(s) before save...`);
-      const deleteBatch = writeBatch(db);
-      documentsToDelete.forEach(docId => {
-        const docToDelete = doc(db, 'purchasedSquares', docId);
-        deleteBatch.delete(docToDelete);
-      });
-      await deleteBatch.commit();
-      console.log(`✅ Deleted ${documentsToDelete.length} conflicting document(s)`);
-    } else {
-      console.log(`✅ No conflicts found - all existing documents are different purchases or on different pages`);
-    }
-
-    // CRITICAL STEP 2: Save the new document with unique purchaseId as document ID
-    const purchaseDocRef = doc(db, 'purchasedSquares', purchaseId);
-    
-    const dataToSave = {
-      purchaseId: purchaseId, // Store unique ID
-      status: 'active',
+    const requestData = {
+      purchaseId: purchaseId,
+      squareNumber: purchaseData.squareNumber,
+      pageNumber: purchaseData.pageNumber || 1,
       businessName: purchaseData.businessName,
+      contactEmail: purchaseData.contactEmail || '',
       logoData: purchaseData.logoData || null,
       dealLink: purchaseData.website || purchaseData.dealLink || '',
-      contactEmail: purchaseData.contactEmail || '',
-      startDate: purchaseData.startDate || new Date().toISOString(),
-      endDate: purchaseData.endDate || new Date(Date.now() + (purchaseData.duration || 30) * 24 * 60 * 60 * 1000).toISOString(),
       amount: purchaseData.amount || purchaseData.finalAmount || 10,
       duration: purchaseData.duration || purchaseData.selectedDuration || 30,
       transactionId: purchaseData.transactionId || purchaseData.sessionId || '',
-      purchaseDate: purchaseData.purchaseDate || new Date().toISOString(),
+      status: 'active',
       paymentStatus: 'paid',
-      storageType: purchaseData.logoData && purchaseData.logoData.includes('firebasestorage') ? 'firebase' : 'local',
-      storagePath: purchaseData.storagePath || null,
-      squareNumber: purchaseData.squareNumber, // Current square assignment (can change during shuffle)
-      pageNumber: purchaseData.pageNumber || 1,
-      clickCount: 0, // Initialize click count
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      startDate: purchaseData.startDate || new Date().toISOString(),
+      endDate: purchaseData.endDate || new Date(Date.now() + (purchaseData.duration || purchaseData.selectedDuration || 30) * 24 * 60 * 60 * 1000).toISOString(),
+      purchaseDate: purchaseData.purchaseDate || new Date().toISOString(),
+      storagePath: purchaseData.storagePath || null
     };
 
-    // Use setDoc (not merge) to ensure clean save
-    console.log('📤 Attempting Firestore write...', {
-      collection: 'purchasedSquares',
-      documentId: purchaseId,
-      dataKeys: Object.keys(dataToSave)
-    });
-    
     try {
-      await setDoc(purchaseDocRef, dataToSave);
-      console.log('✅ setDoc completed successfully');
-    } catch (setDocError) {
-      console.error('❌ setDoc failed:', setDocError);
-      console.error('Error code:', setDocError.code);
-      console.error('Error message:', setDocError.message);
-      throw setDocError; // Re-throw to be caught by outer catch
-    }
-    
-    console.log('✅ Successfully saved to Firestore:', {
-      documentId: purchaseId,
-      purchaseId: purchaseId,
-      square: purchaseData.squareNumber,
-      businessName: purchaseData.businessName
-    });
+      const response = await fetch(`${BACKEND_URL}/api/purchases`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
 
-    // Verify it was saved (with retry logic)
-    let verificationPassed = false;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
-      const verifyDoc = await getDocs(
-        query(collection(db, 'purchasedSquares'), where('purchaseId', '==', purchaseId))
-      );
-      
-      if (!verifyDoc.empty) {
-        console.log(`✅ VERIFICATION SUCCESS (attempt ${attempt + 1}): Document found in Firestore`);
-        verificationPassed = true;
-        break;
-      } else {
-        console.warn(`⚠️ Verification attempt ${attempt + 1} failed, retrying...`);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || result.message || 'Failed to save purchase');
       }
-    }
-    
-    if (!verificationPassed) {
-      console.error('❌ VERIFICATION FAILED: Document not found after 3 attempts!');
-      console.error('This might be a Firestore rules issue or network problem');
-      // Still return true if setDoc succeeded - verification might fail due to eventual consistency
-      return true; // Return true anyway since setDoc succeeded
-    }
-    
-    return true;
+
+      console.log('✅ Successfully saved purchase via backend API:', {
+        purchaseId: result.purchaseId,
+        square: purchaseData.squareNumber,
+        businessName: purchaseData.businessName
+      });
+
+      // Verify it was saved (with retry logic)
+      let verificationPassed = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        const verifyDoc = await getDocs(
+          query(collection(db, 'purchasedSquares'), where('purchaseId', '==', purchaseId))
+        );
+        
+        if (!verifyDoc.empty) {
+          console.log(`✅ VERIFICATION SUCCESS (attempt ${attempt + 1}): Document found in Firestore`);
+          verificationPassed = true;
+          break;
+        } else {
+          console.warn(`⚠️ Verification attempt ${attempt + 1} failed, retrying...`);
+        }
+      }
+      
+      if (!verificationPassed) {
+        console.warn('⚠️ Verification failed but purchase was saved (eventual consistency)');
+      }
+      
+      return true;
 
   } catch (error) {
-    console.error('❌ Error saving to Firestore:', error);
-    console.error('Error code:', error.code);
+    console.error('❌ Error saving purchase via backend API:', error);
     console.error('Error message:', error.message);
-    
-    if (error.code === 'permission-denied') {
-      console.error('🚨 PERMISSION DENIED: Firestore security rules are blocking writes!');
-    }
     
     return false;
   } finally {

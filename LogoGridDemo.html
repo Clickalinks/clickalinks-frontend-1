@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ClickaLinks - Logo Grid Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg,
+        #00c9a7, #00b2ff, #6b73ff, #b36bff
+      );
+      background-size: 400% 400%;
+      animation: bgShift 18s ease infinite;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @keyframes bgShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .container {
+      max-width: 1400px;
+      width: 100%;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 12px 25px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .box {
+      width: 100%;
+      min-height: 600px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 0 40px rgba(0,0,0,0.25);
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 16px;
+      padding: 30px;
+      position: relative;
+      overflow: visible;
+    }
+
+    .square {
+      width: 100%;
+      aspect-ratio: 1;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(14px);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .square:hover {
+      transform: translateY(-5px) scale(1.05);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .square.shuffling {
+      animation: shufflePop 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes shufflePop {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(5deg); }
+    }
+
+    .square img {
+      width: 70%;
+      height: auto;
+      opacity: 0.9;
+      transition: opacity 0.3s ease;
+      object-fit: contain;
+    }
+
+    .square:hover img {
+      opacity: 1;
+    }
+
+    .square.empty {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+    }
+
+    .square.empty:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .square.empty::after {
+      content: '+';
+      font-size: 3rem;
+      color: rgba(255, 255, 255, 0.3);
+      font-weight: 300;
+    }
+
+    .info-text {
+      text-align: center;
+      color: white;
+      margin-top: 20px;
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+      .box {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 12px;
+        padding: 20px;
+      }
+
+      .header h1 {
+        font-size: 2rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .box {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 10px;
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>ClickaLinks Advertising Grid</h1>
+      <p>200 Advertising Squares - Fair Rotation System</p>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="shuffleBtn">🔄 Shuffle Grid</button>
+      <button class="btn" id="fillBtn">✨ Fill Random Squares</button>
+      <button class="btn" id="clearBtn">🗑️ Clear All</button>
+    </div>
+
+    <div class="box" id="box">
+      <!-- Squares will be generated by JavaScript -->
+    </div>
+
+    <div class="info-text" id="info">
+      Click "Shuffle Grid" to see the fair rotation system in action
+    </div>
+  </div>
+
+  <script>
+    const box = document.getElementById('box');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const fillBtn = document.getElementById('fillBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const info = document.getElementById('info');
+    
+    // Sample logo URLs
+    const logos = [
+      'https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png',
+      'https://upload.wikimedia.org/wikipedia/commons/4/4f/Csharp_Logo.png',
+      'https://upload.wikimedia.org/wikipedia/commons/6/6e/Windows_logo_-_2021.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/3/3f/Git_icon.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/9/96/HTML5_logo_and_wordmark.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/d/d5/CSS3_logo_and_wordmark.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/1/18/ISO_C%2B%2B_Logo.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/3/3b/Jupyter_logo.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/0/05/Go_Logo_Blue.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/1/10/Python_logo_notext.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/2/2d/Tensorflow_logo.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/0/09/Twitter_bird_logo_2012.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/0/0b/YouTube_full-color_icon_%282017%29.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/5/5f/Instagram-Icon.png'
+    ];
+
+    let squares = [];
+    let filledSquares = new Set();
+
+    // Create 200 squares (50 visible, rest scrollable or responsive)
+    function createSquares() {
+      box.innerHTML = '';
+      squares = [];
+      
+      // Show 50 squares in grid (adjust for better visibility)
+      const totalSquares = 50;
+      
+      for (let i = 0; i < totalSquares; i++) {
+        const square = document.createElement('div');
+        square.className = 'square empty';
+        square.dataset.index = i;
+        box.appendChild(square);
+        squares.push(square);
+      }
+      
+      info.textContent = `${totalSquares} advertising squares - ${filledSquares.size} filled`;
+    }
+
+    // Shuffle grid (fair rotation)
+    function shuffleGrid() {
+      if (filledSquares.size === 0) {
+        info.textContent = 'Fill some squares first, then shuffle!';
+        return;
+      }
+
+      shuffleBtn.disabled = true;
+      info.textContent = '🔄 Shuffling grid...';
+
+      // Add shuffle animation to all filled squares
+      filledSquares.forEach(index => {
+        squares[index].classList.add('shuffling');
+      });
+
+      // Create array of filled square indices
+      const filledIndices = Array.from(filledSquares);
+      const filledLogos = filledIndices.map(idx => squares[idx].querySelector('img')?.src);
+      
+      // Shuffle the array
+      for (let i = filledIndices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [filledIndices[i], filledIndices[j]] = [filledIndices[j], filledIndices[i]];
+        [filledLogos[i], filledLogos[j]] = [filledLogos[j], filledLogos[i]];
+      }
+
+      // Apply shuffled positions after animation
+      setTimeout(() => {
+        // Clear all squares first
+        filledSquares.forEach(index => {
+          squares[index].innerHTML = '';
+          squares[index].classList.remove('shuffling');
+          squares[index].classList.add('empty');
+        });
+
+        // Fill with shuffled logos
+        filledSquares.clear();
+        filledIndices.forEach((newIndex, i) => {
+          squares[newIndex].classList.remove('empty');
+          squares[newIndex].innerHTML = `<img src="${filledLogos[i]}" alt="Logo">`;
+          filledSquares.add(newIndex);
+        });
+
+        filledSquares.clear();
+        filledIndices.forEach(idx => filledSquares.add(idx));
+        
+        shuffleBtn.disabled = false;
+        info.textContent = `✓ Grid shuffled! ${filledSquares.size} squares repositioned fairly.`;
+      }, 600);
+    }
+
+    // Fill random squares
+    function fillRandomSquares() {
+      const emptySquares = squares
+        .map((sq, idx) => ({ sq, idx }))
+        .filter(({ sq }) => sq.classList.contains('empty'));
+      
+      if (emptySquares.length === 0) {
+        info.textContent = 'All squares are filled!';
+        return;
+      }
+
+      const count = Math.min(5, emptySquares.length);
+      const selected = [];
+      
+      for (let i = 0; i < count; i++) {
+        const randomIdx = Math.floor(Math.random() * emptySquares.length);
+        selected.push(emptySquares.splice(randomIdx, 1)[0]);
+      }
+
+      selected.forEach(({ sq, idx }, i) => {
+        setTimeout(() => {
+          const logoIndex = Math.floor(Math.random() * logos.length);
+          sq.classList.remove('empty');
+          sq.classList.add('shuffling');
+          sq.innerHTML = `<img src="${logos[logoIndex]}" alt="Logo" onerror="this.parentElement.classList.add('empty'); this.remove();">`;
+          filledSquares.add(idx);
+          
+          setTimeout(() => sq.classList.remove('shuffling'), 600);
+          
+          if (i === selected.length - 1) {
+            info.textContent = `✓ Added ${count} new squares. Total filled: ${filledSquares.size} / ${squares.length}`;
+          }
+        }, i * 150);
+      });
+    }
+
+    // Clear all squares
+    function clearAll() {
+      squares.forEach((square, index) => {
+        square.classList.remove('shuffling');
+        square.classList.add('empty');
+        square.innerHTML = '';
+        filledSquares.delete(index);
+      });
+      info.textContent = 'All squares cleared. Ready for new advertisements.';
+    }
+
+    // Event listeners
+    shuffleBtn.addEventListener('click', shuffleGrid);
+    fillBtn.addEventListener('click', fillRandomSquares);
+    clearBtn.addEventListener('click', clearAll);
+
+    // Initialize
+    createSquares();
+  </script>
+
+</body>
+</html>
+

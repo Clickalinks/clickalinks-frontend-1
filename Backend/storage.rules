@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Logo uploads directory
+    match /logos/{logoId} {
+      // Allow read access to all logos (public display)
+      allow read: if true;
+      
+      // Only allow authenticated uploads with size and type restrictions
+      allow write: if request.auth != null
+                  && request.resource.size < 2 * 1024 * 1024  // 2MB limit
+                  && request.resource.contentType.matches('image/.*');
+      
+      // Allow delete only by uploader or admin (if you implement admin check)
+      allow delete: if request.auth != null 
+                   && (request.auth.uid == resource.metadata.uploaderId 
+                       || false); // Add admin check if needed
+    }
+    
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

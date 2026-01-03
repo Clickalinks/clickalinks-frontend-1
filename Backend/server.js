@@ -9,6 +9,7 @@ import { sendAdConfirmationEmail, sendAdminNotificationEmail, generateInvoiceHTM
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
 import adminRoutes from './routes/admin.js';
+import purchaseRoutes from './routes/purchases.js';
 
 import { performGlobalShuffle } from './services/shuffleService.js';
 import {
@@ -192,6 +193,10 @@ console.log('✅ Shuffle routes registered');
 // Promo code routes
 app.use('/api/promo-code', promoCodeRoutes);
 console.log('✅ Promo code routes registered at /api/promo-code');
+
+// Purchase routes (secure Firestore writes via backend API)
+app.use('/api', purchaseRoutes);
+console.log('✅ Purchase routes registered at /api/purchases and /api/track-click');
 
 // Admin authentication routes - MUST be before any catch-all routes
 app.use('/api/admin', adminRoutes);

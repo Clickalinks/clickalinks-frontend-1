@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How ClickaLinks Works - Interactive Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      overflow-x: hidden;
+      padding: 20px;
+    }
+
+    .demo-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Hero Section */
+    .demo-hero {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 40px 20px;
+      text-align: center;
+      border-radius: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .demo-hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .demo-subtitle {
+      font-size: 1.1rem;
+      color: #64748b;
+      margin-bottom: 25px;
+    }
+
+    .demo-controls {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    .demo-button {
+      padding: 12px 25px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .demo-button.primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .demo-button.primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .demo-button.primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .demo-button.secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 2px solid #e2e8f0;
+    }
+
+    .demo-button.secondary:hover {
+      background: #e2e8f0;
+      transform: translateY(-2px);
+    }
+
+    /* Main Demo Area */
+    .demo-main {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    /* Grid Section */
+    .demo-grid-wrapper {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .demo-section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 8px;
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 12px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .demo-square {
+      aspect-ratio: 1;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      overflow: hidden;
+      min-height: 40px;
+    }
+
+    .demo-square:hover:not(.occupied) {
+      transform: scale(1.05);
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      z-index: 10;
+    }
+
+    .demo-square.selected {
+      border-color: #667eea;
+      border-width: 3px;
+      background: #f0f4ff;
+      animation: selectPulse 1s ease-in-out infinite;
+    }
+
+    .demo-square.occupied {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: #667eea;
+      cursor: default;
+    }
+
+    .demo-square.occupied .square-content {
+      color: white;
+      text-align: center;
+      padding: 5px;
+    }
+
+    .square-logo {
+      font-size: 1.2rem;
+      margin-bottom: 3px;
+    }
+
+    .square-name {
+      font-size: 0.55rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .selection-pulse {
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, transparent 70%);
+      animation: ripple 2s ease-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes ripple {
+      0% {
+        transform: scale(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
+
+    @keyframes selectPulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+      }
+    }
+
+    @keyframes popIn {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .animate-pop {
+      animation: popIn 0.5s ease-out;
+    }
+
+    /* Side Panel */
+    .demo-side-panel {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .step-detail-card {
+      display: none;
+    }
+
+    .step-detail-card.active {
+      display: block;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .step-detail-icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      display: block;
+      text-align: center;
+    }
+
+    .step-detail-card h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .step-detail-card p {
+      color: #64748b;
+      line-height: 1.6;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+
+    /* Business Details Form */
+    .business-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      color: #475569;
+      font-size: 0.95rem;
+    }
+
+    .form-group input {
+      padding: 12px 15px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .logo-upload-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 30px;
+      text-align: center;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .logo-upload-area:hover {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+
+    .logo-upload-area.uploaded {
+      border-color: #10b981;
+      border-style: solid;
+      background: #f0fdf4;
+    }
+
+    .logo-upload-icon {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    .logo-upload-text {
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .logo-preview {
+      margin-top: 15px;
+      max-width: 150px;
+      max-height: 150px;
+      border-radius: 8px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .form-button {
+      padding: 14px 25px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      margin-top: 10px;
+    }
+
+    .form-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .form-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Payment Step */
+    .payment-demo {
+      text-align: center;
+    }
+
+    .payment-box {
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      transition: all 0.3s ease;
+      margin-bottom: 20px;
+    }
+
+    .payment-box.processing {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+
+    .payment-box.complete {
+      background: #f0fdf4;
+      border-color: #10b981;
+      border-style: solid;
+    }
+
+    .payment-icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      display: block;
+    }
+
+    .payment-box.processing .payment-icon {
+      animation: spin 1s linear infinite;
+    }
+
+    .payment-box.complete .payment-icon {
+      color: #10b981;
+      animation: checkmark 0.5s ease-out;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes checkmark {
+      0% {
+        transform: scale(0);
+      }
+      50% {
+        transform: scale(1.2);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .payment-text {
+      font-weight: 600;
+      color: #64748b;
+      font-size: 1.1rem;
+    }
+
+    .payment-box.complete .payment-text {
+      color: #10b981;
+      font-size: 1.2rem;
+    }
+
+    /* Live Step */
+    .live-success {
+      text-align: center;
+      padding: 30px;
+    }
+
+    .live-icon {
+      font-size: 5rem;
+      margin-bottom: 20px;
+      animation: bounce 1s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .live-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #10b981;
+      margin-bottom: 15px;
+    }
+
+    .live-message {
+      color: #64748b;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin-bottom: 25px;
+    }
+
+    .live-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-top: 25px;
+    }
+
+    .stat-item {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      color: white;
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    /* Instructions */
+    .instruction-text {
+      text-align: center;
+      color: white;
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .demo-main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .demo-hero h1 {
+        font-size: 2rem;
+      }
+
+      .demo-grid {
+        grid-template-columns: repeat(10, 1fr);
+        gap: 6px;
+      }
+
+      .live-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <!-- Hero Section -->
+    <div class="demo-hero">
+      <h1>How ClickaLinks Works</h1>
+      <p class="demo-subtitle">Watch the complete process automatically</p>
+      <div class="demo-controls">
+        <button id="startBtn" class="demo-button primary">▶️ Start Animation</button>
+        <button id="resetBtn" class="demo-button secondary">🔄 Reset Demo</button>
+      </div>
+    </div>
+
+    <!-- Instruction -->
+    <div class="instruction-text" id="instruction">
+      Click "Start Animation" to see the complete process automatically
+    </div>
+
+    <!-- Main Demo Area -->
+    <div class="demo-main">
+      <!-- Grid Section -->
+      <div class="demo-grid-wrapper">
+        <h2 class="demo-section-title">Choose Your Advertising Square</h2>
+        <div class="demo-grid" id="demoGrid">
+          <!-- Will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Side Panel -->
+      <div class="demo-side-panel" id="sidePanel">
+        <!-- Step 1: Select Square (shown by default) -->
+        <div class="step-detail-card active" id="step-1">
+          <div class="step-detail-icon">🎯</div>
+          <h2>Step 1: Choose Your Square</h2>
+          <p>Select any available square from the grid to get started with your advertising campaign.</p>
+        </div>
+
+        <!-- Step 2: Business Details -->
+        <div class="step-detail-card" id="step-2">
+          <div class="step-detail-icon">📝</div>
+          <h2>Step 2: Enter Business Details</h2>
+          <p>Fill in your business information to create your advertisement.</p>
+          <form class="business-form" id="businessForm">
+            <div class="form-group">
+              <label>Business Name</label>
+              <input type="text" id="businessName" placeholder="Your Business Name" required>
+            </div>
+            <div class="form-group">
+              <label>Email Address</label>
+              <input type="email" id="email" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+              <label>Product/Website Link</label>
+              <input type="url" id="website" placeholder="https://yourwebsite.com" required>
+            </div>
+            <div class="form-group">
+              <label>Logo</label>
+              <div class="logo-upload-area" id="logoUpload">
+                <div class="logo-upload-icon">📤</div>
+                <div class="logo-upload-text">Click to upload logo</div>
+                <div id="logoPreview" style="display: none;">
+                  <img class="logo-preview" id="logoPreviewImg" alt="Logo preview">
+                </div>
+              </div>
+              <input type="file" id="logoFile" accept="image/*" style="display: none;">
+            </div>
+            <button type="submit" class="form-button" id="continueBtn">Continue to Payment →</button>
+          </form>
+        </div>
+
+        <!-- Step 3: Payment -->
+        <div class="step-detail-card" id="step-3">
+          <div class="step-detail-icon">💳</div>
+          <h2>Step 3: Complete Payment</h2>
+          <p>Secure payment via Stripe. Your ad goes live instantly after payment.</p>
+          <div class="payment-demo">
+            <div class="payment-box" id="paymentBox">
+              <div class="payment-icon">💳</div>
+              <div class="payment-text">Processing Payment...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Live -->
+        <div class="step-detail-card" id="step-4">
+          <div class="live-success">
+            <div class="live-icon">🚀</div>
+            <div class="live-title">Your Ad is Live!</div>
+            <div class="live-message">
+              Congratulations! Your advertisement is now active and visible to thousands of customers.
+            </div>
+            <div class="live-stats">
+              <div class="stat-item">
+                <div class="stat-value">24/7</div>
+                <div class="stat-label">Always Active</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Fair</div>
+                <div class="stat-label">Rotation System</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Demo State
+    let currentStep = 1;
+    let selectedSquare = null;
+    let businessData = {};
+    let animationRunning = false;
+    let animationTimeout = null;
+
+    // Sample business data for demo
+    const sampleBusinesses = [
+      { name: "TechStart Solutions", email: "contact@techstart.com", website: "https://techstart.com" },
+      { name: "GreenLeaf Cafe", email: "hello@greenleaf.com", website: "https://greenleaf.com" },
+      { name: "FitZone Gym", email: "info@fitzone.com", website: "https://fitzone.com" },
+      { name: "Design Studio Pro", email: "studio@designpro.com", website: "https://designpro.com" },
+      { name: "Cloud Services Ltd", email: "sales@cloudservices.com", website: "https://cloudservices.com" }
+    ];
+
+    // Initialize the grid
+    function init() {
+      createGrid();
+      setupEventListeners();
+    }
+
+    // Create 50 squares (10x5 grid)
+    function createGrid() {
+      const grid = document.getElementById('demoGrid');
+      grid.innerHTML = '';
+      
+      for (let i = 0; i < 50; i++) {
+        const square = document.createElement('div');
+        square.className = 'demo-square';
+        square.id = `square-${i}`;
+        square.dataset.index = i;
+        square.addEventListener('click', () => handleSquareClick(i));
+        grid.appendChild(square);
+      }
+    }
+
+    // Handle square click (manual mode)
+    function handleSquareClick(index) {
+      if (animationRunning || currentStep !== 1 || selectedSquare !== null) return;
+      
+      selectSquare(index, false);
+    }
+
+    // Select square (for both manual and automatic)
+    function selectSquare(index, isAuto = false) {
+      selectedSquare = index;
+      const square = document.getElementById(`square-${index}`);
+      square.classList.add('selected');
+      square.innerHTML = '<div class="selection-pulse"></div>';
+      
+      if (isAuto) {
+        document.getElementById('instruction').textContent = '✓ Automatically selected square #' + (index + 1);
+      } else {
+        document.getElementById('instruction').textContent = '✓ Square selected! Fill in your business details on the right.';
+      }
+      
+      // Move to step 2
+      setTimeout(() => {
+        showStep(2);
+        if (isAuto) {
+          autoFillForm();
+        }
+      }, 1000);
+    }
+
+    // Show specific step
+    function showStep(step) {
+      currentStep = step;
+      
+      // Hide all steps
+      document.querySelectorAll('.step-detail-card').forEach(card => {
+        card.classList.remove('active');
+      });
+      
+      // Show current step
+      const stepCard = document.getElementById(`step-${step}`);
+      if (stepCard) {
+        stepCard.classList.add('active');
+      }
+    }
+
+    // Type text with animation
+    function typeText(elementId, text, callback) {
+      const element = document.getElementById(elementId);
+      let index = 0;
+      element.value = '';
+      
+      const typingInterval = setInterval(() => {
+        if (index < text.length) {
+          element.value += text.charAt(index);
+          index++;
+        } else {
+          clearInterval(typingInterval);
+          if (callback) setTimeout(callback, 300);
+        }
+      }, 50);
+    }
+
+    // Auto-fill form with random data
+    function autoFillForm() {
+      const randomBusiness = sampleBusinesses[Math.floor(Math.random() * sampleBusinesses.length)];
+      
+      document.getElementById('instruction').textContent = '📝 Automatically filling business details...';
+      
+      // Animate typing in fields
+      typeText('businessName', randomBusiness.name, () => {
+        typeText('email', randomBusiness.email, () => {
+          typeText('website', randomBusiness.website, () => {
+            // Simulate logo upload
+            setTimeout(() => {
+              const logoUpload = document.getElementById('logoUpload');
+              const logoPreview = document.getElementById('logoPreview');
+              const logoPreviewImg = document.getElementById('logoPreviewImg');
+              
+              // Create a simple colored square as logo placeholder
+              const canvas = document.createElement('canvas');
+              canvas.width = 200;
+              canvas.height = 200;
+              const ctx = canvas.getContext('2d');
+              const colors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444'];
+              const color = colors[Math.floor(Math.random() * colors.length)];
+              ctx.fillStyle = color;
+              ctx.fillRect(0, 0, 200, 200);
+              ctx.fillStyle = 'white';
+              ctx.font = 'bold 80px Arial';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(randomBusiness.name.charAt(0).toUpperCase(), 100, 100);
+              
+              logoPreviewImg.src = canvas.toDataURL();
+              logoPreview.style.display = 'block';
+              logoUpload.classList.add('uploaded');
+              logoUpload.querySelector('.logo-upload-text').textContent = 'Logo uploaded ✓';
+              
+              businessData = randomBusiness;
+              
+              // Auto-submit form after a delay
+              setTimeout(() => {
+                document.getElementById('instruction').textContent = '✅ Details complete! Processing payment...';
+                processPayment();
+              }, 1500);
+            }, 800);
+          });
+        });
+      });
+    }
+
+    // Process payment automatically
+    function processPayment() {
+      showStep(3);
+      const paymentBox = document.getElementById('paymentBox');
+      paymentBox.classList.add('processing');
+      
+      setTimeout(() => {
+        paymentBox.classList.remove('processing');
+        paymentBox.classList.add('complete');
+        paymentBox.innerHTML = `
+          <div class="payment-icon">✓</div>
+          <div class="payment-text">Payment Successful!</div>
+        `;
+        
+        // Move to live step
+        setTimeout(() => {
+          showStep(4);
+          document.getElementById('instruction').textContent = '🎉 Your advertisement is now live!';
+          
+          // Fill the selected square
+          const square = document.getElementById(`square-${selectedSquare}`);
+          square.classList.remove('selected');
+          square.classList.add('occupied', 'animate-pop');
+          square.innerHTML = `
+            <div class="square-content">
+              <div class="square-logo">${businessData.name.charAt(0).toUpperCase()}</div>
+              <div class="square-name">${businessData.name.substring(0, 8)}</div>
+            </div>
+          `;
+          
+          animationRunning = false;
+          document.getElementById('startBtn').disabled = false;
+        }, 1500);
+      }, 2500);
+    }
+
+    // Start automatic animation
+    function startAnimation() {
+      if (animationRunning) return;
+      
+      resetDemo();
+      animationRunning = true;
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('instruction').textContent = '🎬 Starting automatic demo...';
+      
+      // Step 1: Auto-select a random square after 1 second
+      setTimeout(() => {
+        const randomSquare = Math.floor(Math.random() * 50);
+        selectSquare(randomSquare, true);
+      }, 1000);
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Business form submit (for manual mode)
+      document.getElementById('businessForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        if (animationRunning) return; // Don't allow manual submit during animation
+        
+        businessData = {
+          name: document.getElementById('businessName').value,
+          email: document.getElementById('email').value,
+          website: document.getElementById('website').value
+        };
+        
+        processPayment();
+      });
+      
+      // Logo upload (for manual mode)
+      const logoUpload = document.getElementById('logoUpload');
+      const logoFile = document.getElementById('logoFile');
+      const logoPreview = document.getElementById('logoPreview');
+      const logoPreviewImg = document.getElementById('logoPreviewImg');
+      
+      logoUpload.addEventListener('click', () => {
+        if (!animationRunning) logoFile.click();
+      });
+      
+      logoFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            logoPreviewImg.src = event.target.result;
+            logoPreview.style.display = 'block';
+            logoUpload.classList.add('uploaded');
+            logoUpload.querySelector('.logo-upload-text').textContent = 'Logo uploaded ✓';
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      
+      // Start button
+      document.getElementById('startBtn').addEventListener('click', startAnimation);
+      
+      // Reset button
+      document.getElementById('resetBtn').addEventListener('click', resetDemo);
+    }
+
+    // Reset demo
+    function resetDemo() {
+      // Clear any running animations
+      if (animationTimeout) {
+        clearTimeout(animationTimeout);
+      }
+      
+      animationRunning = false;
+      currentStep = 1;
+      selectedSquare = null;
+      businessData = {};
+      
+      // Enable start button
+      document.getElementById('startBtn').disabled = false;
+      
+      // Reset grid
+      document.querySelectorAll('.demo-square').forEach(square => {
+        square.classList.remove('selected', 'occupied', 'animate-pop');
+        square.innerHTML = '';
+      });
+      
+      // Reset form
+      document.getElementById('businessForm').reset();
+      document.getElementById('logoPreview').style.display = 'none';
+      const logoUpload = document.getElementById('logoUpload');
+      logoUpload.classList.remove('uploaded');
+      logoUpload.querySelector('.logo-upload-text').textContent = 'Click to upload logo';
+      
+      // Reset payment box
+      const paymentBox = document.getElementById('paymentBox');
+      paymentBox.classList.remove('processing', 'complete');
+      paymentBox.innerHTML = `
+        <div class="payment-icon">💳</div>
+        <div class="payment-text">Processing Payment...</div>
+      `;
+      
+      // Show step 1
+      showStep(1);
+      document.getElementById('instruction').textContent = 'Click "Start Animation" to see the complete process automatically';
+    }
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>

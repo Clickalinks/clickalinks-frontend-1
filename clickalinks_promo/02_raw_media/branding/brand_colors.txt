@@ -1,0 +1,112 @@
+==========================================
+CLICKALINKS BRAND COLORS & DESIGN SYSTEM
+==========================================
+
+PRIMARY GRADIENT COLORS:
+------------------------
+#ff6b35 - Vibrant Orange
+#06b6d4 - Cyan Blue
+#3b82f6 - Bright Blue
+#10b981 - Emerald Green
+#ec4899 - Pink/Magenta
+#fbbf24 - Golden Yellow
+
+BASE GRADIENT:
+--------------
+linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)
+- Deep Blue (#1e40af) to Bright Blue (#3b82f6)
+
+BACKGROUND COLORS:
+------------------
+#f8fafc - Light Gray Background
+#ffffff - White
+rgba(255, 255, 255, 0.95) - Semi-transparent White
+
+TEXT COLORS:
+------------
+#333 - Primary Text (Dark Gray)
+#1e293b - Dark Slate (Headings)
+#64748b - Medium Gray (Secondary Text)
+#1976d2 - Blue (Links, CTAs)
+#ffffff - White Text (on dark backgrounds)
+
+ACCENT COLORS:
+--------------
+#388e3c - Success Green
+#28a745 - Success Green (Alternative)
+#dc3545 - Error Red
+#ffc107 - Warning Yellow
+
+GRADIENT PATTERNS:
+------------------
+Repeating Gradient (for headers/footers):
+  repeating-linear-gradient(
+    45deg,
+    #ff6b35 0px, #ff6b35 12px,
+    #06b6d4 12px, #06b6d4 24px,
+    #3b82f6 24px, #3b82f6 36px,
+    #10b981 36px, #10b981 48px,
+    #ec4899 48px, #ec4899 60px,
+    #fbbf24 60px, #fbbf24 72px
+  )
+
+Radial Gradients (for overlays):
+  - Orange: rgba(255, 107, 53, 0.4)
+  - Cyan: rgba(6, 182, 212, 0.4)
+  - Green: rgba(16, 185, 129, 0.35)
+  - Pink: rgba(236, 72, 153, 0.4)
+  - Yellow: rgba(251, 191, 36, 0.35)
+
+DESIGN PRINCIPLES:
+------------------
+- Modern, vibrant, energetic
+- Professional yet approachable
+- High contrast for readability
+- Gradient overlays for depth
+- Clean, minimalist layouts
+- Responsive design first
+
+TYPOGRAPHY:
+-----------
+Primary Font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+Headings: Bold (700), Large sizes
+Body: Regular (400), 1rem base size
+Line Height: 1.5-1.6 for readability
+
+BUTTON STYLES:
+--------------
+Primary Button:
+  - Gradient background (brand colors)
+  - White text
+  - Rounded corners (8-15px)
+  - Hover: Transform + shadow
+  - Padding: 12px 24px
+
+Secondary Button:
+  - Transparent/outlined
+  - Brand color border
+  - Brand color text
+  - Same hover effects
+
+SPACING:
+--------
+- Small: 0.5rem (8px)
+- Medium: 1rem (16px)
+- Large: 2rem (32px)
+- Extra Large: 3rem (48px)
+
+BORDER RADIUS:
+-------------
+- Small: 6-8px
+- Medium: 10-12px
+- Large: 15-20px
+- Full: 50% (for circles)
+
+SHADOWS:
+--------
+- Light: 0 2px 8px rgba(0,0,0,0.1)
+- Medium: 0 4px 15px rgba(0,0,0,0.1)
+- Heavy: 0 8px 25px rgba(0,0,0,0.15)
+
+==========================================
+

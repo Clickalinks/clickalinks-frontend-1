@@ -1,0 +1,136 @@
+CLICKALINKS PROMOTIONAL MATERIALS - FILE STRUCTURE GUIDE
+========================================================
+
+This document explains the folder structure and what goes where.
+
+FOLDER STRUCTURE:
+-----------------
+
+clickalinks_promo/
+│
+├── 01_scripts/
+│   ├── voiceover_hero_launch.md          ✅ Voiceover scripts for main launch video
+│   ├── social_15sec_hook.md              ✅ Short social media video scripts
+│   └── email_announcement.md             ✅ Email campaign scripts
+│
+├── 02_raw_media/
+│   ├── screen_recordings/
+│   │   ├── homepage_tour.mp4            📹 Record your homepage walkthrough
+│   │   ├── square_purchase_flow.mp4     📹 Record the purchase process
+│   │   └── auto_shuffle_demo.mp4        📹 Record shuffle animation
+│   │
+│   ├── branding/
+│   │   ├── logo_primary.png             🖼️ Main logo (colored version)
+│   │   ├── logo_white.png               🖼️ Logo for dark backgrounds
+│   │   └── brand_colors.txt             ✅ Brand color reference (created)
+│   │
+│   └── audio/
+│       ├── background_track_energetic.mp3  🎵 Upbeat music for videos
+│       └── background_track_corporate.mp3  🎵 Professional music for B2B
+│
+├── 03_work_in_progress/
+│   ├── capcut_projects/
+│   │   └── hero_launch_video.capcut     🎬 CapCut project files
+│   └── canva_designs/
+│       └── (Linked via Canva cloud)     🎨 Canva design links/notes
+│
+├── 04_final_exports/
+│   ├── videos_1080p/
+│   │   ├── hero_launch_facebook.mp4     ✅ Final video for Facebook
+│   │   ├── quick_demo_tiktok.mp4        ✅ Final video for TikTok
+│   │   └── benefit_teaser_1.mp4          ✅ Short benefit video
+│   │
+│   ├── social_static/
+│   │   ├── instagram_post_1.jpg         ✅ Instagram post image
+│   │   └── facebook_ad_banner.png       ✅ Facebook ad banner
+│   │
+│   └── audio_exports/
+│       └── voiceover_hero.mp3           ✅ Final voiceover audio
+│
+└── 05_cursor_prompts/
+    ├── generate_script_ideas.md          ✅ AI prompts for script generation
+    ├── optimize_captions.md              ✅ AI prompts for caption optimization
+    └── create_file_structure.txt        ✅ This file
+
+FILE NAMING CONVENTIONS:
+------------------------
+
+Videos:
+- Format: [purpose]_[platform]_[version].mp4
+- Example: hero_launch_facebook_v2.mp4
+
+Images:
+- Format: [type]_[platform]_[number].jpg/png
+- Example: instagram_post_1.jpg
+
+Scripts:
+- Format: [type]_[purpose].md
+- Example: voiceover_hero_launch.md
+
+Audio:
+- Format: [type]_[mood/purpose].mp3
+- Example: background_track_energetic.mp3
+
+WHAT TO ADD NEXT:
+-----------------
+
+1. SCREEN RECORDINGS (02_raw_media/screen_recordings/):
+   - Use OBS, Loom, or screen recording software
+   - Record in 1080p minimum
+   - Show key features: grid selection, purchase flow, shuffle
+   - Keep recordings clean (close unnecessary tabs)
+
+2. LOGOS (02_raw_media/branding/):
+   - Export logo in PNG format
+   - Primary: colored version on transparent background
+   - White: white version for dark backgrounds
+   - High resolution (at least 1000x1000px)
+
+3. AUDIO (02_raw_media/audio/):
+   - Find royalty-free music (Epidemic Sound, Artlist, YouTube Audio Library)
+   - Energetic: upbeat, modern, corporate-friendly
+   - Corporate: professional, subtle, background-friendly
+   - Save as MP3, 320kbps quality
+
+4. CANVA DESIGNS (03_work_in_progress/canva_designs/):
+   - Create designs in Canva
+   - Save links or export designs
+   - Note: Canva projects are cloud-based, save links here
+
+5. FINAL EXPORTS (04_final_exports/):
+   - Export videos in 1080p (1920x1080)
+   - Social static images: Instagram (1080x1080), Facebook (1200x628)
+   - Audio: MP3, 320kbps, mono or stereo as needed
+
+WORKFLOW:
+----------
+
+1. WRITE SCRIPTS (01_scripts/)
+   ↓
+2. RECORD/GATHER RAW MEDIA (02_raw_media/)
+   ↓
+3. EDIT IN PROGRESS (03_work_in_progress/)
+   ↓
+4. EXPORT FINALS (04_final_exports/)
+   ↓
+5. USE AI PROMPTS (05_cursor_prompts/) for content generation
+
+TIPS:
+-----
+
+- Keep original files in 02_raw_media/ (never delete)
+- Version control: Add _v2, _v3 to filenames for iterations
+- Organize by campaign: Create subfolders for specific campaigns
+- Backup: Keep cloud backup of all files
+- Naming: Be descriptive, use dates if needed (YYYY-MM-DD)
+- Quality: Always export finals in highest quality needed
+
+QUICK REFERENCE:
+----------------
+
+Need a script? → 01_scripts/
+Need brand colors? → 02_raw_media/branding/brand_colors.txt
+Need AI help? → 05_cursor_prompts/
+Looking for final video? → 04_final_exports/videos_1080p/
+Need social image? → 04_final_exports/social_static/
+

@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if request comes from backend (admin SDK)
+    // Note: Admin SDK requests bypass security rules, so this is for client-side rules
+    function isBackendRequest() {
+      // In production, you may want to add additional checks
+      // For now, we'll rely on backend validation
+      return false; // Client-side rules - backend uses Admin SDK
+    }
+    
+    // Purchased Squares Collection
+    match /purchasedSquares/{purchaseId} {
+      // Allow public read access to all purchases (needed for displaying ads)
+      // Frontend filters active/expired purchases client-side
+      allow read: if true;
+      
+      // Only allow writes from backend (Admin SDK)
+      // Client-side writes should go through backend API
+      allow write: if false; // Disable direct client writes - use backend API
+    }
+    
+    // Click Analytics Collection
+    match /clickAnalytics/{clickId} {
+      // Allow public read (for analytics display, if needed)
+      allow read: if true;
+      
+      // Only allow writes from backend (Admin SDK)
+      // Client-side writes should go through backend API
+      allow write: if false; // Disable direct client writes - use backend API
+    }
+    
+    // Promo Codes Collection
+    match /promoCodes/{promoId} {
+      // Allow read access to active promo codes (for validation)
+      allow read: if resource.data.active == true 
+                  && (resource.data.expiresAt == null || resource.data.expiresAt.toMillis() > request.time.toMillis());
+      
+      // No client-side writes - all managed through backend API
+      allow write: if false;
+    }
+    
+    // Admin Collection (if exists)
+    match /admin/{document=**} {
+      // No public access
+      allow read, write: if false;
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

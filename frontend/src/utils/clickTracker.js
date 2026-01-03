@@ -4,7 +4,9 @@
  */
 
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc, increment, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
 
 /**
  * Track a click on a business logo
@@ -15,53 +17,31 @@ import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc, increment,
  */
 export const trackClick = async (squareNumber, businessName, dealLink, pageNumber) => {
   try {
+    // SECURITY: Use backend API instead of direct Firestore writes
     // Don't block UI - fire and forget
     const clickData = {
       squareNumber,
-      businessName,
-      dealLink,
-      pageNumber,
-      clickedAt: serverTimestamp(),
-      userAgent: navigator.userAgent.substring(0, 200), // Limit length
-      referrer: document.referrer || 'direct'
+      businessName: businessName || '',
+      dealLink: dealLink || '',
+      pageNumber: pageNumber || 1
     };
 
-    // Add to clickAnalytics collection
-    await addDoc(collection(db, 'clickAnalytics'), clickData);
+    // Call backend API (fire and forget - don't wait for response)
+    fetch(`${BACKEND_URL}/api/track-click`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(clickData)
+    }).catch(error => {
+      // Fail silently - don't break user experience
+      console.warn('Click tracking failed (non-critical):', error);
+    });
 
-    // Update click count in purchasedSquares document
-    // Note: With new purchaseId system, we need to query by squareNumber field
-    try {
-      const squareQuery = query(
-        collection(db, 'purchasedSquares'),
-        where('squareNumber', '==', squareNumber),
-        where('status', '==', 'active')
-      );
-      const querySnapshot = await getDocs(squareQuery);
-      
-      // Update all matching documents (should only be one)
-      const updatePromises = [];
-      querySnapshot.forEach((docSnapshot) => {
-        updatePromises.push(
-          updateDoc(docSnapshot.ref, {
-            clickCount: increment(1),
-            lastClickAt: serverTimestamp()
-          })
-        );
-      });
-      
-      if (updatePromises.length > 0) {
-        await Promise.all(updatePromises);
-      }
-    } catch (updateError) {
-      // Non-critical - analytics still tracked
-      console.warn('Could not update square click count:', updateError);
-    }
-
-    console.log(`✅ Click tracked: Square ${squareNumber} (${businessName})`);
+    console.log(`✅ Click tracking sent: Square ${squareNumber} (${businessName})`);
   } catch (error) {
     // Fail silently - don't break user experience
-    console.error('❌ Error tracking click:', error);
+    console.warn('❌ Error tracking click:', error);
   }
 };
 
@@ -70,6 +50,8 @@ export const trackClick = async (squareNumber, businessName, dealLink, pageNumbe
  * @param {number} squareNumber - The square number
  * @returns {Promise<{totalClicks: number, lastClickAt: Date}>}
  */
+// Note: getClickStats still uses direct Firestore reads (allowed by security rules)
+// Only writes are restricted - reads are public
 export const getClickStats = async (squareNumber) => {
   try {
     const squareDocRef = doc(db, 'purchasedSquares', squareNumber.toString());
