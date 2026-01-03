@@ -1244,8 +1244,8 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
     pageNumber = 1,
     duration, // Check duration first (from purchases route)
     selectedDuration = duration || 30, // Fallback to duration or default to 30
-    finalAmount = 0,
-    originalAmount = finalAmount,
+    finalAmount,
+    originalAmount,
     discountAmount = 0,
     transactionId,
     promoCode,
@@ -1256,10 +1256,20 @@ async function sendInvoiceEmail(purchaseData, invoiceNumber) {
     return { success: false, message: 'No email address provided' };
   }
 
-  // Calculate amounts correctly
-  const originalAmt = originalAmount !== undefined ? originalAmount : (finalAmount || 10);
-  const discountAmt = discountAmount || 0;
-  const totalAmount = Math.max(0, originalAmt - discountAmt);
+  // Calculate amounts correctly - use passed values if available, otherwise calculate
+  // When called from sendAdConfirmationEmail, these should already be calculated
+  const originalAmt = originalAmount !== undefined && originalAmount !== null ? originalAmount : ((finalAmount !== undefined && finalAmount !== null ? finalAmount : 0) + (discountAmount || 0));
+  const discountAmt = discountAmount !== undefined && discountAmount !== null ? discountAmount : 0;
+  // Use finalAmount if provided (already calculated from sendAdConfirmationEmail), otherwise recalculate
+  const totalAmount = finalAmount !== undefined && finalAmount !== null ? finalAmount : Math.max(0, originalAmt - discountAmt);
+  
+  console.log('📧 Invoice email - Amounts:', {
+    originalAmount: originalAmt,
+    discountAmount: discountAmt,
+    finalAmount: finalAmount,
+    calculatedTotal: totalAmount,
+    promoCode: promoCode
+  });
 
   // Modern Professional Invoice Email - Invoice Only, Clean Design
   const htmlContent = `
