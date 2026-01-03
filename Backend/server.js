@@ -180,6 +180,12 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 console.log('✅ Body size limit configured (1MB default)');
 
+// DEBUG: Log ALL incoming requests
+app.use((req, res, next) => {
+  console.log(`📡 Incoming request: ${req.method} ${req.originalUrl} (path: ${req.path})`);
+  next();
+});
+
 // Shuffle admin routes
 app.use('/', shuffleRoutes);
 console.log('✅ Shuffle routes registered');
@@ -1020,8 +1026,8 @@ function initializeAutoShuffle() {
 }
 
 // 404 handler - catch all unmatched routes (must be LAST, after all routes)
-app.use((req, res, next) => {
-  console.log('❌ 404 Handler - Unmatched route:');
+app.use('*', (req, res) => {
+  console.log('❌❌❌ 404 Handler - Unmatched route (catch-all):');
   console.log('  - Method:', req.method);
   console.log('  - Path:', req.path);
   console.log('  - Original URL:', req.originalUrl);
@@ -1033,6 +1039,7 @@ app.use((req, res, next) => {
     method: req.method,
     path: req.path,
     originalUrl: req.originalUrl,
+    message: 'This is the custom 404 handler. If you see this, routes are not matching.',
     availableRoutes: {
       root: 'GET /',
       health: 'GET /health',
