@@ -322,8 +322,9 @@ app.post('/api/create-checkout-session',
     });
 
     console.log('✅ Stripe session created:', session.id);
-    console.log('🔗 Success URL will be:', `https://clickalinks-frontend.web.app/success?session_id=${session.id}`);
+    console.log('🔗 Success URL will be:', `${frontendUrl}/success?session_id=${session.id}&square=${squareNumber}`);
     console.log('🔗 Session URL (Stripe):', session.url);
+    console.log('🔗 Square number in URL:', squareNumber);
     
     res.json({
       success: true,
