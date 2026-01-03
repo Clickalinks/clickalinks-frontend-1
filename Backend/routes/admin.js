@@ -261,6 +261,13 @@ router.post('/verify-mfa',
         });
       }
 
+      console.log('🔍 MFA Verification Attempt:');
+      console.log('  - Code received:', mfaCode);
+      console.log('  - Code length:', mfaCode?.length);
+      console.log('  - Secret exists:', !!ADMIN_MFA_SECRET);
+      console.log('  - Secret length:', ADMIN_MFA_SECRET?.length || 0);
+      console.log('  - Secret first 10 chars:', ADMIN_MFA_SECRET?.substring(0, 10) || 'N/A');
+
       const verified = speakeasy.totp.verify({
         secret: ADMIN_MFA_SECRET,
         encoding: 'base32',
@@ -268,8 +275,12 @@ router.post('/verify-mfa',
         window: 2 // Allow 2 time steps (60 seconds) before/after current time
       });
 
+      console.log('  - Verification result:', verified);
+
       if (!verified) {
         console.warn(`⚠️ Failed MFA verification attempt from IP: ${req.ip}`);
+        console.warn(`⚠️ Code provided: ${mfaCode}`);
+        console.warn(`⚠️ Make sure the code from your authenticator app matches exactly`);
         return res.status(401).json({
           success: false,
           error: 'Invalid MFA code'
