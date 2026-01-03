@@ -303,6 +303,13 @@ router.post('/verify-mfa',
 );
 
 /**
+ * Test endpoint to verify admin routes work
+ */
+router.get('/test', (req, res) => {
+  res.json({ success: true, message: 'Admin routes are working!', path: req.path, url: req.url });
+});
+
+/**
  * MFA setup endpoint - Generate TOTP secret and QR code (admin only, requires token)
  */
 router.get('/mfa/setup',
