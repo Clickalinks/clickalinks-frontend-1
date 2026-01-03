@@ -249,6 +249,15 @@ export async function createPromoCode(promoData) {
       status = 'active'
     } = promoData;
     
+    // If no expiration provided and maxUses is high (likely a campaign promo), set default to 1 year
+    let finalExpiresAt = expiresAt;
+    if (!expiresAt && maxUses > 10) {
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      finalExpiresAt = oneYearFromNow.toISOString();
+      console.log(`ℹ️ No expiration provided for ${code}, setting default to 1 year: ${finalExpiresAt}`);
+    }
+    
     if (!code || !discountType || discountValue === undefined) {
       return {
         success: false,
@@ -281,7 +290,7 @@ export async function createPromoCode(promoData) {
       status,
       description,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      expiresAt: expiresAt ? admin.firestore.Timestamp.fromDate(new Date(expiresAt)) : null
+      expiresAt: finalExpiresAt ? admin.firestore.Timestamp.fromDate(new Date(finalExpiresAt)) : null
     };
     
     const docRef = await db.collection(COLLECTION_NAME).add(newPromo);
@@ -320,6 +329,15 @@ export async function bulkCreatePromoCodes(options) {
       description = ''
     } = options;
     
+    // If no expiration provided and maxUses is high (likely a campaign promo), set default to 1 year
+    let finalExpiresAt = expiresAt;
+    if (!expiresAt && maxUses > 10) {
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      finalExpiresAt = oneYearFromNow.toISOString();
+      console.log(`ℹ️ No expiration provided for ${code}, setting default to 1 year: ${finalExpiresAt}`);
+    }
+    
     if (!code || !discountType || discountValue === undefined) {
       return {
         success: false,
@@ -354,7 +372,7 @@ export async function bulkCreatePromoCodes(options) {
           status: 'active',
           description,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          expiresAt: expiresAt ? admin.firestore.Timestamp.fromDate(new Date(expiresAt)) : null
+          expiresAt: finalExpiresAt ? admin.firestore.Timestamp.fromDate(new Date(finalExpiresAt)) : null
         };
         
         const docRef = await db.collection(COLLECTION_NAME).add(newPromo);
