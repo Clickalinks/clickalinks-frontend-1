@@ -192,7 +192,9 @@ const Payment = () => {
         },
         body: JSON.stringify({
           code: code,
-          originalAmount: finalAmount || 10
+          originalAmount: finalAmount || 10,
+          email: businessData?.email || null,
+          businessName: businessData?.name || null
         })
       });
 

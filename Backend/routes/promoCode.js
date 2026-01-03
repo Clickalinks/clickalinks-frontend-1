@@ -46,13 +46,15 @@ router.post('/validate',
         });
       }
       
-      const { code, originalAmount } = req.body;
+      const { code, originalAmount, email, businessName } = req.body;
       
       // Sanitize input
       const sanitizedCode = code.trim().toUpperCase();
       const sanitizedAmount = Math.max(0, parseFloat(originalAmount) || 0);
+      const sanitizedEmail = email ? email.trim().toLowerCase() : null;
+      const sanitizedBusiness = businessName ? businessName.trim().toLowerCase() : null;
       
-      const result = await validatePromoCode(sanitizedCode, sanitizedAmount);
+      const result = await validatePromoCode(sanitizedCode, sanitizedAmount, sanitizedEmail, sanitizedBusiness);
       
       // Return appropriate HTTP status code based on validation result
       if (!result.valid || !result.success) {

@@ -22,9 +22,11 @@ const COLLECTION_NAME = 'promoCodes';
  * 
  * @param {string} code - Promo code to validate
  * @param {number} originalAmount - Original amount before discount
+ * @param {string} email - Customer email (optional, for one-per-user restriction)
+ * @param {string} businessName - Business name (optional, for one-per-business restriction)
  * @returns {Promise<Object>} - Validation result
  */
-export async function validatePromoCode(code, originalAmount) {
+export async function validatePromoCode(code, originalAmount, email = null, businessName = null) {
   try {
     if (!code || typeof code !== 'string') {
       return {
@@ -96,6 +98,43 @@ export async function validatePromoCode(code, originalAmount) {
         valid: false,
         error: 'Promo code has reached its usage limit'
       };
+    }
+
+    // ✅ ONE PER USER RESTRICTION: Check if email/business has already used ANY promo code
+    if (email || businessName) {
+      const db = getDb();
+      const normalizedEmail = email ? email.trim().toLowerCase() : null;
+      const normalizedBusiness = businessName ? businessName.trim().toLowerCase() : null;
+      
+      // Fetch all paid purchases (we'll filter client-side for email/business match)
+      // Note: Firestore doesn't support OR queries, so we fetch all and filter
+      const paidPurchasesSnapshot = await db.collection('purchasedSquares')
+        .where('paymentStatus', '==', 'paid')
+        .get();
+      
+      // Check if any existing purchase used a promo code with matching email OR business
+      const hasUsedPromo = paidPurchasesSnapshot.docs.some(doc => {
+        const data = doc.data();
+        // Check if promo code was used (has promoCode field or promoId)
+        const hasPromo = data.promoCode || data.promoId;
+        if (!hasPromo) return false;
+        
+        // Check if email matches (if provided)
+        const emailMatch = normalizedEmail && data.contactEmail && data.contactEmail.toLowerCase() === normalizedEmail;
+        // Check if business name matches (if provided)
+        const businessMatch = normalizedBusiness && data.businessName && data.businessName.toLowerCase() === normalizedBusiness;
+        
+        // Return true if either email OR business matches (one-per-user restriction)
+        return emailMatch || businessMatch;
+      });
+      
+      if (hasUsedPromo) {
+        return {
+          success: false,
+          valid: false,
+          error: 'Each business/email can only use one promo code. You have already used a promo code.'
+        };
+      }
     }
     
     // Calculate discount

@@ -62,7 +62,9 @@ export const savePurchaseToFirestore = async (purchaseData) => {
       startDate: purchaseData.startDate || new Date().toISOString(),
       endDate: purchaseData.endDate || new Date(Date.now() + (purchaseData.duration || purchaseData.selectedDuration || 30) * 24 * 60 * 60 * 1000).toISOString(),
       purchaseDate: purchaseData.purchaseDate || new Date().toISOString(),
-      storagePath: purchaseData.storagePath || null
+      storagePath: purchaseData.storagePath || null,
+      promoCode: purchaseData.promoCode || null,
+      promoId: purchaseData.promoId || null
     };
 
     try {
@@ -108,9 +110,14 @@ export const savePurchaseToFirestore = async (purchaseData) => {
       }
       
       return true;
-
+    } catch (error) {
+      console.error('❌ Error saving purchase via backend API:', error);
+      console.error('Error message:', error.message);
+      
+      return false;
+    }
   } catch (error) {
-    console.error('❌ Error saving purchase via backend API:', error);
+    console.error('❌ Error in savePurchaseToFirestore:', error);
     console.error('Error message:', error.message);
     
     return false;

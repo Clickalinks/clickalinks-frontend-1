@@ -52,24 +52,50 @@ router.post('/purchases',
         startDate,
         endDate,
         purchaseDate,
-        paymentStatus = 'paid'
+        paymentStatus = 'paid',
+        promoCode = null,
+        promoId = null
       } = req.body;
 
       // Generate unique purchase ID if not provided
       const finalPurchaseId = purchaseId || `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      const normalizedEmail = contactEmail.trim().toLowerCase();
 
-      // ✅ IDEMPOTENCY CHECK: If purchaseId already exists, return success without sending emails
+      // ✅ IDEMPOTENCY CHECK 1: If purchaseId already exists, return success without sending emails
       const existingDocRef = db.collection('purchasedSquares').doc(finalPurchaseId);
       const existingDoc = await existingDocRef.get();
       
       if (existingDoc.exists) {
-        console.log(`✅ Purchase already exists (idempotency): ${finalPurchaseId} - returning success without sending emails`);
+        console.log(`✅ Purchase already exists (idempotency by purchaseId): ${finalPurchaseId} - returning success without sending emails`);
         return res.json({
           success: true,
           purchaseId: finalPurchaseId,
           message: 'Purchase already exists',
           alreadyExists: true
         });
+      }
+
+      // ✅ IDEMPOTENCY CHECK 2: If same email + transactionId combination exists, return success without sending emails
+      // This prevents duplicate emails even if purchaseId is different
+      if (transactionId) {
+        const duplicateQuery = db.collection('purchasedSquares')
+          .where('contactEmail', '==', normalizedEmail)
+          .where('transactionId', '==', transactionId)
+          .limit(1);
+        
+        const duplicateSnapshot = await duplicateQuery.get();
+        
+        if (!duplicateSnapshot.empty) {
+          const duplicateDoc = duplicateSnapshot.docs[0];
+          const duplicateData = duplicateDoc.data();
+          console.log(`✅ Duplicate purchase detected (same email + transactionId): ${normalizedEmail} + ${transactionId} - returning success without sending emails`);
+          return res.json({
+            success: true,
+            purchaseId: duplicateData.purchaseId || duplicateDoc.id,
+            message: 'Purchase already exists (duplicate email + transaction)',
+            alreadyExists: true
+          });
+        }
       }
 
       // Calculate dates if not provided
@@ -117,7 +143,7 @@ router.post('/purchases',
         squareNumber,
         pageNumber,
         businessName: businessName.trim(),
-        contactEmail: contactEmail.trim().toLowerCase(),
+        contactEmail: normalizedEmail,
         logoData: finalLogoData || null,
         storagePath: storagePath || null, // Save storage path for reference
         dealLink: dealLink || website || '',
@@ -126,6 +152,8 @@ router.post('/purchases',
         status,
         paymentStatus,
         transactionId: transactionId || null,
+        promoCode: promoCode || null, // Store promo code used
+        promoId: promoId || null, // Store promo code document ID
         startDate: admin.firestore.Timestamp.fromDate(finalStartDate),
         endDate: admin.firestore.Timestamp.fromDate(finalEndDate),
         purchaseDate: admin.firestore.Timestamp.fromDate(finalPurchaseDate),
