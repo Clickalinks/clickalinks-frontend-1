@@ -2,6 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import admin from '../config/firebaseAdmin.js';
 import { generalRateLimit } from '../middleware/security.js';
+import { sendAdminNotificationEmail, sendAdConfirmationEmail } from '../services/emailService.js';
 
 const router = express.Router();
 const db = admin.firestore();
@@ -45,6 +46,7 @@ router.post('/purchases',
         status = 'active',
         pageNumber = 1,
         logoData = null,
+        storagePath = null,
         dealLink = '',
         website = '',
         startDate,
@@ -84,13 +86,26 @@ router.post('/purchases',
       }
 
       // Prepare purchase data
+      // Ensure logoData is properly formatted - use storagePath if logoData is missing
+      let finalLogoData = logoData;
+      if (!finalLogoData && storagePath) {
+        // If we have storagePath but no logoData, construct the Firebase Storage URL
+        if (storagePath.startsWith('logos/')) {
+          // Construct full Firebase Storage URL from path
+          finalLogoData = `https://firebasestorage.googleapis.com/v0/b/clickalinks-frontend.firebasestorage.app/o/${encodeURIComponent(storagePath)}?alt=media`;
+        } else {
+          finalLogoData = storagePath; // Use as-is if already a full URL
+        }
+      }
+
       const purchaseData = {
         purchaseId: finalPurchaseId,
         squareNumber,
         pageNumber,
         businessName: businessName.trim(),
         contactEmail: contactEmail.trim().toLowerCase(),
-        logoData: logoData || null,
+        logoData: finalLogoData || null,
+        storagePath: storagePath || null, // Save storage path for reference
         dealLink: dealLink || website || '',
         amount: parseFloat(amount),
         duration: parseInt(duration),
@@ -111,6 +126,39 @@ router.post('/purchases',
       await purchaseRef.set(purchaseData);
 
       console.log(`✅ Purchase saved via API: ${finalPurchaseId} (Square ${squareNumber})`);
+
+      // Send admin notification email (non-blocking)
+      sendAdminNotificationEmail('purchase', {
+        businessName: businessName.trim(),
+        contactEmail: contactEmail.trim(),
+        squareNumber,
+        pageNumber,
+        duration,
+        amount: parseFloat(amount),
+        transactionId: transactionId || null,
+        finalAmount: parseFloat(amount),
+        originalAmount: parseFloat(amount),
+        discountAmount: 0,
+        selectedDuration: duration,
+        purchaseId: finalPurchaseId
+      }).catch(err => {
+        console.error('❌ Admin notification email error (non-critical):', err.message);
+      });
+
+      // Send confirmation email to customer (non-blocking)
+      if (contactEmail) {
+        sendAdConfirmationEmail({
+          businessName: businessName.trim(),
+          contactEmail: contactEmail.trim(),
+          squareNumber,
+          pageNumber,
+          duration,
+          amount: parseFloat(amount),
+          transactionId: transactionId || null
+        }).catch(err => {
+          console.error('❌ Confirmation email error (non-critical):', err.message);
+        });
+      }
 
       res.json({
         success: true,
