@@ -181,47 +181,8 @@ app.use('/api/promo-code', promoCodeRoutes);
 console.log('✅ Promo code routes registered at /api/promo-code');
 
 // Admin authentication routes - MUST be before any catch-all routes
-console.log('========================================');
-console.log('🔍 Registering admin routes...');
-console.log('🔍 Admin routes type:', typeof adminRoutes);
-console.log('🔍 Admin routes exists?', !!adminRoutes);
-console.log('🔍 Admin routes stack exists?', !!(adminRoutes && adminRoutes.stack));
-console.log('🔍 Admin routes stack length:', adminRoutes?.stack?.length || 0);
-console.log('========================================');
-
-// Add test route directly to verify routing works (BEFORE the router)
-app.get('/api/admin/test-direct', (req, res) => {
-  console.log('✅ Direct test route hit!');
-  res.json({ success: true, message: 'Direct route works!', path: req.path, url: req.url });
-});
-
-// Mount admin router
-app.use('/api/admin', (req, res, next) => {
-  console.log(`🔍 Admin middleware hit: ${req.method} ${req.path} (original: ${req.originalUrl})`);
-  console.log(`🔍 Admin middleware - baseUrl: ${req.baseUrl}, route: ${req.route}`);
-  next();
-}, adminRoutes);
+app.use('/api/admin', adminRoutes);
 console.log('✅ Admin authentication routes registered at /api/admin');
-
-// Debug: List all registered admin routes
-console.log('🔍 Registered admin routes:');
-try {
-  if (adminRoutes.stack && adminRoutes.stack.length > 0) {
-    adminRoutes.stack.forEach((middleware) => {
-      if (middleware.route) {
-        console.log(`  ${Object.keys(middleware.route.methods).join(',').toUpperCase()} ${middleware.route.path}`);
-      } else if (middleware.name === 'router') {
-        console.log(`  Router: ${middleware.regexp}`);
-      } else {
-        console.log(`  Middleware: ${middleware.name || 'unnamed'}`);
-      }
-    });
-  } else {
-    console.log('  ⚠️ No routes found in adminRoutes.stack');
-  }
-} catch (error) {
-  console.error('❌ Error listing admin routes:', error);
-}
 
 
 
