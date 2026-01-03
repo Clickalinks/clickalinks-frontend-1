@@ -299,11 +299,14 @@ const Success = () => {
                   console.log('✅ Found Stripe session metadata:', metadata);
                   
                   // Reconstruct from Stripe metadata and businessFormData
-                  if (metadata.squareNumber && businessFormData.businessName) {
+                  // Try to get businessName from metadata first, then businessFormData
+                  const businessNameFromMetadata = metadata.businessName || businessFormData.businessName || businessFormData.name;
+                  
+                  if (metadata.squareNumber && (businessNameFromMetadata || businessFormData.businessName || businessFormData.name)) {
                     purchaseData = {
                       squareNumber: parseInt(metadata.squareNumber),
                       pageNumber: parseInt(metadata.pageNumber) || 1,
-                      businessName: businessFormData.businessName || businessFormData.name,
+                      businessName: businessNameFromMetadata,
                       contactEmail: metadata.contactEmail || businessFormData.email || businessFormData.contactEmail,
                       website: metadata.website || businessFormData.website || '',
                       finalAmount: (sessionData.session.amount_total / 100) || 0,
@@ -318,7 +321,14 @@ const Success = () => {
                     
                     console.log('✅ Successfully reconstructed from Stripe session metadata:', {
                       squareNumber: purchaseData.squareNumber,
-                      businessName: purchaseData.businessName
+                      businessName: purchaseData.businessName,
+                      hasLogo: !!purchaseData.logoData
+                    });
+                  } else {
+                    console.warn('⚠️ Stripe metadata missing squareNumber or businessName:', {
+                      squareNumber: metadata.squareNumber,
+                      businessName: businessNameFromMetadata,
+                      businessFormData: !!businessFormData
                     });
                   }
                 }

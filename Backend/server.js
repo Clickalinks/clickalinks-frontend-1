@@ -308,7 +308,7 @@ app.post('/api/create-checkout-session',
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}&square=${squareNumber}`,
       cancel_url: `${frontendUrl}/`,
       customer_email: contactEmail,
       metadata: {
@@ -316,7 +316,8 @@ app.post('/api/create-checkout-session',
         pageNumber: pageNumber.toString(),
         duration: duration.toString(),
         contactEmail: contactEmail,
-        website: website
+        website: website || '',
+        businessName: businessName || ''
       }
     });
 
