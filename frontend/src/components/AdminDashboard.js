@@ -174,7 +174,7 @@ const AdminDashboard = () => {
           )}
 
           <div className="login-hint">
-            <p>💡 <strong>Secret Access:</strong> Press <code>Ctrl+Shift+A</code> on any page to reveal admin link</p>
+            <p>💡 <strong>Secret Access:</strong> Press <code>Ctrl+Shift+A</code> on any page to access admin portal</p>
           </div>
         </div>
       </div>

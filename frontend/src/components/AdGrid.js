@@ -512,7 +512,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
 
     if (!adminHeaders['x-admin-token']) {
       alert('⚠️ Not authenticated. Please log in to the admin dashboard to shuffle.');
-      navigate('/admin');
+      navigate('/portal');
       return;
     }
 

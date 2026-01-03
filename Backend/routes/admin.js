@@ -26,12 +26,6 @@ const JWT_EXPIRES_IN = '24h'; // Token expires in 24 hours
 const ADMIN_MFA_SECRET = process.env.ADMIN_MFA_SECRET || '';
 const ADMIN_MFA_ENABLED = process.env.ADMIN_MFA_ENABLED === 'true' || false;
 
-// Debug logging for MFA configuration
-console.log('🔍 Admin routes - MFA configuration:');
-console.log('  - ADMIN_MFA_ENABLED env:', process.env.ADMIN_MFA_ENABLED);
-console.log('  - ADMIN_MFA_ENABLED parsed:', ADMIN_MFA_ENABLED);
-console.log('  - ADMIN_MFA_SECRET exists:', !!ADMIN_MFA_SECRET);
-console.log('  - ADMIN_MFA_SECRET length:', ADMIN_MFA_SECRET?.length || 0);
 
 // In-memory session store (in production, use Redis or database)
 const activeSessions = new Map();
@@ -130,11 +124,6 @@ router.post('/login',
       }
 
       // Password is valid - check if MFA is enabled
-      console.log('🔍 Login - Checking MFA:');
-      console.log('  - ADMIN_MFA_ENABLED:', ADMIN_MFA_ENABLED);
-      console.log('  - ADMIN_MFA_SECRET exists:', !!ADMIN_MFA_SECRET);
-      console.log('  - Both conditions met:', ADMIN_MFA_ENABLED && ADMIN_MFA_SECRET);
-      
       if (ADMIN_MFA_ENABLED && ADMIN_MFA_SECRET) {
         // Generate temporary MFA verification token (expires in 5 minutes)
         const mfaToken = jwt.sign(
@@ -261,13 +250,6 @@ router.post('/verify-mfa',
         });
       }
 
-      console.log('🔍 MFA Verification Attempt:');
-      console.log('  - Code received:', mfaCode);
-      console.log('  - Code length:', mfaCode?.length);
-      console.log('  - Secret exists:', !!ADMIN_MFA_SECRET);
-      console.log('  - Secret length:', ADMIN_MFA_SECRET?.length || 0);
-      console.log('  - Secret first 10 chars:', ADMIN_MFA_SECRET?.substring(0, 10) || 'N/A');
-
       const verified = speakeasy.totp.verify({
         secret: ADMIN_MFA_SECRET,
         encoding: 'base32',
@@ -275,12 +257,8 @@ router.post('/verify-mfa',
         window: 2 // Allow 2 time steps (60 seconds) before/after current time
       });
 
-      console.log('  - Verification result:', verified);
-
       if (!verified) {
         console.warn(`⚠️ Failed MFA verification attempt from IP: ${req.ip}`);
-        console.warn(`⚠️ Code provided: ${mfaCode}`);
-        console.warn(`⚠️ Make sure the code from your authenticator app matches exactly`);
         return res.status(401).json({
           success: false,
           error: 'Invalid MFA code'
@@ -336,22 +314,13 @@ router.get('/test', (req, res) => {
  * MFA setup endpoint - Generate TOTP secret and QR code (admin only, requires token)
  */
 router.get('/mfa/setup',
-  (req, res, next) => {
-    console.log('🔐 MFA setup middleware - request received');
-    console.log('🔐 Method:', req.method);
-    console.log('🔐 Path:', req.path);
-    console.log('🔐 URL:', req.url);
-    next();
-  },
   adminRateLimit,
   async (req, res) => {
     try {
-      console.log('🔐 MFA setup endpoint handler - starting execution');
       // This endpoint should be protected, but for initial setup, we'll allow it
       // In production, you might want to add additional verification
 
       if (ADMIN_MFA_SECRET) {
-        console.log('ℹ️ MFA secret already configured, returning existing setup');
         // MFA already configured - return existing setup info
         const otpauthUrl = speakeasy.otpauthURL({
           secret: ADMIN_MFA_SECRET,
@@ -381,14 +350,12 @@ router.get('/mfa/setup',
       }
 
       // Generate new MFA secret
-      console.log('🔄 Generating new MFA secret...');
       let secret;
       try {
         secret = speakeasy.generateSecret({
           name: 'ClickALinks Admin',
           length: 32
         });
-        console.log('✅ MFA secret generated');
       } catch (secretError) {
         console.error('❌ Error generating MFA secret:', secretError);
         return res.status(500).json({
@@ -406,7 +373,6 @@ router.get('/mfa/setup',
           label: 'ClickALinks Admin',
           issuer: 'ClickALinks'
         });
-        console.log('✅ OTP auth URL generated');
       } catch (urlError) {
         console.error('❌ Error generating OTP auth URL:', urlError);
         return res.status(500).json({
@@ -418,9 +384,7 @@ router.get('/mfa/setup',
 
       let qrCodeDataUrl;
       try {
-        console.log('🔄 Generating QR code...');
         qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
-        console.log('✅ QR code generated');
       } catch (qrError) {
         console.error('❌ Error generating QR code:', qrError);
         return res.status(500).json({

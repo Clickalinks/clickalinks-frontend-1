@@ -1,5 +1,5 @@
-import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
 import Header from './components/Header';
 import RunningStrip from './components/RunningStrip';
@@ -33,6 +33,26 @@ const LoadingFallback = () => (
   </div>
 );
 
+// Global keyboard shortcut handler component
+const KeyboardShortcutHandler = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl+Shift+A to navigate to admin portal
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        navigate('/portal');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
+  return null;
+};
+
 function App() {
   // Create page routes dynamically
   const pages = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -58,6 +78,7 @@ function App() {
         }}
       >
         <ScrollToTop />
+        <KeyboardShortcutHandler />
         <div className="App">
           <Header />
           <RunningStrip />
@@ -159,9 +180,9 @@ function App() {
             } 
           />
 
-          {/* Admin Route - Lazy loaded */}
+          {/* Admin Route - Lazy loaded (obscured URL for security) */}
           <Route 
-            path="/admin" 
+            path="/portal" 
             element={
               <Suspense fallback={<LoadingFallback />}>
                 <AdminDashboard />

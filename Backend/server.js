@@ -5,7 +5,7 @@ import Stripe from 'stripe';
 import FormData from 'form-data';
 // Initialize Firebase Admin first (before importing services that depend on it)
 import './config/firebaseAdmin.js';
-import { sendAdConfirmationEmail, sendAdminNotificationEmail, generateInvoiceHTML } from './services/emailService.js';
+import { sendAdConfirmationEmail, sendAdminNotificationEmail, generateInvoiceHTML, sendContactFormEmail } from './services/emailService.js';
 import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
 import adminRoutes from './routes/admin.js';
@@ -45,12 +45,6 @@ if (!process.env.ADMIN_PASSWORD_HASH) {
 console.log('✅ ADMIN_PASSWORD_HASH is configured');
 
 // Check MFA configuration
-console.log('🔍 Checking MFA configuration...');
-console.log('  - ADMIN_MFA_ENABLED:', process.env.ADMIN_MFA_ENABLED);
-console.log('  - ADMIN_MFA_ENABLED === "true":', process.env.ADMIN_MFA_ENABLED === 'true');
-console.log('  - ADMIN_MFA_SECRET exists:', !!process.env.ADMIN_MFA_SECRET);
-console.log('  - ADMIN_MFA_SECRET length:', process.env.ADMIN_MFA_SECRET?.length || 0);
-
 if (process.env.ADMIN_MFA_ENABLED === 'true') {
   if (!process.env.ADMIN_MFA_SECRET) {
     console.warn('⚠️ ADMIN_MFA_ENABLED is true but ADMIN_MFA_SECRET is not set');
@@ -58,9 +52,6 @@ if (process.env.ADMIN_MFA_ENABLED === 'true') {
   } else {
     console.log('✅ MFA is enabled and configured');
   }
-} else {
-  console.log('ℹ️ MFA is disabled (set ADMIN_MFA_ENABLED=true to enable)');
-  console.log('ℹ️ Current ADMIN_MFA_ENABLED value:', process.env.ADMIN_MFA_ENABLED || '(not set)');
 }
 
 
