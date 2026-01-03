@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import ShuffleManager from './ShuffleManager';
 import CouponManager from './CouponManager';
-import { adminLogin, checkAdminAuth, logout } from '../utils/adminAuth';
+import { adminLogin, verifyMFA, checkAdminAuth, logout } from '../utils/adminAuth';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -15,6 +15,9 @@ const AdminDashboard = () => {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [requiresMFA, setRequiresMFA] = useState(false);
+  const [mfaToken, setMfaToken] = useState(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   // Check if already authenticated on mount
   useEffect(() => {
@@ -33,10 +36,47 @@ const AdminDashboard = () => {
     const result = await adminLogin(password);
     
     if (result.success) {
-      setIsAuthenticated(true);
-      setPassword('');
+      if (result.requiresMFA && result.mfaToken) {
+        // MFA is required - show MFA input
+        setRequiresMFA(true);
+        setMfaToken(result.mfaToken);
+        setPassword(''); // Clear password for security
+      } else if (result.token) {
+        // No MFA required - login complete
+        setIsAuthenticated(true);
+        setPassword('');
+        setRequiresMFA(false);
+        setMfaToken(null);
+      }
     } else {
       setLoginError(result.error || 'Invalid password');
+      setRequiresMFA(false);
+      setMfaToken(null);
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleMFAVerification = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setLoginError('');
+
+    if (!mfaToken || !mfaCode) {
+      setLoginError('Please enter your MFA code');
+      setIsLoading(false);
+      return;
+    }
+
+    const result = await verifyMFA(mfaToken, mfaCode);
+    
+    if (result.success && result.token) {
+      setIsAuthenticated(true);
+      setMfaCode('');
+      setRequiresMFA(false);
+      setMfaToken(null);
+    } else {
+      setLoginError(result.error || 'Invalid MFA code');
     }
     
     setIsLoading(false);
@@ -47,36 +87,91 @@ const AdminDashboard = () => {
     setIsAuthenticated(false);
     setPassword('');
     setLoginError('');
+    setRequiresMFA(false);
+    setMfaToken(null);
+    setMfaCode('');
   };
 
   if (!isAuthenticated) {
     return (
       <div className="admin-login-container">
         <div className="admin-login">
-          <form onSubmit={handleLogin}>
-            <h1>🔒 Admin Dashboard</h1>
-            <p>Enter admin password to continue</p>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setLoginError(''); // Clear error on input
-              }}
-              placeholder="Enter admin password..."
-              autoComplete="current-password"
-              required
-              disabled={isLoading}
-            />
-            {loginError && (
-              <div className="login-error" style={{ color: 'red', marginTop: '10px' }}>
-                ❌ {loginError}
-              </div>
-            )}
-            <button type="submit" className="btn-primary" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Unlock Dashboard'}
-            </button>
-          </form>
+          {!requiresMFA ? (
+            // Password login form
+            <form onSubmit={handleLogin}>
+              <h1>🔒 Admin Dashboard</h1>
+              <p>Enter admin password to continue</p>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setLoginError(''); // Clear error on input
+                }}
+                placeholder="Enter admin password..."
+                autoComplete="current-password"
+                required
+                disabled={isLoading}
+              />
+              {loginError && (
+                <div className="login-error" style={{ color: 'red', marginTop: '10px' }}>
+                  ❌ {loginError}
+                </div>
+              )}
+              <button type="submit" className="btn-primary" disabled={isLoading}>
+                {isLoading ? 'Verifying...' : 'Unlock Dashboard'}
+              </button>
+            </form>
+          ) : (
+            // MFA verification form
+            <form onSubmit={handleMFAVerification}>
+              <h1>🔐 Multi-Factor Authentication</h1>
+              <p>Enter the 6-digit code from your authenticator app</p>
+              <input
+                type="text"
+                value={mfaCode}
+                onChange={(e) => {
+                  // Only allow 6 digits
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setMfaCode(value);
+                  setLoginError(''); // Clear error on input
+                }}
+                placeholder="000000"
+                autoComplete="one-time-code"
+                maxLength={6}
+                required
+                disabled={isLoading}
+                style={{
+                  textAlign: 'center',
+                  fontSize: '24px',
+                  letterSpacing: '8px',
+                  fontFamily: 'monospace'
+                }}
+              />
+              {loginError && (
+                <div className="login-error" style={{ color: 'red', marginTop: '10px' }}>
+                  ❌ {loginError}
+                </div>
+              )}
+              <button type="submit" className="btn-primary" disabled={isLoading || mfaCode.length !== 6}>
+                {isLoading ? 'Verifying...' : 'Verify Code'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRequiresMFA(false);
+                  setMfaToken(null);
+                  setMfaCode('');
+                  setLoginError('');
+                }}
+                className="btn-secondary"
+                disabled={isLoading}
+                style={{ marginTop: '10px' }}
+              >
+                ← Back to Password
+              </button>
+            </form>
+          )}
 
           <div className="login-hint">
             <p>💡 <strong>Secret Access:</strong> Press <code>Ctrl+Shift+A</code> on any page to reveal admin link</p>

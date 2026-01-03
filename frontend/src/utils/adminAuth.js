@@ -8,9 +8,9 @@ const TOKEN_STORAGE_KEY = 'admin_token';
 const TOKEN_EXPIRY_KEY = 'admin_token_expiry';
 
 /**
- * Login to admin dashboard
+ * Login to admin dashboard (Step 1: Password verification)
  * @param {string} password - Admin password
- * @returns {Promise<{success: boolean, token?: string, error?: string}>}
+ * @returns {Promise<{success: boolean, requiresMFA?: boolean, mfaToken?: string, token?: string, error?: string}>}
  */
 export const adminLogin = async (password) => {
   try {
@@ -24,6 +24,50 @@ export const adminLogin = async (password) => {
 
     const data = await response.json();
 
+    if (data.success) {
+      if (data.requiresMFA && data.mfaToken) {
+        // MFA is required - return MFA token for verification
+        return { 
+          success: true, 
+          requiresMFA: true, 
+          mfaToken: data.mfaToken,
+          message: data.message || 'Password verified. Please enter your MFA code.'
+        };
+      } else if (data.token) {
+        // No MFA required - store token directly
+        localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+        if (data.expiresAt) {
+          localStorage.setItem(TOKEN_EXPIRY_KEY, data.expiresAt.toString());
+        }
+        return { success: true, token: data.token };
+      }
+    }
+    
+    return { success: false, error: data.error || 'Login failed' };
+  } catch (error) {
+    console.error('Admin login error:', error);
+    return { success: false, error: 'Network error. Please check your connection.' };
+  }
+};
+
+/**
+ * Verify MFA code (Step 2: MFA verification)
+ * @param {string} mfaToken - Temporary MFA verification token from login
+ * @param {string} mfaCode - 6-digit TOTP code from authenticator app
+ * @returns {Promise<{success: boolean, token?: string, error?: string}>}
+ */
+export const verifyMFA = async (mfaToken, mfaCode) => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/admin/verify-mfa`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ mfaToken, mfaCode })
+    });
+
+    const data = await response.json();
+
     if (data.success && data.token) {
       // Store token securely
       localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
@@ -32,10 +76,10 @@ export const adminLogin = async (password) => {
       }
       return { success: true, token: data.token };
     } else {
-      return { success: false, error: data.error || 'Login failed' };
+      return { success: false, error: data.error || 'MFA verification failed' };
     }
   } catch (error) {
-    console.error('Admin login error:', error);
+    console.error('MFA verification error:', error);
     return { success: false, error: 'Network error. Please check your connection.' };
   }
 };
