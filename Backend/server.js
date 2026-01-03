@@ -33,6 +33,9 @@ dotenv.config();
 
 console.log('🔄 Starting server initialization...');
 console.log('🔑 ADMIN_API_KEY check:', process.env.ADMIN_API_KEY ? `SET (${process.env.ADMIN_API_KEY.substring(0, 10)}...)` : 'NOT SET');
+console.log('🔍 Checking ADMIN_PASSWORD_HASH...');
+console.log('🔍 ADMIN_PASSWORD_HASH exists?', !!process.env.ADMIN_PASSWORD_HASH);
+console.log('🔍 ADMIN_PASSWORD_HASH length:', process.env.ADMIN_PASSWORD_HASH?.length || 0);
 
 // CRITICAL: Check for ADMIN_PASSWORD_HASH (required, no plain text fallback)
 if (!process.env.ADMIN_PASSWORD_HASH) {
@@ -186,8 +189,13 @@ app.use('/api/promo-code', promoCodeRoutes);
 console.log('✅ Promo code routes registered at /api/promo-code');
 
 // Admin authentication routes - MUST be before any catch-all routes
+console.log('========================================');
 console.log('🔍 Registering admin routes...');
-console.log('🔍 Admin routes stack:', adminRoutes?.stack?.length || 0);
+console.log('🔍 Admin routes type:', typeof adminRoutes);
+console.log('🔍 Admin routes exists?', !!adminRoutes);
+console.log('🔍 Admin routes stack exists?', !!(adminRoutes && adminRoutes.stack));
+console.log('🔍 Admin routes stack length:', adminRoutes?.stack?.length || 0);
+console.log('========================================');
 
 // Add test route directly to verify routing works (BEFORE the router)
 app.get('/api/admin/test-direct', (req, res) => {
