@@ -110,8 +110,17 @@ router.post('/login',
 
       const { password } = req.body;
 
+      // Debug logging (remove in production if sensitive)
+      console.log('🔍 Login attempt:');
+      console.log('  - Password length:', password?.length || 0);
+      console.log('  - Hash exists?', !!ADMIN_PASSWORD_HASH);
+      console.log('  - Hash length:', ADMIN_PASSWORD_HASH?.length || 0);
+      console.log('  - Hash prefix:', ADMIN_PASSWORD_HASH?.substring(0, 7) || 'N/A');
+
       // Verify password using bcrypt
       const passwordValid = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
+
+      console.log('  - Password valid?', passwordValid);
 
       if (!passwordValid) {
         // Log failed login attempt
