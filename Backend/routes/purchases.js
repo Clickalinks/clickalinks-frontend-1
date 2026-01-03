@@ -54,12 +54,47 @@ router.post('/purchases',
         purchaseDate,
         paymentStatus = 'paid',
         promoCode = null,
-        promoId = null
+        promoId = null,
+        originalAmount = null,
+        finalAmount = null,
+        discountAmount = null
       } = req.body;
 
       // Generate unique purchase ID if not provided
       const finalPurchaseId = purchaseId || `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
       const normalizedEmail = contactEmail.trim().toLowerCase();
+      const normalizedBusiness = businessName.trim().toLowerCase();
+
+      // ✅ CHECK 1: Verify promo code hasn't been used by this email/business BEFORE any other checks
+      // This must happen first to prevent saving purchases with duplicate promo codes
+      if (promoCode || promoId) {
+        const paidPurchasesSnapshot = await db.collection('purchasedSquares')
+          .where('paymentStatus', '==', 'paid')
+          .get();
+        
+        const hasUsedPromo = paidPurchasesSnapshot.docs.some(doc => {
+          const data = doc.data();
+          const hasPromo = data.promoCode || data.promoId;
+          if (!hasPromo) return false;
+          
+          // Check if email matches (case-insensitive)
+          const emailMatch = data.contactEmail && data.contactEmail.toLowerCase() === normalizedEmail;
+          // Check if business name matches (case-insensitive)
+          const businessMatch = data.businessName && data.businessName.toLowerCase() === normalizedBusiness;
+          
+          // Return true if EITHER email OR business name matches (one-per-user restriction)
+          return emailMatch || businessMatch;
+        });
+        
+        if (hasUsedPromo) {
+          console.log(`❌ Promo code restriction: ${normalizedEmail} or ${normalizedBusiness} has already used a promo code`);
+          return res.status(400).json({
+            success: false,
+            error: 'Each business/email can only use one promo code. You have already used a promo code.',
+            code: 'PROMO_ALREADY_USED'
+          });
+        }
+      }
 
       // ✅ IDEMPOTENCY CHECK 1: If purchaseId already exists, return success without sending emails
       const existingDocRef = db.collection('purchasedSquares').doc(finalPurchaseId);
@@ -97,6 +132,11 @@ router.post('/purchases',
           });
         }
       }
+
+      // Calculate amounts - use provided values or defaults
+      const finalOriginalAmount = originalAmount !== null ? parseFloat(originalAmount) : parseFloat(amount);
+      const finalDiscountAmount = discountAmount !== null ? parseFloat(discountAmount) : 0;
+      const finalFinalAmount = finalAmount !== null ? parseFloat(finalAmount) : (finalOriginalAmount - finalDiscountAmount);
 
       // Calculate dates if not provided
       const now = new Date();
@@ -138,31 +178,6 @@ router.post('/purchases',
         }
       }
 
-      // ✅ CHECK 3: Verify promo code hasn't been used by this email/business before saving
-      if (promoCode || promoId) {
-        const paidPurchasesSnapshot = await db.collection('purchasedSquares')
-          .where('paymentStatus', '==', 'paid')
-          .get();
-        
-        const hasUsedPromo = paidPurchasesSnapshot.docs.some(doc => {
-          const data = doc.data();
-          const hasPromo = data.promoCode || data.promoId;
-          if (!hasPromo) return false;
-          
-          const emailMatch = data.contactEmail && data.contactEmail.toLowerCase() === normalizedEmail;
-          const businessMatch = data.businessName && data.businessName.toLowerCase() === businessName.trim().toLowerCase();
-          
-          return emailMatch || businessMatch;
-        });
-        
-        if (hasUsedPromo) {
-          return res.status(400).json({
-            success: false,
-            error: 'Each business/email can only use one promo code. You have already used a promo code.',
-            code: 'PROMO_ALREADY_USED'
-          });
-        }
-      }
 
       const purchaseData = {
         purchaseId: finalPurchaseId,
@@ -173,7 +188,10 @@ router.post('/purchases',
         logoData: finalLogoData || null,
         storagePath: storagePath || null, // Save storage path for reference
         dealLink: dealLink || website || '',
-        amount: parseFloat(amount),
+        amount: finalFinalAmount,
+        originalAmount: finalOriginalAmount,
+        finalAmount: finalFinalAmount,
+        discountAmount: finalDiscountAmount,
         duration: parseInt(duration),
         status,
         paymentStatus,
@@ -196,60 +214,56 @@ router.post('/purchases',
 
       console.log(`✅ Purchase saved via API: ${finalPurchaseId} (Square ${squareNumber})`);
 
-      // ✅ Only send emails if they haven't been sent yet (check flag)
-      // Note: If existingDoc.exists was true, we already returned early, so this is a new purchase
-      // Check the saved document to see if emails were already sent
-      const savedDoc = await purchaseRef.get();
-      const savedData = savedDoc.data();
+      // ✅ CRITICAL: Check if emails were already sent before sending
+      // Get fresh document to check emailsSent flag
+      const freshDoc = await purchaseRef.get();
+      const freshData = freshDoc.data();
       
-      if (!savedData || !savedData.emailsSent) {
+      // Only send emails if emailsSent is false (or undefined for new documents)
+      if (!freshData || !freshData.emailsSent) {
+        // Set flag to true BEFORE sending to prevent race conditions
+        await purchaseRef.update({ emailsSent: true });
+        
         // Send admin notification email (non-blocking)
-        sendAdminNotificationEmail('purchase', {
+      sendAdminNotificationEmail('purchase', {
+        businessName: businessName.trim(),
+        contactEmail: contactEmail.trim(),
+        squareNumber,
+        pageNumber,
+        duration,
+        amount: finalFinalAmount,
+        transactionId: transactionId || null,
+        finalAmount: finalFinalAmount,
+        originalAmount: finalOriginalAmount,
+        discountAmount: finalDiscountAmount,
+        selectedDuration: duration,
+        purchaseId: finalPurchaseId,
+        promoCode: promoCode || null,
+        promoId: promoId || null
+      }).catch(err => {
+        console.error('❌ Admin notification email error (non-critical):', err.message);
+      });
+
+      // Send confirmation email to customer (non-blocking) - this sends both welcome + invoice
+      if (contactEmail) {
+        sendAdConfirmationEmail({
           businessName: businessName.trim(),
           contactEmail: contactEmail.trim(),
           squareNumber,
           pageNumber,
           duration,
-          amount: parseFloat(amount),
+          amount: finalFinalAmount,
+          originalAmount: finalOriginalAmount,
+          finalAmount: finalFinalAmount,
+          discountAmount: finalDiscountAmount,
           transactionId: transactionId || null,
-          finalAmount: parseFloat(amount),
-          originalAmount: parseFloat(amount),
-          discountAmount: 0,
-          selectedDuration: duration,
-          purchaseId: finalPurchaseId
+          promoCode: promoCode || null,
+          promoId: promoId || null
         }).catch(err => {
-          console.error('❌ Admin notification email error (non-critical):', err.message);
+          console.error('❌ Confirmation email error (non-critical):', err.message);
         });
-
-        // Send confirmation email to customer (non-blocking)
-        if (contactEmail) {
-          sendAdConfirmationEmail({
-            businessName: businessName.trim(),
-            contactEmail: contactEmail.trim(),
-            squareNumber,
-            pageNumber,
-            duration,
-            amount: parseFloat(amount),
-            transactionId: transactionId || null,
-            promoCode: promoCode || null,
-            promoId: promoId || null
-          }).then(() => {
-            // Mark emails as sent
-            purchaseRef.update({ emailsSent: true }).catch(err => {
-              console.error('❌ Error updating emailsSent flag:', err);
-            });
-            emailsSent = true;
-          }).catch(err => {
-            console.error('❌ Confirmation email error (non-critical):', err.message);
-          });
-        } else {
-          // Mark as sent even if no email (prevents retries)
-          purchaseRef.update({ emailsSent: true }).catch(err => {
-            console.error('❌ Error updating emailsSent flag:', err);
-          });
-        }
       } else {
-        console.log(`⚠️ Emails already sent for purchase ${finalPurchaseId}, skipping`);
+        console.log(`⚠️ Emails already sent for purchase ${finalPurchaseId}, skipping email send`);
       }
 
       res.json({

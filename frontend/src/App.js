@@ -17,7 +17,6 @@ const Payment = lazy(() => import('./components/Payment'));
 const About = lazy(() => import('./components/About'));
 const HowItWorks = lazy(() => import('./components/HowItWorks'));
 const Terms = lazy(() => import('./components/Terms'));
-const ContactForm = lazy(() => import('./components/ContactForm'));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 
@@ -160,14 +159,6 @@ function App() {
             element={
               <Suspense fallback={<LoadingFallback />}>
                 <Terms />
-              </Suspense>
-            } 
-          />
-          <Route 
-            path="/contact" 
-            element={
-              <Suspense fallback={<LoadingFallback />}>
-                <ContactForm />
               </Suspense>
             } 
           />

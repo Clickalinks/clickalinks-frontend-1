@@ -706,7 +706,7 @@ const Success = () => {
             <h4>💬 Need Help?</h4>
             <p>Our support team is here to assist you with any questions about your campaign.</p>
             <div className="support-links">
-              <Link to="/contact" className="support-link">Contact Us</Link>
+              <a href="mailto:support@clickalinks.com" className="support-link">Contact Us</a>
               <span className="support-separator">•</span>
               <Link to="/how-it-works" className="support-link">How It Works</Link>
               <span className="support-separator">•</span>

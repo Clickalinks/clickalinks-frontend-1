@@ -66,9 +66,6 @@ const Footer = () => {
               <a href="mailto:support@clickalinks.com" className="footer-link">
                 support@clickalinks.com
               </a>
-              <Link to="/contact" className="footer-link">
-                Contact Form
-              </Link>
               <Link to="/help" className="footer-link">
                 Help Center
               </Link>
