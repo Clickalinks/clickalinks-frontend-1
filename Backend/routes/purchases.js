@@ -262,6 +262,7 @@ router.post('/purchases',
         }).catch(err => {
           console.error('❌ Confirmation email error (non-critical):', err.message);
         });
+      }
       } else {
         console.log(`⚠️ Emails already sent for purchase ${finalPurchaseId}, skipping email send`);
       }
