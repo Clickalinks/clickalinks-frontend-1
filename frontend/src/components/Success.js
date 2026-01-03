@@ -284,10 +284,53 @@ const Success = () => {
         
         // ✅ LAST RESORT: Try multiple methods to find purchase data
         if (sessionId || squareFromQuery) {
-          console.log('🔍 Attempting to fetch purchase from Firestore by sessionId or squareNumber...');
-          try {
-            // Method 1: Try to fetch from Firestore by transactionId (sessionId)
-            if (sessionId) {
+          console.log('🔍 Attempting to fetch purchase from Firestore or Stripe session...');
+          
+          // Method 1: Try to get from Stripe session metadata via backend API
+          if (sessionId) {
+            try {
+              const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
+              const sessionResponse = await fetch(`${BACKEND_URL}/api/check-session/${sessionId}`);
+              
+              if (sessionResponse.ok) {
+                const sessionData = await sessionResponse.json();
+                if (sessionData.success && sessionData.session?.metadata) {
+                  const metadata = sessionData.session.metadata;
+                  console.log('✅ Found Stripe session metadata:', metadata);
+                  
+                  // Reconstruct from Stripe metadata and businessFormData
+                  if (metadata.squareNumber && businessFormData.businessName) {
+                    purchaseData = {
+                      squareNumber: parseInt(metadata.squareNumber),
+                      pageNumber: parseInt(metadata.pageNumber) || 1,
+                      businessName: businessFormData.businessName || businessFormData.name,
+                      contactEmail: metadata.contactEmail || businessFormData.email || businessFormData.contactEmail,
+                      website: metadata.website || businessFormData.website || '',
+                      finalAmount: (sessionData.session.amount_total / 100) || 0,
+                      originalAmount: (sessionData.session.amount_total / 100) || 0,
+                      discountAmount: 0,
+                      promoCode: null,
+                      selectedDuration: parseInt(metadata.duration) || 30,
+                      transactionId: sessionId,
+                      logoData: businessFormData.logoData || localStorage.getItem(`logoData_${metadata.squareNumber}`),
+                      paymentStatus: 'paid'
+                    };
+                    
+                    console.log('✅ Successfully reconstructed from Stripe session metadata:', {
+                      squareNumber: purchaseData.squareNumber,
+                      businessName: purchaseData.businessName
+                    });
+                  }
+                }
+              }
+            } catch (apiError) {
+              console.warn('⚠️ Could not fetch from Stripe session API:', apiError);
+            }
+          }
+          
+          // Method 2: Try to fetch from Firestore by transactionId (sessionId)
+          if (!purchaseData.squareNumber && sessionId) {
+            try {
               const purchaseQuery = query(
                 collection(db, 'purchasedSquares'),
                 where('transactionId', '==', sessionId)
@@ -320,10 +363,14 @@ const Success = () => {
                   businessName: purchaseData.businessName
                 });
               }
+            } catch (firestoreError) {
+              console.error('❌ Error fetching from Firestore:', firestoreError);
             }
-            
-            // Method 2: Try by squareNumber if still not found
-            if (!purchaseData.squareNumber && squareFromQuery) {
+          }
+          
+          // Method 3: Try by squareNumber if still not found
+          if (!purchaseData.squareNumber && squareFromQuery) {
+            try {
               const squareQuery = query(
                 collection(db, 'purchasedSquares'),
                 where('squareNumber', '==', parseInt(squareFromQuery)),
@@ -359,9 +406,9 @@ const Success = () => {
                   paymentStatus: 'paid'
                 };
               }
+            } catch (firestoreError) {
+              console.error('❌ Error fetching from Firestore by square:', firestoreError);
             }
-          } catch (firestoreError) {
-            console.error('❌ Error fetching from Firestore:', firestoreError);
           }
         }
         
