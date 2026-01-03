@@ -183,6 +183,16 @@ console.log('✅ Promo code routes registered at /api/promo-code');
 app.use('/api/admin', adminRoutes);
 console.log('✅ Admin authentication routes registered at /api/admin');
 
+// Debug: List all registered admin routes
+console.log('🔍 Registered admin routes:');
+adminRoutes.stack.forEach((middleware) => {
+  if (middleware.route) {
+    console.log(`  ${Object.keys(middleware.route.methods).join(',').toUpperCase()} ${middleware.route.path}`);
+  } else if (middleware.name === 'router') {
+    console.log(`  Router: ${middleware.regexp}`);
+  }
+});
+
 
 
 // Root route
