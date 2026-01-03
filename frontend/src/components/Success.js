@@ -81,12 +81,51 @@ const Success = () => {
           }
         }
         
+        // If still not found, try to find by square number from query params
+        if (!foundPurchase && squareFromQuery) {
+          if (squarePurchases[squareFromQuery]) {
+            foundPurchase = {
+              ...squarePurchases[squareFromQuery],
+              squareNumber: parseInt(squareFromQuery)
+            };
+            console.log('✅ Found purchase by square number from squarePurchases');
+          }
+        }
+        
         // If still not found, get the most recent pending purchase
         if (!foundPurchase) {
           const pendingKeys = Object.keys(pendingPurchases);
           if (pendingKeys.length > 0) {
-            foundPurchase = pendingPurchases[pendingKeys[pendingKeys.length - 1]];
-            console.log('⚠️ Using latest pending purchase (sessionId not found)');
+            // Try to find the most recent one that matches square number from query
+            if (squareFromQuery) {
+              for (const key of pendingKeys.reverse()) {
+                const purchase = pendingPurchases[key];
+                if (purchase.squareNumber === parseInt(squareFromQuery) || 
+                    purchase.squareNumber?.toString() === squareFromQuery) {
+                  foundPurchase = purchase;
+                  console.log('✅ Found pending purchase by square number');
+                  break;
+                }
+              }
+            }
+            
+            // If still not found, use the most recent one
+            if (!foundPurchase && pendingKeys.length > 0) {
+              foundPurchase = pendingPurchases[pendingKeys[0]];
+              console.log('⚠️ Using most recent pending purchase (sessionId not found)');
+            }
+          }
+        }
+        
+        // Last resort: Try to get from businessFormData and squareFromQuery
+        if (!foundPurchase && businessFormData.squareNumber && squareFromQuery) {
+          if (parseInt(businessFormData.squareNumber) === parseInt(squareFromQuery)) {
+            foundPurchase = {
+              ...businessFormData,
+              squareNumber: parseInt(squareFromQuery),
+              paymentStatus: 'paid'
+            };
+            console.log('✅ Using businessFormData as fallback');
           }
         }
         
@@ -232,7 +271,7 @@ const Success = () => {
           // Continue anyway - show success page
         }
       } else {
-        console.error('❌ Could not reconstruct purchase data');
+        console.error('❌ Could not reconstruct purchase data from localStorage');
         console.error('Missing data:', {
           squareNumber: purchaseData.squareNumber,
           businessName: purchaseData.businessName,
@@ -242,13 +281,89 @@ const Success = () => {
           pendingPurchases: Object.keys(pendingPurchases),
           squarePurchases: Object.keys(squarePurchases)
         });
+        
+        // ✅ LAST RESORT: Try to fetch from Firestore if sessionId is available
+        if (sessionId && squareFromQuery) {
+          console.log('🔍 Attempting to fetch purchase from Firestore by sessionId or squareNumber...');
+          try {
+            const purchaseQuery = query(
+              collection(db, 'purchasedSquares'),
+              where('transactionId', '==', sessionId)
+            );
+            const purchaseSnapshot = await getDocs(purchaseQuery);
+            
+            if (!purchaseSnapshot.empty) {
+              const firestoreDoc = purchaseSnapshot.docs[0];
+              const firestoreData = firestoreDoc.data();
+              console.log('✅ Found purchase in Firestore!', firestoreData);
+              
+              purchaseData = {
+                squareNumber: firestoreData.squareNumber,
+                pageNumber: firestoreData.pageNumber || 1,
+                businessName: firestoreData.businessName,
+                contactEmail: firestoreData.contactEmail,
+                website: firestoreData.dealLink || firestoreData.website || '',
+                finalAmount: firestoreData.amount || firestoreData.finalAmount || 0,
+                originalAmount: firestoreData.originalAmount || firestoreData.amount || 0,
+                discountAmount: firestoreData.discountAmount || 0,
+                promoCode: firestoreData.promoCode || null,
+                selectedDuration: firestoreData.duration || 30,
+                transactionId: sessionId,
+                logoData: firestoreData.logoData,
+                paymentStatus: 'paid'
+              };
+              
+              console.log('✅ Successfully reconstructed from Firestore:', {
+                squareNumber: purchaseData.squareNumber,
+                businessName: purchaseData.businessName
+              });
+            } else {
+              // Try by squareNumber as fallback
+              const squareQuery = query(
+                collection(db, 'purchasedSquares'),
+                where('squareNumber', '==', parseInt(squareFromQuery)),
+                where('pageNumber', '==', 1)
+              );
+              const squareSnapshot = await getDocs(squareQuery);
+              
+              if (!squareSnapshot.empty) {
+                const firestoreDoc = squareSnapshot.docs[0];
+                const firestoreData = firestoreDoc.data();
+                console.log('✅ Found purchase in Firestore by square number!', firestoreData);
+                
+                purchaseData = {
+                  squareNumber: firestoreData.squareNumber,
+                  pageNumber: firestoreData.pageNumber || 1,
+                  businessName: firestoreData.businessName,
+                  contactEmail: firestoreData.contactEmail,
+                  website: firestoreData.dealLink || firestoreData.website || '',
+                  finalAmount: firestoreData.amount || firestoreData.finalAmount || 0,
+                  originalAmount: firestoreData.originalAmount || firestoreData.amount || 0,
+                  discountAmount: firestoreData.discountAmount || 0,
+                  promoCode: firestoreData.promoCode || null,
+                  selectedDuration: firestoreData.duration || 30,
+                  transactionId: firestoreData.transactionId || sessionId,
+                  logoData: firestoreData.logoData,
+                  paymentStatus: 'paid'
+                };
+              }
+            }
+          } catch (firestoreError) {
+            console.error('❌ Error fetching from Firestore:', firestoreError);
+          }
+        }
+        
         // Still show success page even if data is incomplete
-        if (purchaseData.squareNumber || businessFormData.squareNumber) {
+        if (purchaseData.squareNumber && purchaseData.businessName) {
+          setOrderData(purchaseData);
+          console.log('✅ Using reconstructed purchase data (may be incomplete)');
+        } else if (purchaseData.squareNumber || businessFormData.squareNumber) {
           setOrderData({
             ...purchaseData,
             ...businessFormData,
             squareNumber: purchaseData.squareNumber || businessFormData.squareNumber
           });
+          console.log('⚠️ Using partial data - some details may be missing');
         }
       }
       
