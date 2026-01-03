@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test MFA Endpoint</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; }
+        #result { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; white-space: pre-wrap; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Test MFA Endpoint</h1>
+    <p>Click to test different endpoints:</p>
+    
+    <button onclick="testRoot()">1. Test Root Endpoint</button>
+    <button onclick="testAdminVerify()">2. Test Admin Verify</button>
+    <button onclick="testMFASetup()">3. Test MFA Setup</button>
+    
+    <div id="result"></div>
+
+    <script>
+        const BACKEND_URL = 'https://clickalinks-backend-2.onrender.com';
+        
+        async function testRoot() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing root endpoint...';
+            
+            try {
+                const response = await fetch(BACKEND_URL + '/');
+                const text = await response.text();
+                result.innerHTML = `<span class="success">✅ Root endpoint works!</span>\n\nStatus: ${response.status}\nResponse: ${text}`;
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ Root endpoint failed</span>\n\nError: ${error.message}`;
+            }
+        }
+        
+        async function testAdminVerify() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing admin verify endpoint...';
+            
+            try {
+                const response = await fetch(BACKEND_URL + '/api/admin/verify');
+                const text = await response.text();
+                const isError = response.status >= 400;
+                
+                if (isError && text.includes('token')) {
+                    result.innerHTML = `<span class="success">✅ Admin verify endpoint exists!</span>\n\nStatus: ${response.status}\nResponse: ${text}\n\n(Error about token is expected - confirms route works)`;
+                } else {
+                    result.innerHTML = `Status: ${response.status}\nResponse: ${text}`;
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ Admin verify endpoint failed</span>\n\nError: ${error.message}`;
+            }
+        }
+        
+        async function testMFASetup() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing MFA setup endpoint...\n\nPlease wait...';
+            
+            try {
+                console.log('Testing:', BACKEND_URL + '/api/admin/mfa/setup');
+                const response = await fetch(BACKEND_URL + '/api/admin/mfa/setup', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                if (response.status === 200) {
+                    try {
+                        const json = JSON.parse(text);
+                        result.innerHTML = `<span class="success">✅ MFA setup endpoint works!</span>\n\nStatus: ${response.status}\n\nResponse:\n${JSON.stringify(json, null, 2)}\n\nSecret: ${json.secret || 'N/A'}`;
+                    } catch (parseError) {
+                        result.innerHTML = `<span class="error">❌ Got 200 but couldn't parse JSON</span>\n\nStatus: ${response.status}\nResponse text: ${text.substring(0, 500)}`;
+                    }
+                } else if (response.status === 404) {
+                    result.innerHTML = `<span class="error">❌ Endpoint not found (404)</span>\n\nThis means the route isn't registered.\nCheck Render logs for errors.\n\nResponse: ${text.substring(0, 500)}`;
+                } else {
+                    result.innerHTML = `<span class="error">❌ Unexpected status: ${response.status}</span>\n\nResponse: ${text.substring(0, 500)}`;
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                result.innerHTML = `<span class="error">❌ MFA setup endpoint failed</span>\n\nError: ${error.message}\n\nType: ${error.name}\n\nThis could be:\n1. CORS issue\n2. Network error\n3. Server not responding\n\nCheck browser console (F12) for details.`;
+            }
+        }
+    </script>
+</body>
+</html>
+
