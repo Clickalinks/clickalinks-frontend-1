@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import admin from '../config/firebaseAdmin.js';
 import { generalRateLimit } from '../middleware/security.js';
 import { sendAdminNotificationEmail, sendAdConfirmationEmail } from '../services/emailService.js';
+import { verifyPurchaseOwnership, verifyPurchaseOwnershipByQuery } from '../middleware/verifyPurchaseOwnership.js';
 
 const router = express.Router();
 const db = admin.firestore();
@@ -363,6 +364,222 @@ router.post('/track-click',
       res.json({
         success: true,
         message: 'Click tracking attempted'
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/purchases/:purchaseId
+ * Get a specific purchase (requires ownership verification)
+ * Users can only view their own purchases
+ */
+router.get('/purchases/:purchaseId',
+  generalRateLimit,
+  verifyPurchaseOwnershipByQuery,
+  async (req, res) => {
+    try {
+      const purchaseData = req.purchaseData;
+      
+      // Don't expose sensitive data like internal IDs
+      const safePurchaseData = {
+        purchaseId: purchaseData.purchaseId,
+        squareNumber: purchaseData.squareNumber,
+        pageNumber: purchaseData.pageNumber,
+        businessName: purchaseData.businessName,
+        contactEmail: purchaseData.contactEmail,
+        website: purchaseData.website || purchaseData.dealLink,
+        logoData: purchaseData.logoData,
+        amount: purchaseData.amount,
+        finalAmount: purchaseData.finalAmount,
+        originalAmount: purchaseData.originalAmount,
+        discountAmount: purchaseData.discountAmount,
+        duration: purchaseData.duration,
+        status: purchaseData.status,
+        paymentStatus: purchaseData.paymentStatus,
+        clickCount: purchaseData.clickCount || 0,
+        startDate: purchaseData.startDate?.toDate?.()?.toISOString() || purchaseData.startDate,
+        endDate: purchaseData.endDate?.toDate?.()?.toISOString() || purchaseData.endDate,
+        purchaseDate: purchaseData.purchaseDate?.toDate?.()?.toISOString() || purchaseData.purchaseDate,
+        promoCode: purchaseData.promoCode
+      };
+      
+      res.json({
+        success: true,
+        purchase: safePurchaseData
+      });
+      
+    } catch (error) {
+      console.error('❌ Error fetching purchase:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch purchase',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
+ * PUT /api/purchases/:purchaseId
+ * Update a purchase (requires ownership verification)
+ * Users can only update their own purchases
+ * Allowed fields: website, dealLink, logoData (limited updates only)
+ */
+router.put('/purchases/:purchaseId',
+  generalRateLimit,
+  [
+    body('contactEmail').isEmail().withMessage('Valid email is required for ownership verification'),
+    body('website').optional().isString().trim().isLength({ max: 500 }).withMessage('Website must be a valid URL (max 500 chars)'),
+    body('dealLink').optional().isString().trim().isLength({ max: 500 }).withMessage('Deal link must be a valid URL (max 500 chars)'),
+    body('logoData').optional().isString().trim().withMessage('Logo data must be a string')
+  ],
+  verifyPurchaseOwnership,
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: errors.array()
+        });
+      }
+      
+      const { website, dealLink, logoData } = req.body;
+      const purchaseDoc = req.purchaseDoc;
+      const purchaseData = req.purchaseData;
+      
+      // Only allow updating specific fields (website, dealLink, logoData)
+      // Critical fields like amount, duration, status, etc. cannot be modified by users
+      const updateData = {
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      if (website !== undefined) {
+        updateData.website = website.trim();
+        updateData.dealLink = website.trim(); // Keep dealLink in sync with website
+      }
+      
+      if (dealLink !== undefined) {
+        updateData.dealLink = dealLink.trim();
+        // If website wasn't provided, update website too
+        if (website === undefined) {
+          updateData.website = dealLink.trim();
+        }
+      }
+      
+      if (logoData !== undefined) {
+        // Validate logoData is a valid URL or data URL
+        if (logoData.trim().startsWith('http://') || 
+            logoData.trim().startsWith('https://') || 
+            logoData.trim().startsWith('data:image/')) {
+          updateData.logoData = logoData.trim();
+        } else {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid logoData format. Must be a URL or data URL.'
+          });
+        }
+      }
+      
+      // Only update if there are changes
+      if (Object.keys(updateData).length <= 1) { // Only updatedAt
+        return res.json({
+          success: true,
+          message: 'No changes to update',
+          purchaseId: purchaseData.purchaseId
+        });
+      }
+      
+      // Update purchase document
+      await purchaseDoc.ref.update(updateData);
+      
+      console.log(`✅ Purchase updated by owner: ${purchaseData.purchaseId}`);
+      
+      res.json({
+        success: true,
+        message: 'Purchase updated successfully',
+        purchaseId: purchaseData.purchaseId,
+        updatedFields: Object.keys(updateData).filter(key => key !== 'updatedAt')
+      });
+      
+    } catch (error) {
+      console.error('❌ Error updating purchase:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update purchase',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/purchases/user/:email
+ * Get all purchases for a specific user (identified by email)
+ * Users can only view their own purchases
+ */
+router.get('/purchases/user/:email',
+  generalRateLimit,
+  async (req, res) => {
+    try {
+      const { email } = req.params;
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(normalizedEmail)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid email format'
+        });
+      }
+      
+      // Fetch all purchases for this email
+      const purchasesQuery = db.collection('purchasedSquares')
+        .where('contactEmail', '==', normalizedEmail)
+        .orderBy('purchaseDate', 'desc');
+      
+      const purchasesSnapshot = await purchasesQuery.get();
+      
+      const purchases = purchasesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          purchaseId: data.purchaseId || doc.id,
+          squareNumber: data.squareNumber,
+          pageNumber: data.pageNumber,
+          businessName: data.businessName,
+          contactEmail: data.contactEmail,
+          website: data.website || data.dealLink,
+          logoData: data.logoData,
+          amount: data.amount,
+          finalAmount: data.finalAmount,
+          originalAmount: data.originalAmount,
+          discountAmount: data.discountAmount,
+          duration: data.duration,
+          status: data.status,
+          paymentStatus: data.paymentStatus,
+          clickCount: data.clickCount || 0,
+          startDate: data.startDate?.toDate?.()?.toISOString() || data.startDate,
+          endDate: data.endDate?.toDate?.()?.toISOString() || data.endDate,
+          purchaseDate: data.purchaseDate?.toDate?.()?.toISOString() || data.purchaseDate,
+          promoCode: data.promoCode
+        };
+      });
+      
+      res.json({
+        success: true,
+        purchases,
+        count: purchases.length
+      });
+      
+    } catch (error) {
+      console.error('❌ Error fetching user purchases:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch purchases',
+        message: error.message
       });
     }
   }
