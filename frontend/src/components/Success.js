@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { saveLogoToStorage } from '../firebaseStorage';
 import { db, storage } from '../firebase';
@@ -13,20 +13,20 @@ const Success = () => {
   const [searchParams] = useSearchParams();
   const [orderData, setOrderData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const isProcessingRef = useRef(false); // Use ref to persist across renders
 
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
     // Prevent multiple executions
-    let isProcessing = false;
     let timeoutId = null;
     
     const processSuccess = async () => {
-      if (isProcessing) {
+      if (isProcessingRef.current) {
         console.warn('⚠️ Success page already processing, skipping duplicate call');
         return;
       }
-      isProcessing = true;
+      isProcessingRef.current = true;
       
       // Set a timeout to ensure loading always stops (max 10 seconds)
       timeoutId = setTimeout(() => {
@@ -255,13 +255,13 @@ const Success = () => {
       // Always stop loading
       clearTimeout(timeoutId);
       setIsLoading(false);
-      isProcessing = false;
+      isProcessingRef.current = false;
     } catch (error) {
       console.error('❌ Error in processSuccess:', error);
       // Always stop loading even on error
       clearTimeout(timeoutId);
       setIsLoading(false);
-      isProcessing = false;
+      isProcessingRef.current = false;
     }
     };
 
@@ -270,7 +270,7 @@ const Success = () => {
     // Cleanup function
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
-      isProcessing = false;
+      isProcessingRef.current = false;
     };
   }, [sessionId, location.state, searchParams]);
 

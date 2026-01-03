@@ -58,6 +58,20 @@ router.post('/purchases',
       // Generate unique purchase ID if not provided
       const finalPurchaseId = purchaseId || `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 
+      // ✅ IDEMPOTENCY CHECK: If purchaseId already exists, return success without sending emails
+      const existingDocRef = db.collection('purchasedSquares').doc(finalPurchaseId);
+      const existingDoc = await existingDocRef.get();
+      
+      if (existingDoc.exists) {
+        console.log(`✅ Purchase already exists (idempotency): ${finalPurchaseId} - returning success without sending emails`);
+        return res.json({
+          success: true,
+          purchaseId: finalPurchaseId,
+          message: 'Purchase already exists',
+          alreadyExists: true
+        });
+      }
+
       // Calculate dates if not provided
       const now = new Date();
       const finalStartDate = startDate ? new Date(startDate) : now;
