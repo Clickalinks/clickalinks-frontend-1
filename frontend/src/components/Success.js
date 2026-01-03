@@ -282,43 +282,48 @@ const Success = () => {
           squarePurchases: Object.keys(squarePurchases)
         });
         
-        // ✅ LAST RESORT: Try to fetch from Firestore if sessionId is available
-        if (sessionId && squareFromQuery) {
+        // ✅ LAST RESORT: Try multiple methods to find purchase data
+        if (sessionId || squareFromQuery) {
           console.log('🔍 Attempting to fetch purchase from Firestore by sessionId or squareNumber...');
           try {
-            const purchaseQuery = query(
-              collection(db, 'purchasedSquares'),
-              where('transactionId', '==', sessionId)
-            );
-            const purchaseSnapshot = await getDocs(purchaseQuery);
+            // Method 1: Try to fetch from Firestore by transactionId (sessionId)
+            if (sessionId) {
+              const purchaseQuery = query(
+                collection(db, 'purchasedSquares'),
+                where('transactionId', '==', sessionId)
+              );
+              const purchaseSnapshot = await getDocs(purchaseQuery);
+              
+              if (!purchaseSnapshot.empty) {
+                const firestoreDoc = purchaseSnapshot.docs[0];
+                const firestoreData = firestoreDoc.data();
+                console.log('✅ Found purchase in Firestore by transactionId!', firestoreData);
+                
+                purchaseData = {
+                  squareNumber: firestoreData.squareNumber,
+                  pageNumber: firestoreData.pageNumber || 1,
+                  businessName: firestoreData.businessName,
+                  contactEmail: firestoreData.contactEmail,
+                  website: firestoreData.dealLink || firestoreData.website || '',
+                  finalAmount: firestoreData.amount || firestoreData.finalAmount || 0,
+                  originalAmount: firestoreData.originalAmount || firestoreData.amount || 0,
+                  discountAmount: firestoreData.discountAmount || 0,
+                  promoCode: firestoreData.promoCode || null,
+                  selectedDuration: firestoreData.duration || 30,
+                  transactionId: sessionId,
+                  logoData: firestoreData.logoData,
+                  paymentStatus: 'paid'
+                };
+                
+                console.log('✅ Successfully reconstructed from Firestore:', {
+                  squareNumber: purchaseData.squareNumber,
+                  businessName: purchaseData.businessName
+                });
+              }
+            }
             
-            if (!purchaseSnapshot.empty) {
-              const firestoreDoc = purchaseSnapshot.docs[0];
-              const firestoreData = firestoreDoc.data();
-              console.log('✅ Found purchase in Firestore!', firestoreData);
-              
-              purchaseData = {
-                squareNumber: firestoreData.squareNumber,
-                pageNumber: firestoreData.pageNumber || 1,
-                businessName: firestoreData.businessName,
-                contactEmail: firestoreData.contactEmail,
-                website: firestoreData.dealLink || firestoreData.website || '',
-                finalAmount: firestoreData.amount || firestoreData.finalAmount || 0,
-                originalAmount: firestoreData.originalAmount || firestoreData.amount || 0,
-                discountAmount: firestoreData.discountAmount || 0,
-                promoCode: firestoreData.promoCode || null,
-                selectedDuration: firestoreData.duration || 30,
-                transactionId: sessionId,
-                logoData: firestoreData.logoData,
-                paymentStatus: 'paid'
-              };
-              
-              console.log('✅ Successfully reconstructed from Firestore:', {
-                squareNumber: purchaseData.squareNumber,
-                businessName: purchaseData.businessName
-              });
-            } else {
-              // Try by squareNumber as fallback
+            // Method 2: Try by squareNumber if still not found
+            if (!purchaseData.squareNumber && squareFromQuery) {
               const squareQuery = query(
                 collection(db, 'purchasedSquares'),
                 where('squareNumber', '==', parseInt(squareFromQuery)),
@@ -327,7 +332,14 @@ const Success = () => {
               const squareSnapshot = await getDocs(squareQuery);
               
               if (!squareSnapshot.empty) {
-                const firestoreDoc = squareSnapshot.docs[0];
+                // Get the most recent purchase for this square
+                const sortedDocs = squareSnapshot.docs.sort((a, b) => {
+                  const aDate = a.data().createdAt?.toDate?.() || new Date(0);
+                  const bDate = b.data().createdAt?.toDate?.() || new Date(0);
+                  return bDate - aDate;
+                });
+                
+                const firestoreDoc = sortedDocs[0];
                 const firestoreData = firestoreDoc.data();
                 console.log('✅ Found purchase in Firestore by square number!', firestoreData);
                 
