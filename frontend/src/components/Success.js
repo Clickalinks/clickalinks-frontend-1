@@ -369,8 +369,8 @@ const Success = () => {
                       businessName: businessNameFromMetadata || `Business ${metadata.squareNumber}`,
                       contactEmail: contactEmailFromStripe,
                       website: metadata.website || businessFormData.website || '',
-                      finalAmount: (sessionData.session.amount_total / 100) || 0,
-                      originalAmount: (sessionData.session.amount_total / 100) || 0,
+                      finalAmount: sessionData.session.amount_total ? (sessionData.session.amount_total / 100) : (foundPurchase?.finalAmount || foundPurchase?.amount || 10),
+                      originalAmount: sessionData.session.amount_total ? (sessionData.session.amount_total / 100) : (foundPurchase?.originalAmount || foundPurchase?.amount || 10),
                       discountAmount: 0,
                       promoCode: null,
                       selectedDuration: parseInt(metadata.duration) || 30,
@@ -884,7 +884,11 @@ const Success = () => {
               <span className="detail-icon">💰</span>
               <div className="detail-content">
                 <span className="detail-label">Total Paid</span>
-                <span className="detail-value total-amount-value">£{orderData.finalAmount || 10}.00</span>
+                <span className="detail-value total-amount-value">
+                  £{typeof orderData.finalAmount === 'number' 
+                    ? orderData.finalAmount.toFixed(2) 
+                    : (parseFloat(orderData.finalAmount || orderData.amount || 10)).toFixed(2)}
+                </span>
               </div>
             </div>
             

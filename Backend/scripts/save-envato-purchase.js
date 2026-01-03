@@ -61,7 +61,8 @@ async function saveEnvatoPurchase(sessionId) {
     
     try {
       console.log(`\n🔍 Searching for logo in Firebase Storage...`);
-      const bucket = admin.storage().bucket();
+      const bucketName = 'clickalinks-frontend.firebasestorage.app';
+      const bucket = admin.storage().bucket(bucketName);
       const [files] = await bucket.getFiles({ prefix: 'logos/' });
       
       // Look for files matching this transaction or square number
