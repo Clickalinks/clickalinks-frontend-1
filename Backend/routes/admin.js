@@ -306,10 +306,17 @@ router.post('/verify-mfa',
  * MFA setup endpoint - Generate TOTP secret and QR code (admin only, requires token)
  */
 router.get('/mfa/setup',
+  (req, res, next) => {
+    console.log('🔐 MFA setup middleware - request received');
+    console.log('🔐 Method:', req.method);
+    console.log('🔐 Path:', req.path);
+    console.log('🔐 URL:', req.url);
+    next();
+  },
   adminRateLimit,
   async (req, res) => {
     try {
-      console.log('🔐 MFA setup endpoint called');
+      console.log('🔐 MFA setup endpoint handler - starting execution');
       // This endpoint should be protected, but for initial setup, we'll allow it
       // In production, you might want to add additional verification
 
