@@ -226,49 +226,86 @@ router.post('/purchases',
       
       // Only send emails if emailsSent is false (or undefined for new documents)
       if (!freshData || !freshData.emailsSent) {
-        // Set flag to true BEFORE sending to prevent race conditions
-        await purchaseRef.update({ emailsSent: true });
+        console.log('📧 Sending emails for purchase:', finalPurchaseId);
         
-        // Send admin notification email (non-blocking)
-      sendAdminNotificationEmail('purchase', {
-        businessName: businessName.trim(),
-        contactEmail: contactEmail.trim(),
-        squareNumber,
-        pageNumber,
-        duration,
-        amount: finalFinalAmount,
-        transactionId: transactionId || null,
-        finalAmount: finalFinalAmount,
-        originalAmount: finalOriginalAmount,
-        discountAmount: finalDiscountAmount,
-        selectedDuration: duration,
-        purchaseId: finalPurchaseId,
-        promoCode: promoCode || null,
-        promoId: promoId || null
-      }).catch(err => {
-        console.error('❌ Admin notification email error (non-critical):', err.message);
-      });
+        // Send admin notification email and await result
+        let adminEmailSuccess = false;
+        try {
+          const adminResult = await sendAdminNotificationEmail('purchase', {
+            businessName: businessName.trim(),
+            contactEmail: contactEmail.trim(),
+            squareNumber,
+            pageNumber,
+            duration,
+            amount: finalFinalAmount,
+            transactionId: transactionId || null,
+            finalAmount: finalFinalAmount,
+            originalAmount: finalOriginalAmount,
+            discountAmount: finalDiscountAmount,
+            selectedDuration: duration,
+            purchaseId: finalPurchaseId,
+            promoCode: promoCode || null,
+            promoId: promoId || null
+          });
+          adminEmailSuccess = adminResult && adminResult.success;
+          if (adminEmailSuccess) {
+            console.log('✅ Admin notification email sent successfully');
+          } else {
+            console.error('❌ Admin notification email failed:', adminResult?.message || 'Unknown error');
+          }
+        } catch (err) {
+          console.error('❌ Admin notification email error:', err.message);
+          console.error('   Full error:', err);
+        }
 
-      // Send confirmation email to customer (non-blocking) - this sends both welcome + invoice
-      if (contactEmail) {
-        sendAdConfirmationEmail({
-          businessName: businessName.trim(),
-          contactEmail: contactEmail.trim(),
-          squareNumber,
-          pageNumber,
-          duration: parseInt(duration),
-          selectedDuration: parseInt(duration), // Email service uses selectedDuration
-          amount: finalFinalAmount,
-          originalAmount: finalOriginalAmount,
-          finalAmount: finalFinalAmount,
-          discountAmount: finalDiscountAmount,
-          transactionId: transactionId || null,
-          promoCode: promoCode || null,
-          promoId: promoId || null
-        }).catch(err => {
-          console.error('❌ Confirmation email error (non-critical):', err.message);
-        });
-      }
+        // Send confirmation email to customer (this sends both welcome + invoice)
+        let customerEmailSuccess = false;
+        if (contactEmail) {
+          try {
+            const customerResult = await sendAdConfirmationEmail({
+              businessName: businessName.trim(),
+              contactEmail: contactEmail.trim(),
+              squareNumber,
+              pageNumber,
+              duration: parseInt(duration), // Ensure duration is an integer
+              selectedDuration: parseInt(duration), // Email service uses selectedDuration
+              amount: finalFinalAmount,
+              originalAmount: finalOriginalAmount,
+              finalAmount: finalFinalAmount,
+              discountAmount: finalDiscountAmount,
+              transactionId: transactionId || null,
+              promoCode: promoCode || null,
+              promoId: promoId || null
+            });
+            customerEmailSuccess = customerResult && customerResult.success;
+            if (customerEmailSuccess) {
+              console.log('✅ Customer confirmation emails sent successfully');
+            } else {
+              console.error('❌ Customer confirmation emails failed:', customerResult?.message || 'Unknown error');
+            }
+          } catch (err) {
+            console.error('❌ Customer confirmation email error:', err.message);
+            console.error('   Full error:', err);
+          }
+        } else {
+          console.warn('⚠️ No contact email provided, skipping customer emails');
+        }
+
+        // Only set emailsSent to true if at least admin email was sent successfully
+        // This allows retry if emails fail
+        if (adminEmailSuccess || customerEmailSuccess) {
+          await purchaseRef.update({ 
+            emailsSent: true,
+            emailStatus: {
+              adminSent: adminEmailSuccess,
+              customerSent: customerEmailSuccess,
+              timestamp: admin.firestore.FieldValue.serverTimestamp()
+            }
+          });
+          console.log('✅ Email status saved:', { adminSent: adminEmailSuccess, customerSent: customerEmailSuccess });
+        } else {
+          console.error('❌ All emails failed - emailsSent flag NOT set, will retry on next attempt');
+        }
       } else {
         console.log(`⚠️ Emails already sent for purchase ${finalPurchaseId}, skipping email send`);
       }
