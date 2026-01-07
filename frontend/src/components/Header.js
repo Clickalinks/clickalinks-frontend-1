@@ -79,7 +79,7 @@ const Header = () => {
             <span className="promo-separator">•</span>
             <span className="promo-text">💰 £1 Per Day</span>
             <span className="promo-separator">•</span>
-            <span className="promo-text">📈 Reach Thousands</span>
+            <span className="promo-text">⚖️ Fair visibility for every business</span>
             <span className="promo-separator">•</span>
             <span className="promo-text">⚡ Instant Setup</span>
             <span className="promo-separator">•</span>
