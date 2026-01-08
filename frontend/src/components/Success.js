@@ -254,8 +254,8 @@ const Success = () => {
       const hasMinimumData = purchaseData.squareNumber && (purchaseData.transactionId || sessionId);
       
       if (hasMinimumData) {
-        // If businessName or contactEmail is missing, try to get it from Stripe metadata one more time
-        if ((!purchaseData.businessName || !purchaseData.contactEmail) && sessionId) {
+        // If businessName, contactEmail, or logoData is missing, try to get it from Stripe metadata
+        if ((!purchaseData.businessName || !purchaseData.contactEmail || !purchaseData.logoData || !purchaseData.storagePath) && sessionId) {
           try {
             const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
             const sessionResponse = await fetch(`${BACKEND_URL}/api/check-session/${sessionId}`);
@@ -263,18 +263,37 @@ const Success = () => {
             if (sessionResponse.ok) {
               const sessionData = await sessionResponse.json();
               if (sessionData.success && sessionData.session) {
+                const metadata = sessionData.session.metadata || {};
+                
                 // Get businessName from metadata
-                if (!purchaseData.businessName && sessionData.session.metadata?.businessName) {
-                  purchaseData.businessName = sessionData.session.metadata.businessName;
+                if (!purchaseData.businessName && metadata.businessName) {
+                  purchaseData.businessName = metadata.businessName;
                   console.log('✅ Got businessName from Stripe metadata:', purchaseData.businessName);
                 }
                 
                 // Get contactEmail from Stripe session (customer_email) or metadata
                 if (!purchaseData.contactEmail) {
-                  purchaseData.contactEmail = sessionData.session.customer_email || sessionData.session.metadata?.contactEmail;
+                  purchaseData.contactEmail = sessionData.session.customer_email || metadata.contactEmail;
                   if (purchaseData.contactEmail) {
                     console.log('✅ Got contactEmail from Stripe session:', purchaseData.contactEmail);
                   }
+                }
+                
+                // Get storagePath from metadata and construct logoData URL if missing
+                if (!purchaseData.storagePath && metadata.storagePath && metadata.storagePath.trim()) {
+                  purchaseData.storagePath = metadata.storagePath;
+                  console.log('✅ Got storagePath from Stripe metadata:', purchaseData.storagePath);
+                  
+                  // Construct logoData URL from storagePath if logoData is missing
+                  if (!purchaseData.logoData && purchaseData.storagePath.startsWith('logos/')) {
+                    purchaseData.logoData = `https://firebasestorage.googleapis.com/v0/b/clickalinks-frontend.firebasestorage.app/o/${encodeURIComponent(purchaseData.storagePath)}?alt=media`;
+                    console.log('✅ Constructed logoData URL from storagePath in Stripe metadata');
+                  }
+                }
+                
+                // Also get website from metadata if missing
+                if (!purchaseData.website && metadata.website) {
+                  purchaseData.website = metadata.website;
                 }
               }
             }
