@@ -7,6 +7,7 @@ import AdGrid from './components/AdGrid';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
+import WelcomeModal from './components/WelcomeModal';
 
 // PERFORMANCE: Lazy load heavy components
 const Success = lazy(() => import('./components/Success'));
@@ -80,6 +81,7 @@ function App() {
         >
           <ScrollToTop />
           <KeyboardShortcutHandler />
+          <WelcomeModal />
           <div className="App">
             <Header />
             <RunningStrip />
