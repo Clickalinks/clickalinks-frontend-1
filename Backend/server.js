@@ -581,8 +581,6 @@ app.post('/api/create-checkout-session',
       });
     }
     
-    console.log(`🔄 Creating Stripe session for Square #${squareNumber}, Amount: £${amount}`);
-    
     // CRITICAL: Normalize FRONTEND_URL to remove www. prefix (Firebase Hosting SSL doesn't support www subdomain)
     let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     // Remove www. prefix if present (Firebase Hosting SSL certificates don't cover www subdomain)
@@ -594,6 +592,8 @@ app.post('/api/create-checkout-session',
     if (frontendUrl.includes('clickalinks-frontend.web.app') && !frontendUrl.startsWith('https://')) {
       frontendUrl = frontendUrl.replace('http://', 'https://');
     }
+    
+    console.log(`🔄 Creating Stripe session for Square #${squareNumber}, Amount: £${amount}`);
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
