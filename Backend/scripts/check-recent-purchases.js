@@ -1,95 +1,79 @@
 /**
- * Check Recent Purchases
- * Lists the most recent purchases to find the missing one
+ * Diagnostic script to check recent purchases in Firestore
+ * Shows the last 10 purchases with detailed information
  */
 
 import admin from '../config/firebaseAdmin.js';
-import dotenv from 'dotenv';
 
-dotenv.config();
-
-const db = admin.firestore();
-
-async function checkRecentPurchases() {
+const checkRecentPurchases = async () => {
   try {
-    console.log('🔍 Checking recent purchases...\n');
+    console.log('🔍 Checking recent purchases in Firestore...\n');
     
-    const snapshot = await db.collection('purchasedSquares')
+    const db = admin.firestore();
+    const purchasesRef = db.collection('purchasedSquares');
+    
+    // Get last 10 purchases ordered by createdAt
+    const snapshot = await purchasesRef
       .orderBy('createdAt', 'desc')
       .limit(10)
       .get();
     
     if (snapshot.empty) {
-      console.log('❌ No purchases found');
+      console.log('❌ No purchases found in Firestore');
       return;
     }
     
-    console.log(`📊 Found ${snapshot.size} most recent purchase(s):\n`);
+    console.log(`📊 Found ${snapshot.size} recent purchase(s):\n`);
+    console.log('='.repeat(100));
     
     snapshot.forEach((doc, index) => {
       const data = doc.data();
-      console.log(`${index + 1}. Document ID: ${doc.id}`);
-      console.log(`   Purchase ID: ${data.purchaseId || 'N/A'}`);
-      console.log(`   Square Number: ${data.squareNumber || 'N/A'}`);
-      console.log(`   Business: ${data.businessName || 'N/A'}`);
-      console.log(`   Email: ${data.contactEmail || 'N/A'}`);
-      console.log(`   Status: ${data.status || 'N/A'}`);
-      console.log(`   Payment Status: ${data.paymentStatus || 'N/A'}`);
-      console.log(`   Has logoData: ${!!data.logoData}`);
-      if (data.logoData) {
-        console.log(`   LogoData preview: ${data.logoData.substring(0, 80)}...`);
-      }
-      console.log(`   Has storagePath: ${!!data.storagePath}`);
-      if (data.storagePath) {
-        console.log(`   StoragePath: ${data.storagePath}`);
-      }
-      const createdAt = data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : null;
-      console.log(`   Created: ${createdAt ? createdAt.toISOString() : 'N/A'}`);
-      console.log('');
-    });
-    
-    // Check for purchases without logoData
-    console.log('\n🔍 Checking for purchases missing logoData...\n');
-    const allSnapshot = await db.collection('purchasedSquares').get();
-    let missingLogoCount = 0;
-    
-    allSnapshot.forEach(doc => {
-      const data = doc.data();
-      const hasLogo = data.logoData && typeof data.logoData === 'string' && data.logoData.trim() !== '';
-      const hasStoragePath = data.storagePath && typeof data.storagePath === 'string' && data.storagePath.trim() !== '';
+      console.log(`\n📦 Purchase #${index + 1}`);
+      console.log('-'.repeat(100));
+      console.log('   Document ID:', doc.id);
+      console.log('   Purchase ID:', data.purchaseId || 'MISSING');
+      console.log('   Square Number:', data.squareNumber || 'MISSING');
+      console.log('   Page Number:', data.pageNumber || 'MISSING');
+      console.log('   Business Name:', data.businessName || 'MISSING');
+      console.log('   Contact Email:', data.contactEmail || 'MISSING');
+      console.log('   Transaction ID:', data.transactionId || 'MISSING');
+      console.log('   Amount:', data.amount ? `£${data.amount}` : 'MISSING');
+      console.log('   Duration:', data.duration ? `${data.duration} days` : 'MISSING');
+      console.log('   Status:', data.status || 'MISSING');
+      console.log('   Payment Status:', data.paymentStatus || 'MISSING');
+      console.log('   Has Logo Data:', !!data.logoData);
+      console.log('   Logo Data:', data.logoData ? (data.logoData.substring(0, 80) + '...') : 'MISSING');
+      console.log('   Has Storage Path:', !!data.storagePath);
+      console.log('   Storage Path:', data.storagePath || 'MISSING');
+      console.log('   Website:', data.website || data.dealLink || 'none');
+      console.log('   Promo Code:', data.promoCode || 'none');
+      console.log('   Start Date:', data.startDate?.toDate ? data.startDate.toDate().toISOString() : 'MISSING');
+      console.log('   End Date:', data.endDate?.toDate ? data.endDate.toDate().toISOString() : 'MISSING');
+      console.log('   Created At:', data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : 'MISSING');
       
-      if (!hasLogo) {
-        missingLogoCount++;
-        console.log(`⚠️  Missing logoData: Square ${data.squareNumber || 'N/A'} (${data.businessName || 'N/A'})`);
-        console.log(`   Document ID: ${doc.id}`);
-        console.log(`   Has storagePath: ${hasStoragePath}`);
-        if (hasStoragePath) {
-          console.log(`   StoragePath: ${data.storagePath}`);
-          console.log(`   💡 Can fix by constructing logoData from storagePath`);
-        }
-        console.log('');
+      // Check for missing critical data
+      const issues = [];
+      if (!data.contactEmail) issues.push('Missing contactEmail');
+      if (!data.businessName) issues.push('Missing businessName');
+      if (!data.logoData && !data.storagePath) issues.push('Missing logo data');
+      if (!data.transactionId) issues.push('Missing transactionId');
+      
+      if (issues.length > 0) {
+        console.log('   ⚠️  ISSUES:', issues.join(', '));
       }
     });
     
-    if (missingLogoCount === 0) {
-      console.log('✅ All purchases have logoData');
-    } else {
-      console.log(`⚠️  Found ${missingLogoCount} purchase(s) missing logoData`);
-    }
+    console.log('\n' + '='.repeat(100));
+    console.log('✅ Check complete\n');
+    
+    process.exit(0);
     
   } catch (error) {
     console.error('❌ Error checking purchases:', error);
-    throw error;
-  }
-}
-
-// Run the script
-checkRecentPurchases()
-  .then(() => {
-    console.log('\n✅ Script completed successfully');
-    process.exit(0);
-  })
-  .catch(error => {
-    console.error('\n❌ Script failed:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
     process.exit(1);
-  });
+  }
+};
+
+checkRecentPurchases();

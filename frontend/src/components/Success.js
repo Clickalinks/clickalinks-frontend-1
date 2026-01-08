@@ -323,25 +323,39 @@ const Success = () => {
           });
         }
         
-        console.log('✅ Purchase data ready to save:', {
-          squareNumber: purchaseData.squareNumber,
-          businessName: purchaseData.businessName,
-          transactionId: purchaseData.transactionId,
-          hasLogo: !!purchaseData.logoData,
-          logoType: purchaseData.logoData ? (purchaseData.logoData.startsWith('http') ? 'URL' : 'Data URL') : 'NONE'
-        });
+        console.log('\n' + '='.repeat(80));
+        console.log('✅ FRONTEND: Purchase data ready to save');
+        console.log('='.repeat(80));
+        console.log('📊 Purchase Data Summary:');
+        console.log('   squareNumber:', purchaseData.squareNumber);
+        console.log('   pageNumber:', purchaseData.pageNumber);
+        console.log('   businessName:', purchaseData.businessName || 'MISSING');
+        console.log('   contactEmail:', purchaseData.contactEmail || 'MISSING');
+        console.log('   transactionId:', purchaseData.transactionId || 'MISSING');
+        console.log('   sessionId:', sessionId || 'MISSING');
+        console.log('   amount:', purchaseData.amount || purchaseData.finalAmount || 'MISSING');
+        console.log('   duration:', purchaseData.duration || purchaseData.selectedDuration || 'MISSING');
+        console.log('   hasLogoData:', !!purchaseData.logoData);
+        console.log('   logoData type:', purchaseData.logoData ? (purchaseData.logoData.startsWith('http') ? 'URL' : 'Data URL') : 'NONE');
+        console.log('   logoData preview:', purchaseData.logoData ? (purchaseData.logoData.substring(0, 100) + '...') : 'NONE');
+        console.log('   hasStoragePath:', !!purchaseData.storagePath);
+        console.log('   storagePath:', purchaseData.storagePath || 'MISSING');
+        console.log('   website:', purchaseData.website || 'none');
+        console.log('='.repeat(80));
+        
         setOrderData(purchaseData);
         
         // Save purchase (with timeout to prevent hanging)
         try {
-          console.log('💾 Attempting to save purchase to Firestore...');
+          console.log('\n💾 FRONTEND: Attempting to save purchase to Firestore via API...');
           const savePromise = savePurchaseToStorage(purchaseData);
           const timeoutPromise = new Promise((resolve) => setTimeout(() => {
-            console.warn('⚠️ Save purchase timeout, continuing anyway...');
+            console.warn('⚠️ FRONTEND: Save purchase timeout after 8 seconds, continuing anyway...');
             resolve();
           }, 8000)); // 8 second timeout
           
-          await Promise.race([savePromise, timeoutPromise]);
+          const saveResult = await Promise.race([savePromise, timeoutPromise]);
+          console.log('📊 FRONTEND: Save result:', saveResult ? 'SUCCESS' : 'FAILED or TIMEOUT');
           console.log('✅ Purchase save completed (or timed out)');
         } catch (saveError) {
           console.error('❌ Error saving purchase (non-blocking):', saveError);

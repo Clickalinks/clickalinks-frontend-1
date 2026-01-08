@@ -36,9 +36,18 @@ router.post('/purchases',
     body('status').optional().isIn(['active', 'pending', 'cancelled']).withMessage('Invalid status')
   ],
   async (req, res) => {
+    const requestTimestamp = new Date().toISOString();
+    console.log('\n' + '='.repeat(80));
+    console.log('📥 PURCHASE REQUEST RECEIVED:', requestTimestamp);
+    console.log('='.repeat(80));
+    console.log('🔍 Request Origin:', req.headers.origin || req.headers.referer || 'unknown');
+    console.log('🔍 Request Method:', req.method);
+    console.log('🔍 Request Path:', req.path);
+    
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.error('❌ VALIDATION FAILED:', errors.array());
         return res.status(400).json({ 
           success: false, 
           error: 'Validation failed', 
@@ -70,6 +79,24 @@ router.post('/purchases',
         finalAmount = null,
         discountAmount = null
       } = req.body;
+
+      // 📊 LOG ALL INCOMING DATA
+      console.log('📊 INCOMING REQUEST DATA:');
+      console.log('   squareNumber:', squareNumber);
+      console.log('   pageNumber:', pageNumber);
+      console.log('   businessName:', businessName || 'MISSING');
+      console.log('   contactEmail:', contactEmail || 'MISSING');
+      console.log('   transactionId:', transactionId || 'MISSING');
+      console.log('   purchaseId:', purchaseId || 'WILL BE GENERATED');
+      console.log('   amount:', amount);
+      console.log('   duration:', duration);
+      console.log('   status:', status);
+      console.log('   paymentStatus:', paymentStatus);
+      console.log('   promoCode:', promoCode || 'none');
+      console.log('   logoData:', logoData ? (logoData.substring(0, 80) + '...') : 'MISSING');
+      console.log('   storagePath:', storagePath || 'MISSING');
+      console.log('   website:', website || 'none');
+      console.log('   dealLink:', dealLink || 'none');
 
       // Generate unique purchase ID if not provided
       const finalPurchaseId = purchaseId || `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
@@ -330,10 +357,42 @@ router.post('/purchases',
       };
 
       // Save to Firestore using Admin SDK (bypasses security rules)
+      console.log('\n💾 ATTEMPTING TO SAVE TO FIRESTORE:');
+      console.log('   Collection: purchasedSquares');
+      console.log('   Document ID:', finalPurchaseId);
+      console.log('   Purchase Data Summary:', {
+        squareNumber: purchaseData.squareNumber,
+        pageNumber: purchaseData.pageNumber,
+        businessName: purchaseData.businessName,
+        contactEmail: purchaseData.contactEmail,
+        hasLogoData: !!purchaseData.logoData,
+        hasStoragePath: !!purchaseData.storagePath,
+        amount: purchaseData.amount,
+        transactionId: purchaseData.transactionId,
+        status: purchaseData.status,
+        paymentStatus: purchaseData.paymentStatus
+      });
+      
       const purchaseRef = db.collection('purchasedSquares').doc(finalPurchaseId);
-      await purchaseRef.set(purchaseData);
-
-      console.log(`✅ Purchase saved via API: ${finalPurchaseId} (Square ${squareNumber})`);
+      
+      try {
+        await purchaseRef.set(purchaseData);
+        console.log(`✅ SUCCESS: Purchase saved to Firestore: ${finalPurchaseId} (Square ${squareNumber})`);
+        
+        // Verify the save by reading it back
+        const verifyDoc = await purchaseRef.get();
+        if (verifyDoc.exists) {
+          console.log('✅ VERIFIED: Document exists in Firestore after save');
+        } else {
+          console.error('❌ WARNING: Document does not exist in Firestore after save!');
+        }
+      } catch (firestoreError) {
+        console.error('❌ FIRESTORE SAVE ERROR:', firestoreError);
+        console.error('   Error Code:', firestoreError.code);
+        console.error('   Error Message:', firestoreError.message);
+        console.error('   Error Stack:', firestoreError.stack);
+        throw firestoreError;
+      }
 
       // ✅ CRITICAL: Check if emails were already sent before sending
       // Get fresh document to check emailsSent flag

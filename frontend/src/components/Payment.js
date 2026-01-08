@@ -423,6 +423,23 @@ const Payment = () => {
 
       // Get storagePath from localStorage if available (logo was uploaded earlier)
       const storagePath = localStorage.getItem(`logoPath_${selectedSquare}`) || null;
+      const logoData = localStorage.getItem(`logoData_${selectedSquare}`) || null;
+      
+      console.log('\n' + '='.repeat(80));
+      console.log('💰 FRONTEND: Creating Stripe Checkout Session');
+      console.log('='.repeat(80));
+      console.log('📊 Payment Data:');
+      console.log('   squareNumber:', selectedSquare);
+      console.log('   pageNumber:', pageNumber);
+      console.log('   duration:', selectedDuration);
+      console.log('   amount:', `£${amountToChargeForStripe}`);
+      console.log('   businessName:', businessData?.name || 'MISSING');
+      console.log('   contactEmail:', businessData?.email || 'MISSING');
+      console.log('   website:', businessData?.website || 'none');
+      console.log('   promoCode:', appliedPromo ? promoCode.toUpperCase() : 'none');
+      console.log('   storagePath:', storagePath || 'MISSING');
+      console.log('   hasLogoData in localStorage:', !!logoData);
+      console.log('='.repeat(80));
       
       const payload = {
         amount: amountToChargeForStripe,
@@ -436,7 +453,7 @@ const Payment = () => {
         storagePath: storagePath // Include storagePath so backend can add to Stripe metadata
       };
 
-      console.log('💰 Creating Stripe session for square:', selectedSquare, 'Amount: £' + amountToChargeForStripe, 'StoragePath:', storagePath || 'N/A');
+      console.log('📤 Sending payload to backend:', JSON.stringify(payload, null, 2));
       
       const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
         method: 'POST',
@@ -447,7 +464,10 @@ const Payment = () => {
       const responseData = await response.json();
 
       if (response.ok && responseData.success && responseData.url) {
-        console.log('✅ Stripe session created:', responseData.sessionId);
+        console.log('✅ SUCCESS: Stripe session created');
+        console.log('   Session ID:', responseData.sessionId);
+        console.log('   Session URL:', responseData.url);
+        console.log('='.repeat(80) + '\n');
         
         // 🚀 CRITICAL: Persist data BEFORE redirect
         persistPurchaseData(responseData.sessionId);

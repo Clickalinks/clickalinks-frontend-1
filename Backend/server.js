@@ -222,16 +222,22 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     
-    console.log('✅ Stripe webhook: checkout.session.completed');
+    console.log('\n' + '='.repeat(80));
+    console.log('🔔 STRIPE WEBHOOK EVENT RECEIVED:', new Date().toISOString());
+    console.log('='.repeat(80));
+    console.log('✅ Event Type: checkout.session.completed');
     console.log('📦 Session ID:', session.id);
-    console.log('💳 Payment status:', session.payment_status);
-    console.log('📧 Customer email:', session.customer_email);
+    console.log('💳 Payment Status:', session.payment_status);
+    console.log('📧 Customer Email:', session.customer_email || 'NOT PROVIDED');
+    console.log('💰 Amount Total:', session.amount_total ? `£${(session.amount_total / 100).toFixed(2)}` : 'NOT PROVIDED');
+    console.log('💵 Currency:', session.currency || 'NOT PROVIDED');
     
     // Only process if payment was successful
     if (session.payment_status === 'paid' && session.metadata) {
       const metadata = session.metadata;
       
-      console.log('🔍 Session metadata:', JSON.stringify(metadata, null, 2));
+      console.log('\n🔍 SESSION METADATA:');
+      console.log(JSON.stringify(metadata, null, 2));
       
       try {
         const db = admin.firestore();
@@ -251,10 +257,23 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const storagePath = metadata.storagePath || '';
         let logoData = null;
         
+        console.log('\n🔧 PROCESSING METADATA:');
+        console.log('   storagePath from metadata:', storagePath || 'NOT PROVIDED');
+        console.log('   squareNumber:', metadata.squareNumber || 'NOT PROVIDED');
+        console.log('   pageNumber:', metadata.pageNumber || 'NOT PROVIDED');
+        console.log('   businessName:', metadata.businessName || 'NOT PROVIDED');
+        console.log('   contactEmail (metadata):', metadata.contactEmail || 'NOT PROVIDED');
+        console.log('   contactEmail (session):', session.customer_email || 'NOT PROVIDED');
+        console.log('   website:', metadata.website || 'NOT PROVIDED');
+        console.log('   duration:', metadata.duration || 'NOT PROVIDED');
+        
         // Construct logoData URL from storagePath if available
         if (storagePath && storagePath.trim() && storagePath.startsWith('logos/')) {
           logoData = `https://firebasestorage.googleapis.com/v0/b/clickalinks-frontend.firebasestorage.app/o/${encodeURIComponent(storagePath)}?alt=media`;
-          console.log('✅ Webhook: Constructed logo URL from storagePath:', storagePath);
+          console.log('✅ Constructed logo URL from storagePath:', storagePath);
+          console.log('   Logo URL:', logoData.substring(0, 100) + '...');
+        } else {
+          console.warn('⚠️ WARNING: No valid storagePath in metadata - logo may be missing');
         }
         
         const purchaseData = {
@@ -275,12 +294,17 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           storagePath: storagePath || null
         };
         
-        console.log('💾 Webhook attempting to save purchase:', {
+        console.log('\n💾 WEBHOOK ATTEMPTING TO SAVE PURCHASE:');
+        console.log('   Purchase Data Summary:', {
           squareNumber: purchaseData.squareNumber,
+          pageNumber: purchaseData.pageNumber,
           businessName: purchaseData.businessName,
           contactEmail: purchaseData.contactEmail,
           hasLogo: !!purchaseData.logoData,
-          storagePath: purchaseData.storagePath || 'NOT PROVIDED'
+          storagePath: purchaseData.storagePath || 'NOT PROVIDED',
+          amount: purchaseData.amount,
+          duration: purchaseData.duration,
+          transactionId: purchaseData.transactionId
         });
         
         // Call the purchase route POST endpoint internally via HTTP
@@ -329,33 +353,48 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const purchaseRef = db.collection('purchasedSquares').doc(purchaseId);
         
         // Use same format as purchase route
-        await purchaseRef.set({
-          purchaseId: purchaseId,
-          squareNumber: purchaseData.squareNumber,
-          pageNumber: purchaseData.pageNumber,
-          businessName: purchaseData.businessName.trim(),
-          contactEmail: purchaseData.contactEmail.trim().toLowerCase(),
-          logoData: purchaseData.logoData,
-          storagePath: purchaseData.storagePath,
-          dealLink: purchaseData.website || '',
-          website: purchaseData.website || '',
-          amount: purchaseData.amount,
-          originalAmount: purchaseData.amount,
-          finalAmount: purchaseData.amount,
-          discountAmount: 0,
-          duration: parseInt(purchaseData.duration),
-          status: 'active',
-          paymentStatus: 'paid',
-          transactionId: purchaseData.transactionId,
-          promoCode: null,
-          startDate: admin.firestore.Timestamp.fromDate(new Date(purchaseData.startDate)),
-          endDate: admin.firestore.Timestamp.fromDate(new Date(purchaseData.endDate)),
-          purchaseDate: admin.firestore.Timestamp.fromDate(new Date(purchaseData.purchaseDate)),
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        
-        console.log('✅ Webhook: Purchase saved successfully to Firestore:', purchaseId);
+        try {
+          await purchaseRef.set({
+            purchaseId: purchaseId,
+            squareNumber: purchaseData.squareNumber,
+            pageNumber: purchaseData.pageNumber,
+            businessName: purchaseData.businessName.trim(),
+            contactEmail: purchaseData.contactEmail.trim().toLowerCase(),
+            logoData: purchaseData.logoData,
+            storagePath: purchaseData.storagePath,
+            dealLink: purchaseData.website || '',
+            website: purchaseData.website || '',
+            amount: purchaseData.amount,
+            originalAmount: purchaseData.amount,
+            finalAmount: purchaseData.amount,
+            discountAmount: 0,
+            duration: parseInt(purchaseData.duration),
+            status: 'active',
+            paymentStatus: 'paid',
+            transactionId: purchaseData.transactionId,
+            promoCode: null,
+            startDate: admin.firestore.Timestamp.fromDate(new Date(purchaseData.startDate)),
+            endDate: admin.firestore.Timestamp.fromDate(new Date(purchaseData.endDate)),
+            purchaseDate: admin.firestore.Timestamp.fromDate(new Date(purchaseData.purchaseDate)),
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          
+          console.log('✅ SUCCESS: Webhook saved purchase to Firestore:', purchaseId);
+          
+          // Verify the save
+          const verifyDoc = await purchaseRef.get();
+          if (verifyDoc.exists) {
+            console.log('✅ VERIFIED: Webhook purchase document exists in Firestore');
+          } else {
+            console.error('❌ WARNING: Webhook purchase document does not exist after save!');
+          }
+        } catch (firestoreError) {
+          console.error('❌ WEBHOOK FIRESTORE SAVE ERROR:', firestoreError);
+          console.error('   Error Code:', firestoreError.code);
+          console.error('   Error Message:', firestoreError.message);
+          throw firestoreError;
+        }
         
         // Send emails using the same email service
         try {
@@ -393,8 +432,12 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         }
         
       } catch (webhookError) {
-        console.error('❌ Webhook: Error saving purchase:', webhookError);
-        console.error('Error details:', webhookError.message, webhookError.stack);
+        console.error('\n❌ WEBHOOK ERROR SAVING PURCHASE:');
+        console.error('   Error Type:', webhookError.constructor.name);
+        console.error('   Error Code:', webhookError.code || 'N/A');
+        console.error('   Error Message:', webhookError.message);
+        console.error('   Error Stack:', webhookError.stack);
+        console.error('='.repeat(80));
         // Don't fail the webhook - Stripe will retry
         return res.status(500).json({ 
           received: true, 
@@ -402,12 +445,21 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         });
       }
     } else {
-      console.log('⚠️ Webhook: Payment not completed or missing metadata, skipping');
+      console.log('\n⚠️ WEBHOOK SKIPPED:');
+      console.log('   Payment Status:', session.payment_status);
+      console.log('   Has Metadata:', !!session.metadata);
+      if (session.payment_status !== 'paid') {
+        console.log('   Reason: Payment not completed');
+      }
+      if (!session.metadata) {
+        console.log('   Reason: Missing metadata');
+      }
     }
   } else {
-    console.log(`ℹ️ Webhook: Unhandled event type: ${event.type}`);
+    console.log(`\nℹ️ WEBHOOK: Unhandled event type: ${event.type}`);
   }
 
+  console.log('='.repeat(80) + '\n');
   // Return a response to acknowledge receipt of the event
   res.json({ received: true });
 });
@@ -472,10 +524,11 @@ app.post('/api/create-checkout-session',
   async (req, res) => {
   try {
     const origin = req.headers.origin || 'unknown';
-    console.log('💰 Payment request received from:', origin);
-    // SECURITY: Sanitize log data
-    const sanitizedBody = sanitizeLogData(req.body);
-    console.log('📦 Request body:', JSON.stringify(sanitizedBody, null, 2));
+    console.log('\n' + '='.repeat(80));
+    console.log('💰 BACKEND: Creating Stripe Checkout Session');
+    console.log('='.repeat(80));
+    console.log('📥 Request Origin:', origin);
+    console.log('📥 Request Timestamp:', new Date().toISOString());
     
     const { 
       amount, 
@@ -487,6 +540,20 @@ app.post('/api/create-checkout-session',
       website = '',
       storagePath = null
     } = req.body;
+    
+    console.log('📊 Request Data:');
+    console.log('   squareNumber:', squareNumber);
+    console.log('   pageNumber:', pageNumber);
+    console.log('   duration:', duration);
+    console.log('   amount:', amount ? `£${amount}` : 'MISSING');
+    console.log('   businessName:', businessName || 'MISSING');
+    console.log('   contactEmail:', contactEmail || 'MISSING');
+    console.log('   website:', website || 'none');
+    console.log('   storagePath:', storagePath || 'MISSING');
+    console.log('='.repeat(80));
+    
+    // SECURITY: Sanitize log data (for detailed logging if needed)
+    const sanitizedBody = sanitizeLogData(req.body);
 
     // Validate required fields
     if (!amount || !squareNumber || !duration || !contactEmail) {
@@ -556,10 +623,19 @@ app.post('/api/create-checkout-session',
       }
     });
 
-    console.log('✅ Stripe session created:', session.id);
-    console.log('🔗 Success URL will be:', `${frontendUrl}/success?session_id=${session.id}&square=${squareNumber}`);
-    console.log('🔗 Session URL (Stripe):', session.url);
-    console.log('🔗 Square number in URL:', squareNumber);
+    console.log('✅ SUCCESS: Stripe session created');
+    console.log('   Session ID:', session.id);
+    console.log('   Success URL:', `${frontendUrl}/success?session_id=${session.id}&square=${squareNumber}`);
+    console.log('   Session URL (Stripe):', session.url);
+    console.log('   Metadata included:', {
+      squareNumber: squareNumber.toString(),
+      pageNumber: pageNumber.toString(),
+      duration: duration.toString(),
+      contactEmail: contactEmail,
+      businessName: businessName || '',
+      storagePath: storagePath || 'NOT INCLUDED'
+    });
+    console.log('='.repeat(80) + '\n');
     
     res.json({
       success: true,
