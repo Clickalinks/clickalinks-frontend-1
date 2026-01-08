@@ -540,7 +540,7 @@ export function generateInvoiceHTML(purchaseData, invoiceNumber = null) {
     pageNumber = 1,
     selectedDuration = 30,
     finalAmount = 0,
-    originalAmount = finalAmount,
+    originalAmount,
     discountAmount = 0,
     transactionId,
     promoCode,
@@ -561,9 +561,19 @@ export function generateInvoiceHTML(purchaseData, invoiceNumber = null) {
   }
 
   // Calculate amounts correctly
-  const originalAmt = originalAmount !== undefined ? originalAmount : (finalAmount || 10);
-  const discountAmt = discountAmount || 0;
-  const totalAmount = Math.max(0, originalAmt - discountAmt);
+  // If originalAmount is not provided, calculate it from finalAmount + discountAmount
+  // Otherwise use the provided originalAmount
+  const discountAmt = discountAmount !== undefined && discountAmount !== null ? parseFloat(discountAmount) : 0;
+  const finalAmt = finalAmount !== undefined && finalAmount !== null ? parseFloat(finalAmount) : 0;
+  
+  // CRITICAL FIX: If originalAmount is not provided, reconstruct it from finalAmount + discount
+  const originalAmt = originalAmount !== undefined && originalAmount !== null 
+    ? parseFloat(originalAmount) 
+    : (finalAmt + discountAmt || 10);
+  
+  // Total should be the finalAmount (already discounted)
+  // Don't recalculate totalAmount as it might double-apply discounts
+  const totalAmount = finalAmt > 0 ? finalAmt : Math.max(0, originalAmt - discountAmt);
 
   // Generate downloadable HTML invoice
   const invoiceHTML = `
