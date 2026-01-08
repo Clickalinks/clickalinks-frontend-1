@@ -375,15 +375,26 @@ const Success = () => {
                       promoCode: null,
                       selectedDuration: parseInt(metadata.duration) || 30,
                       transactionId: sessionId,
-                      logoData: businessFormData.logoData || localStorage.getItem(`logoData_${metadata.squareNumber}`),
+                      logoData: null, // Will be constructed from storagePath below
+                      storagePath: metadata.storagePath || null,
                       paymentStatus: 'paid'
                     };
+                    
+                    // Construct logoData URL from storagePath if available
+                    if (metadata.storagePath && metadata.storagePath.trim()) {
+                      purchaseData.logoData = `https://firebasestorage.googleapis.com/v0/b/clickalinks-frontend.firebasestorage.app/o/${encodeURIComponent(metadata.storagePath)}?alt=media`;
+                      console.log('✅ Constructed logo URL from storagePath in Stripe metadata');
+                    } else {
+                      // Fallback to localStorage
+                      purchaseData.logoData = businessFormData.logoData || localStorage.getItem(`logoData_${metadata.squareNumber}`);
+                    }
                     
                     console.log('✅ Successfully reconstructed from Stripe session metadata:', {
                       squareNumber: purchaseData.squareNumber,
                       businessName: purchaseData.businessName,
                       contactEmail: purchaseData.contactEmail ? 'PRESENT' : 'MISSING',
-                      hasLogo: !!purchaseData.logoData
+                      hasLogo: !!purchaseData.logoData,
+                      storagePath: metadata.storagePath || 'NOT IN METADATA'
                     });
                   } else {
                     console.warn('⚠️ Stripe metadata missing required fields:', {

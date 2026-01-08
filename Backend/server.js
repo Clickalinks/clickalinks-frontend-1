@@ -10,6 +10,7 @@ import shuffleRoutes from './routes/shuffle.js';
 import promoCodeRoutes from './routes/promoCode.js';
 import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchases.js';
+import { sendAdminNotificationEmail, sendAdConfirmationEmail } from './services/emailService.js';
 
 import { performGlobalShuffle } from './services/shuffleService.js';
 import {
@@ -260,7 +261,8 @@ app.post('/api/create-checkout-session',
       duration, 
       contactEmail,
       pageNumber = 1,
-      website = ''
+      website = '',
+      storagePath = null
     } = req.body;
 
     // Validate required fields
@@ -326,7 +328,8 @@ app.post('/api/create-checkout-session',
         duration: duration.toString(),
         contactEmail: contactEmail,
         website: website || '',
-        businessName: businessName || ''
+        businessName: businessName || '',
+        storagePath: storagePath || '' // Include storagePath so Success page can find the logo
       }
     });
 
@@ -365,7 +368,9 @@ app.get('/api/check-session/:sessionId', async (req, res) => {
     }
     
     const { sessionId } = req.params;
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['line_items']
+    });
     
     res.json({
       success: true,
@@ -375,7 +380,8 @@ app.get('/api/check-session/:sessionId', async (req, res) => {
         payment_status: session.payment_status,
         customer_email: session.customer_email,
         amount_total: session.amount_total ? session.amount_total / 100 : 0,
-        metadata: session.metadata
+        metadata: session.metadata,
+        payment_intent: session.payment_intent
       }
     });
     
@@ -386,6 +392,152 @@ app.get('/api/check-session/:sessionId', async (req, res) => {
       error: error.message
     });
   }
+});
+
+// STRIPE WEBHOOK: Handle checkout.session.completed events
+// This ensures purchases are saved even if the Success page fails
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.warn('⚠️ STRIPE_WEBHOOK_SECRET not set - webhook verification disabled');
+    // In development, allow webhooks without secret
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(400).json({ error: 'Webhook secret not configured' });
+    }
+  }
+
+  let event;
+
+  try {
+    if (webhookSecret) {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } else {
+      // Development mode: parse JSON directly
+      event = JSON.parse(req.body.toString());
+    }
+  } catch (err) {
+    console.error('❌ Webhook signature verification failed:', err.message);
+    return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+  }
+
+  // Handle the event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    
+    console.log('✅ Stripe webhook: checkout.session.completed');
+    console.log('📦 Session ID:', session.id);
+    console.log('💳 Payment status:', session.payment_status);
+    console.log('📧 Customer email:', session.customer_email);
+    
+    // Only process if payment was successful
+    if (session.payment_status === 'paid' && session.metadata) {
+      const metadata = session.metadata;
+      
+      console.log('🔍 Session metadata:', JSON.stringify(metadata, null, 2));
+      
+      // Import purchase route handler to reuse save logic
+      try {
+        const db = admin.firestore();
+        
+        // Check if purchase already exists (idempotency)
+        const existingQuery = db.collection('purchasedSquares')
+          .where('transactionId', '==', session.id)
+          .limit(1);
+        const existingSnapshot = await existingQuery.get();
+        
+        if (!existingSnapshot.empty) {
+          console.log('✅ Purchase already exists for session:', session.id);
+          return res.json({ received: true, message: 'Purchase already exists' });
+        }
+        
+        // Prepare purchase data from Stripe session metadata
+        const purchaseData = {
+          squareNumber: parseInt(metadata.squareNumber) || 1,
+          pageNumber: parseInt(metadata.pageNumber) || 1,
+          businessName: metadata.businessName || 'Unknown Business',
+          contactEmail: session.customer_email || metadata.contactEmail,
+          website: metadata.website || '',
+          amount: session.amount_total ? session.amount_total / 100 : 10,
+          duration: parseInt(metadata.duration) || 30,
+          transactionId: session.id,
+          paymentStatus: 'paid',
+          status: 'active',
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + (parseInt(metadata.duration) || 30) * 24 * 60 * 60 * 1000).toISOString(),
+          purchaseDate: new Date().toISOString()
+        };
+        
+        console.log('💾 Webhook attempting to save purchase:', {
+          squareNumber: purchaseData.squareNumber,
+          businessName: purchaseData.businessName,
+          contactEmail: purchaseData.contactEmail
+        });
+        
+        // Call the purchase route handler logic directly
+        // Use a simplified version that doesn't require logo validation for webhook
+        const purchaseId = `purchase-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+        const purchaseRef = db.collection('purchasedSquares').doc(purchaseId);
+        
+        await purchaseRef.set({
+          purchaseId: purchaseId,
+          ...purchaseData,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log('✅ Webhook: Purchase saved successfully:', purchaseId);
+        
+        // Try to send emails (non-blocking)
+        try {
+          await sendAdminNotificationEmail({
+            businessName: purchaseData.businessName,
+            contactEmail: purchaseData.contactEmail,
+            squareNumber: purchaseData.squareNumber,
+            pageNumber: purchaseData.pageNumber,
+            campaignDuration: purchaseData.duration,
+            originalAmt: purchaseData.amount,
+            finalAmt: purchaseData.amount,
+            transactionId: session.id,
+            promoCode: null
+          }, 'purchase');
+          
+          if (purchaseData.contactEmail) {
+            await sendAdConfirmationEmail({
+              contactEmail: purchaseData.contactEmail,
+              businessName: purchaseData.businessName,
+              squareNumber: purchaseData.squareNumber,
+              pageNumber: purchaseData.pageNumber,
+              finalAmount: purchaseData.amount,
+              originalAmount: purchaseData.amount,
+              discountAmount: 0,
+              promoCode: null,
+              transactionId: session.id,
+              selectedDuration: purchaseData.duration
+            });
+          }
+        } catch (emailError) {
+          console.error('⚠️ Webhook: Email send failed (non-critical):', emailError.message);
+        }
+        
+      } catch (webhookError) {
+        console.error('❌ Webhook: Error saving purchase:', webhookError);
+        // Don't fail the webhook - Stripe will retry
+        return res.status(500).json({ 
+          received: true, 
+          error: webhookError.message 
+        });
+      }
+    } else {
+      console.log('⚠️ Webhook: Payment not completed or missing metadata, skipping');
+    }
+  } else {
+    console.log(`ℹ️ Webhook: Unhandled event type: ${event.type}`);
+  }
+
+  // Return a response to acknowledge receipt of the event
+  res.json({ received: true });
 });
 
 // In-memory storage (replace with database later)

@@ -421,6 +421,9 @@ const Payment = () => {
         return;
       }
 
+      // Get storagePath from localStorage if available (logo was uploaded earlier)
+      const storagePath = localStorage.getItem(`logoPath_${selectedSquare}`) || null;
+      
       const payload = {
         amount: amountToChargeForStripe,
         squareNumber: selectedSquare,
@@ -429,10 +432,11 @@ const Payment = () => {
         businessName: businessData?.name,
         contactEmail: businessData?.email,
         website: businessData?.website,
-        promoCode: appliedPromo ? promoCode.toUpperCase() : null
+        promoCode: appliedPromo ? promoCode.toUpperCase() : null,
+        storagePath: storagePath // Include storagePath so backend can add to Stripe metadata
       };
 
-      console.log('💰 Creating Stripe session for square:', selectedSquare, 'Amount: £' + amountToChargeForStripe);
+      console.log('💰 Creating Stripe session for square:', selectedSquare, 'Amount: £' + amountToChargeForStripe, 'StoragePath:', storagePath || 'N/A');
       
       const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
         method: 'POST',

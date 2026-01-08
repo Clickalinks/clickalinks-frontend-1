@@ -68,6 +68,9 @@ export const savePurchaseToFirestore = async (purchaseData) => {
       logoData: purchaseData.logoData || null,
       dealLink: purchaseData.website || purchaseData.dealLink || '',
       amount: purchaseData.amount || purchaseData.finalAmount || 10,
+      originalAmount: purchaseData.originalAmount || purchaseData.amount || purchaseData.finalAmount || 10,
+      finalAmount: purchaseData.finalAmount || purchaseData.amount || 10,
+      discountAmount: purchaseData.discountAmount || 0,
       duration: purchaseData.duration || purchaseData.selectedDuration || 30,
       transactionId: purchaseData.transactionId || purchaseData.sessionId || '',
       status: 'active',
@@ -92,6 +95,20 @@ export const savePurchaseToFirestore = async (purchaseData) => {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
+        console.error('❌ Backend API error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: result.error,
+          message: result.message,
+          details: result.details,
+          requestData: {
+            squareNumber: requestData.squareNumber,
+            businessName: requestData.businessName,
+            contactEmail: requestData.contactEmail,
+            hasLogo: !!requestData.logoData,
+            hasStoragePath: !!requestData.storagePath
+          }
+        });
         throw new Error(result.error || result.message || 'Failed to save purchase');
       }
 
