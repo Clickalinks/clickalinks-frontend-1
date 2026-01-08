@@ -172,7 +172,208 @@ const PrivacyPolicy = () => {
           </section>
 
           <section className="policy-section">
-            <h2>4. Data Control & Your Rights</h2>
+            <h2>4. Legal Basis for Processing (GDPR)</h2>
+            <p>Under the UK GDPR and EU GDPR, we process your personal data based on the following legal bases:</p>
+            <ul>
+              <li><strong>Contract Performance:</strong> Processing necessary to fulfill our contract with you (displaying your advertisement, processing payments)</li>
+              <li><strong>Legitimate Interests:</strong> Processing for our legitimate business interests (analytics, service improvement, fraud prevention)</li>
+              <li><strong>Legal Obligation:</strong> Processing required by law (accounting records, tax compliance)</li>
+              <li><strong>Consent:</strong> Where applicable, we obtain explicit consent for specific data processing activities</li>
+            </ul>
+          </section>
+
+          <section className="policy-section">
+            <h2>5. Your Data Protection Rights (GDPR)</h2>
+            <p>As a data subject under UK GDPR and EU GDPR, you have the following rights regarding your personal data:</p>
+            <div className="rights-grid">
+              <div className="right-item">
+                <h4>Right to Access</h4>
+                <p>Request a copy of all personal data we hold about you in a structured, commonly used format</p>
+              </div>
+              <div className="right-item">
+                <h4>Right to Rectification</h4>
+                <p>Request correction of inaccurate or incomplete personal data we hold about you</p>
+              </div>
+              <div className="right-item">
+                <h4>Right to Erasure ("Right to be Forgotten")</h4>
+                <p>Request deletion of your personal data where there is no compelling reason for continued processing</p>
+              </div>
+              <div className="right-item">
+                <h4>Right to Restrict Processing</h4>
+                <p>Request restriction of processing of your personal data in certain circumstances</p>
+              </div>
+              <div className="right-item">
+                <h4>Right to Data Portability</h4>
+                <p>Receive your personal data in a structured, machine-readable format and transfer it to another service</p>
+              </div>
+              <div className="right-item">
+                <h4>Right to Object</h4>
+                <p>Object to processing of your personal data based on legitimate interests or for direct marketing</p>
+              </div>
+              <div className="right-item">
+                <h4>Right to Withdraw Consent</h4>
+                <p>Withdraw consent at any time where processing is based on consent (this does not affect lawfulness of processing before withdrawal)</p>
+              </div>
+              <div className="right-item">
+                <h4>Right to Lodge a Complaint</h4>
+                <p>Lodge a complaint with the UK Information Commissioner's Office (ICO) if you believe your data protection rights have been violated</p>
+              </div>
+            </div>
+            <div className="transparency-note" style={{ marginTop: '20px' }}>
+              <strong>Exercising Your Rights:</strong> To exercise any of these rights, please contact us at support@clickalinks.com. 
+              We will respond to your request within one month (extendable to two months for complex requests). 
+              We may require proof of identity before processing your request.
+            </div>
+          </section>
+
+          <section className="policy-section">
+            <h2>6. Data Retention</h2>
+            <p>We retain your personal data only for as long as necessary to fulfill the purposes outlined in this policy:</p>
+            <div className="info-category">
+              <h3>Campaign Data</h3>
+              <ul>
+                <li><strong>Active Campaigns:</strong> Retained for the duration of your campaign</li>
+                <li><strong>Expired Campaigns:</strong> Advertising content removed immediately after campaign expiry; transaction data retained for 7 years for accounting and legal compliance</li>
+                <li><strong>Logo Images:</strong> Removed from active storage after campaign expiry; may be retained in backup systems for up to 90 days</li>
+              </ul>
+            </div>
+            <div className="info-category" style={{ marginTop: '20px' }}>
+              <h3>Analytics Data</h3>
+              <ul>
+                <li><strong>Click Analytics:</strong> Retained for 24 months for campaign performance analysis, then anonymized or deleted</li>
+                <li><strong>Transaction Records:</strong> Retained for 7 years as required by UK tax and accounting law</li>
+              </ul>
+            </div>
+            <div className="info-category" style={{ marginTop: '20px' }}>
+              <h3>Communication Records</h3>
+              <ul>
+                <li><strong>Email Correspondence:</strong> Retained for 3 years for customer service and dispute resolution purposes</li>
+                <li><strong>Support Requests:</strong> Retained for 2 years after resolution</li>
+              </ul>
+            </div>
+            <p style={{ marginTop: '15px', fontSize: '14px', color: '#666' }}>
+              <strong>Note:</strong> Some data may be retained longer if required by law, regulation, or for legal claims. 
+              We will securely delete or anonymize data at the end of the retention period.
+            </p>
+          </section>
+
+          <section className="policy-section">
+            <h2>7. Data Security Measures</h2>
+            <p>We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, loss, destruction, or alteration:</p>
+            <div className="usage-grid">
+              <div className="usage-item">
+                <div className="usage-icon">🔐</div>
+                <div>
+                  <h4>Encryption</h4>
+                  <p>All data transmissions are encrypted using SSL/TLS. Data at rest in Firebase is encrypted</p>
+                </div>
+              </div>
+              <div className="usage-item">
+                <div className="usage-icon">🛡️</div>
+                <div>
+                  <h4>Access Controls</h4>
+                  <p>Strict access controls limit data access to authorized personnel only on a need-to-know basis</p>
+                </div>
+              </div>
+              <div className="usage-item">
+                <div className="usage-icon">☁️</div>
+                <div>
+                  <h4>Secure Cloud Storage</h4>
+                  <p>Firebase (Google Cloud) provides enterprise-grade security with regular security audits and compliance certifications</p>
+                </div>
+              </div>
+              <div className="usage-item">
+                <div className="usage-icon">🔒</div>
+                <div>
+                  <h4>Payment Security</h4>
+                  <p>Payment processing handled by Stripe (PCI DSS Level 1 compliant) - we never store payment card details</p>
+                </div>
+              </div>
+              <div className="usage-item">
+                <div className="usage-icon">🔍</div>
+                <div>
+                  <h4>Regular Monitoring</h4>
+                  <p>Continuous monitoring for security threats, unauthorized access, and suspicious activity</p>
+                </div>
+              </div>
+              <div className="usage-item">
+                <div className="usage-icon">📋</div>
+                <div>
+                  <h4>Data Minimization</h4>
+                  <p>We collect and process only the minimum amount of data necessary to provide our Service</p>
+                </div>
+              </div>
+            </div>
+            <div className="transparency-note" style={{ marginTop: '20px' }}>
+              <strong>Data Breach Notification:</strong> In the unlikely event of a data breach that may affect your personal data, 
+              we will notify you and the relevant supervisory authority (ICO) within 72 hours as required by GDPR, 
+              unless the breach is unlikely to result in a risk to your rights and freedoms.
+            </div>
+          </section>
+
+          <section className="policy-section">
+            <h2>8. Cookies & Tracking Technologies</h2>
+            <p>We use minimal tracking technologies to provide and improve our Service:</p>
+            <div className="info-category">
+              <h3>Essential Cookies (Strictly Necessary)</h3>
+              <ul>
+                <li><strong>Session Storage:</strong> Temporary storage for campaign purchase progress (cleared when browser session ends)</li>
+                <li><strong>Local Storage:</strong> Used to cache your welcome modal preference (dismissal status)</li>
+              </ul>
+              <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                These are necessary for the Service to function and cannot be disabled. They do not contain personal information 
+                and are used only for technical functionality.
+              </p>
+            </div>
+            <div className="info-category" style={{ marginTop: '20px' }}>
+              <h3>What We Don't Use</h3>
+              <ul>
+                <li>❌ Third-party analytics cookies (Google Analytics, etc.)</li>
+                <li>❌ Advertising/tracking cookies</li>
+                <li>❌ Social media tracking pixels</li>
+                <li>❌ Cross-site tracking technologies</li>
+                <li>❌ Behavioral profiling cookies</li>
+              </ul>
+            </div>
+            <p style={{ marginTop: '15px', fontSize: '14px', color: '#666' }}>
+              <strong>Managing Storage:</strong> You can clear cookies and local storage at any time through your browser settings. 
+              This will not affect your active campaigns but may reset certain preferences (e.g., welcome modal will show again).
+            </p>
+          </section>
+
+          <section className="policy-section">
+            <h2>9. International Data Transfers</h2>
+            <p>Your data may be stored and processed outside the UK/EEA:</p>
+            <div className="info-category">
+              <h3>Data Location</h3>
+              <ul>
+                <li><strong>Firebase (Google Cloud):</strong> Data is primarily stored in EU/UK data centers, but may be processed in the United States by Google</li>
+                <li><strong>Stripe:</strong> Payment data is processed in accordance with Stripe's data processing terms, primarily in the EU/US</li>
+              </ul>
+              <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                <strong>Safeguards:</strong> International transfers are protected by appropriate safeguards:
+              </p>
+              <ul style={{ marginTop: '10px' }}>
+                <li>Standard Contractual Clauses (SCCs) approved by the European Commission</li>
+                <li>Adequacy decisions where applicable</li>
+                <li>Service providers' compliance with GDPR and UK GDPR requirements</li>
+              </ul>
+            </div>
+            <p style={{ marginTop: '15px', fontSize: '14px', color: '#666' }}>
+              By using our Service, you consent to the transfer of your data as described above. 
+              We ensure all international transfers comply with applicable data protection laws.
+            </p>
+          </section>
+
+          <section className="policy-section">
+            <h2>10. Children's Privacy</h2>
+            <p>Our Service is not intended for individuals under the age of 18. We do not knowingly collect personal data from children.</p>
+            <p>If we become aware that we have collected personal data from a child under 18 without parental consent, we will take steps to delete that information immediately.</p>
+            <p>If you are a parent or guardian and believe your child has provided us with personal data, please contact us at support@clickalinks.com.</p>
+          </section>
+
+          <section className="policy-section">
+            <h2>11. Data Control & Your Rights</h2>
             <p>
               You have control over your data and can request changes or removal at any time:
             </p>
@@ -204,7 +405,7 @@ const PrivacyPolicy = () => {
           </section>
 
           <section className="policy-section">
-            <h2>5. Data Sharing & Third-Party Services</h2>
+            <h2>12. Data Sharing & Third-Party Services</h2>
             <p>
               We are committed to protecting your privacy. Here's how we handle data sharing:
             </p>
@@ -244,12 +445,48 @@ const PrivacyPolicy = () => {
           </section>
 
           <section className="policy-section">
-            <h2>6. Contact & Questions</h2>
+            <h2>13. Supervisory Authority</h2>
+            <p>If you are based in the UK or EU and believe we have not adequately addressed your data protection concerns, you have the right to lodge a complaint with your local data protection authority:</p>
+            <div className="info-category">
+              <h3>UK Information Commissioner's Office (ICO)</h3>
+              <ul>
+                <li><strong>Website:</strong> <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>ico.org.uk</a></li>
+                <li><strong>Phone:</strong> 0303 123 1113</li>
+                <li><strong>Address:</strong> Information Commissioner's Office, Wycliffe House, Water Lane, Wilmslow, Cheshire SK9 5AF</li>
+              </ul>
+              <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                For EU residents, you may contact your local data protection authority. 
+                A list of EU data protection authorities is available at: 
+                <a href="https://edpb.europa.eu/about-edpb/board/members_en" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea', marginLeft: '5px' }}>edpb.europa.eu</a>
+              </p>
+            </div>
+          </section>
+
+          <section className="policy-section">
+            <h2>14. Changes to This Privacy Policy</h2>
+            <p>We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or other factors.</p>
+            <p><strong>Material Changes:</strong> If we make material changes to how we process your personal data, we will:</p>
+            <ul>
+              <li>Update the "Last Updated" date at the top of this policy</li>
+              <li>Notify you by email if you have an active campaign or recent contact with us</li>
+              <li>Provide a summary of material changes on our website</li>
+            </ul>
+            <p><strong>Review:</strong> We encourage you to review this Privacy Policy periodically to stay informed about how we protect your data.</p>
+            <p style={{ marginTop: '15px', fontSize: '14px', color: '#666' }}>
+              <strong>Continued Use:</strong> Your continued use of the Service after changes to this Privacy Policy constitutes acceptance of the updated policy.
+            </p>
+          </section>
+
+          <section className="policy-section">
+            <h2>15. Contact & Questions</h2>
             <div className="contact-info">
-              <p>If you have questions about your data or privacy, we're happy to help.</p>
+              <p>If you have questions about your data or privacy, or wish to exercise your data protection rights, we're happy to help.</p>
               <div className="contact-details">
                 <p><strong>Email:</strong> <a href="mailto:support@clickalinks.com" style={{ color: '#667eea', textDecoration: 'none' }}>support@clickalinks.com</a></p>
-                <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>We typically reply within 24 hours during business days.</p>
+                <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>We typically reply within 24 hours during business days (Monday-Friday, 9 AM - 5 PM GMT).</p>
+                <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                  <strong>Data Protection Officer:</strong> For data protection inquiries, please email support@clickalinks.com with "Data Protection" in the subject line.
+                </p>
               </div>
             </div>
           </section>
