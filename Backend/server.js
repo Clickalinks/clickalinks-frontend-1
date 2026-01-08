@@ -273,7 +273,57 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           console.log('✅ Constructed logo URL from storagePath:', storagePath);
           console.log('   Logo URL:', logoData.substring(0, 100) + '...');
         } else {
-          console.warn('⚠️ WARNING: No valid storagePath in metadata - logo may be missing');
+          console.warn('⚠️ WARNING: No valid storagePath in metadata - attempting to find logo file');
+          
+          // Try to find logo file by searching Storage for recent uploads matching square number
+          // This is a fallback when storagePath is missing from metadata
+          if (metadata.squareNumber) {
+            try {
+              const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'clickalinks-frontend.firebasestorage.app';
+              const bucket = admin.storage().bucket(storageBucket);
+              
+              // List recent files in logos/ folder and find one that matches the purchase pattern
+              // Look for files uploaded in the last hour
+              const [files] = await bucket.getFiles({
+                prefix: 'logos/',
+                maxResults: 100
+              });
+              
+              // Find most recent file that matches the purchase ID pattern
+              // Files are typically: logos/purchase-{timestamp}-{random}-{timestamp}
+              const recentFiles = files
+                .filter(file => {
+                  const fileName = file.name;
+                  // Check if file was uploaded recently (within last 2 hours)
+                  const fileCreated = file.metadata.timeCreated ? new Date(file.metadata.timeCreated) : null;
+                  if (!fileCreated) return false;
+                  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+                  return fileCreated > twoHoursAgo;
+                })
+                .sort((a, b) => {
+                  const timeA = a.metadata.timeCreated ? new Date(a.metadata.timeCreated).getTime() : 0;
+                  const timeB = b.metadata.timeCreated ? new Date(b.metadata.timeCreated).getTime() : 0;
+                  return timeB - timeA; // Most recent first
+                });
+              
+              if (recentFiles.length > 0) {
+                // Use the most recent file as a fallback
+                const fallbackFile = recentFiles[0];
+                const fallbackPath = fallbackFile.name;
+                logoData = `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(fallbackPath)}?alt=media`;
+                console.log('✅ Found fallback logo file:', fallbackPath);
+                console.log('   Using most recent logo file as fallback');
+                // Update storagePath to the found file
+                const updatedStoragePath = fallbackPath;
+                storagePath = updatedStoragePath;
+              } else {
+                console.warn('⚠️ No recent logo files found in Storage - purchase will be saved without logo');
+              }
+            } catch (storageError) {
+              console.error('❌ Error searching for fallback logo file:', storageError.message);
+              console.warn('⚠️ Continuing without logo - purchase will be saved, admin can add logo later');
+            }
+          }
         }
         
         const purchaseData = {
@@ -1046,15 +1096,26 @@ app.get('/api/invoice/view', async (req, res) => {
     });
 
     // Use default values if not provided (for testing/preview)
+    // Parse amounts correctly - handle null/undefined/empty string
+    const parsedOriginalAmountView = originalAmount !== undefined && originalAmount !== null && originalAmount !== '' 
+      ? parseFloat(originalAmount) 
+      : undefined;
+    const parsedDiscountAmountView = discountAmount !== undefined && discountAmount !== null && discountAmount !== '' 
+      ? parseFloat(discountAmount) 
+      : 0;
+    const parsedFinalAmountView = finalAmount !== undefined && finalAmount !== null && finalAmount !== '' 
+      ? parseFloat(finalAmount) 
+      : undefined;
+    
     const purchaseData = {
       businessName: businessName || 'Sample Business',
       contactEmail: contactEmail || 'sample@example.com',
       squareNumber: parseInt(squareNumber) || 1,
       pageNumber: parseInt(pageNumber) || 1,
       selectedDuration: parseInt(duration) || 30,
-      originalAmount: parseFloat(originalAmount) || 30,
-      discountAmount: parseFloat(discountAmount) || 0,
-      finalAmount: parseFloat(finalAmount) || 30,
+      originalAmount: parsedOriginalAmountView,
+      discountAmount: parsedDiscountAmountView,
+      finalAmount: parsedFinalAmountView,
       transactionId: transactionId || 'TEST-' + Date.now(),
       promoCode: promoCode || null,
       website: website || ''

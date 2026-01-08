@@ -294,7 +294,9 @@ router.post('/purchases',
 
       // ✅ CRITICAL: Verify logo file exists in Storage if storagePath is provided
       // This prevents creating purchases with broken logo references
-      if (finalStoragePath && finalStoragePath.startsWith('logos/')) {
+      // IMPORTANT: Only validate if storagePath is explicitly provided
+      // If storagePath is missing, allow purchase to proceed (logo can be added later by admin)
+      if (finalStoragePath && finalStoragePath.trim() && finalStoragePath.startsWith('logos/')) {
         try {
           const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 'clickalinks-frontend.firebasestorage.app';
           const file = admin.storage().bucket(storageBucket).file(finalStoragePath);
@@ -305,24 +307,27 @@ router.post('/purchases',
             console.error(`   Purchase: ${businessName} (${contactEmail})`);
             console.error(`   Square: ${squareNumber}`);
             
-            return res.status(400).json({
-              success: false,
-              error: 'Logo file not found in Storage. The logo upload may have failed. Please try uploading the logo again.',
-              code: 'LOGO_FILE_MISSING',
-              details: {
-                storagePath: finalStoragePath,
-                suggestion: 'Try re-uploading the logo from the business details form'
-              }
-            });
+            // For paid purchases, don't block the purchase if logo is missing
+            // Allow it to be saved and admin can add logo later
+            console.warn(`⚠️ Logo file missing but allowing purchase to proceed (paid purchase)`);
+            console.warn(`⚠️ Admin should manually add logo for: ${businessName}`);
+            // Clear invalid storagePath to prevent broken references
+            finalStoragePath = null;
+            finalLogoData = null;
+          } else {
+            console.log(`✅ Verified logo file exists in Storage: ${finalStoragePath}`);
           }
-          
-          console.log(`✅ Verified logo file exists in Storage: ${finalStoragePath}`);
         } catch (storageError) {
           console.error(`❌ Error checking Storage file: ${storageError.message}`);
           // Don't block purchase if Storage check fails (network issue, etc.)
           // But log it for investigation
           console.warn(`⚠️ Continuing with purchase despite Storage check error`);
         }
+      } else if (!finalStoragePath && !finalLogoData) {
+        // No storagePath and no logoData - this is okay for paid purchases
+        // Logo can be added later by admin
+        console.warn(`⚠️ No logo data provided - purchase will be saved without logo`);
+        console.warn(`⚠️ Admin should manually add logo for: ${businessName}`);
       }
 
 

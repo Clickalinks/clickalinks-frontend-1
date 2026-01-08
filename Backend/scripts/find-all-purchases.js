@@ -1,75 +1,104 @@
 /**
- * Find All Purchases
- * Lists all purchases in Firestore to help identify the square 4 purchase
+ * Find ALL purchases in Firestore, not just recent ones
+ * Helps diagnose missing purchases
  */
 
 import admin from '../config/firebaseAdmin.js';
-import dotenv from 'dotenv';
 
-dotenv.config();
-
-const db = admin.firestore();
-
-async function findAllPurchases() {
+const findAllPurchases = async () => {
   try {
-    console.log('🔍 Fetching all purchases from Firestore...\n');
+    console.log('🔍 Finding ALL purchases in Firestore...\n');
     
-    const snapshot = await db.collection('purchasedSquares').get();
+    const db = admin.firestore();
+    const purchasesRef = db.collection('purchasedSquares');
+    
+    // Get ALL purchases (no limit)
+    const snapshot = await purchasesRef.get();
     
     if (snapshot.empty) {
       console.log('❌ No purchases found in Firestore');
       return;
     }
     
-    console.log(`📊 Found ${snapshot.size} purchase(s):\n`);
+    console.log(`📊 Found ${snapshot.size} total purchase(s):\n`);
+    console.log('='.repeat(100));
     
-    snapshot.forEach((doc, index) => {
+    const purchases = [];
+    snapshot.forEach((doc) => {
       const data = doc.data();
-      console.log(`${index + 1}. Document ID: ${doc.id}`);
-      console.log(`   Purchase ID: ${data.purchaseId || 'N/A'}`);
-      console.log(`   Square Number: ${data.squareNumber || 'N/A'} (type: ${typeof data.squareNumber})`);
-      console.log(`   Business: ${data.businessName || 'N/A'}`);
-      console.log(`   Contact Email: ${data.contactEmail || 'N/A'}`);
-      console.log(`   Status: ${data.status || 'N/A'}`);
-      console.log(`   Has logoData: ${!!data.logoData} ${data.logoData ? `(${data.logoData.substring(0, 50)}...)` : ''}`);
-      console.log(`   Has storagePath: ${!!data.storagePath} ${data.storagePath || ''}`);
-      console.log(`   Created: ${data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt) : 'N/A'}`);
-      console.log('');
+      purchases.push({
+        id: doc.id,
+        ...data
+      });
     });
     
-    // Also search specifically for square 4 (as number and string)
-    console.log('\n🔍 Searching specifically for square 4...\n');
+    // Sort by createdAt (newest first)
+    purchases.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+    });
     
-    // Try as number
-    const queryNum = db.collection('purchasedSquares').where('squareNumber', '==', 4);
-    const snapshotNum = await queryNum.get();
-    console.log(`   Found ${snapshotNum.size} with squareNumber === 4 (number)`);
+    purchases.forEach((purchase, index) => {
+      const data = purchase;
+      console.log(`\n📦 Purchase #${index + 1}`);
+      console.log('-'.repeat(100));
+      console.log('   Document ID:', purchase.id);
+      console.log('   Purchase ID:', data.purchaseId || 'MISSING');
+      console.log('   Square Number:', data.squareNumber || 'MISSING');
+      console.log('   Page Number:', data.pageNumber || 'MISSING');
+      console.log('   Business Name:', data.businessName || 'MISSING');
+      console.log('   Contact Email:', data.contactEmail || 'MISSING');
+      console.log('   Transaction ID:', data.transactionId || 'MISSING');
+      console.log('   Amount:', data.amount ? `£${data.amount}` : 'MISSING');
+      console.log('   Original Amount:', data.originalAmount ? `£${data.originalAmount}` : 'not set');
+      console.log('   Final Amount:', data.finalAmount ? `£${data.finalAmount}` : 'not set');
+      console.log('   Discount Amount:', data.discountAmount ? `£${data.discountAmount}` : 'not set');
+      console.log('   Duration:', data.duration ? `${data.duration} days` : 'MISSING');
+      console.log('   Status:', data.status || 'MISSING');
+      console.log('   Payment Status:', data.paymentStatus || 'MISSING');
+      console.log('   Promo Code:', data.promoCode || 'none');
+      console.log('   Has Logo Data:', !!data.logoData);
+      console.log('   Has Storage Path:', !!data.storagePath);
+      console.log('   Start Date:', data.startDate?.toDate ? data.startDate.toDate().toISOString() : 'MISSING');
+      console.log('   End Date:', data.endDate?.toDate ? data.endDate.toDate().toISOString() : 'MISSING');
+      console.log('   Created At:', data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : 'MISSING');
+      
+      // Check for missing critical data
+      const issues = [];
+      if (!data.contactEmail) issues.push('Missing contactEmail');
+      if (!data.businessName) issues.push('Missing businessName');
+      if (!data.logoData && !data.storagePath) issues.push('Missing logo data');
+      if (!data.transactionId) issues.push('Missing transactionId');
+      if (data.transactionId && data.transactionId.startsWith('free_')) {
+        issues.push('Promo code purchase (transaction starts with "free_")');
+      }
+      if (data.transactionId && !data.transactionId.startsWith('free_') && !data.transactionId.startsWith('cs_')) {
+        issues.push('⚠️ Unusual transaction ID format');
+      }
+      
+      if (issues.length > 0) {
+        console.log('   ⚠️  NOTES:', issues.join(', '));
+      }
+    });
     
-    // Try as string
-    const queryStr = db.collection('purchasedSquares').where('squareNumber', '==', '4');
-    const snapshotStr = await queryStr.get();
-    console.log(`   Found ${snapshotStr.size} with squareNumber === '4' (string)`);
+    console.log('\n' + '='.repeat(100));
+    console.log(`\n📊 SUMMARY:`);
+    console.log(`   Total Purchases: ${purchases.length}`);
+    console.log(`   Promo Code Purchases: ${purchases.filter(p => p.transactionId?.startsWith('free_')).length}`);
+    console.log(`   Stripe Purchases: ${purchases.filter(p => p.transactionId?.startsWith('cs_')).length}`);
+    console.log(`   Other Transaction IDs: ${purchases.filter(p => p.transactionId && !p.transactionId.startsWith('free_') && !p.transactionId.startsWith('cs_')).length}`);
+    console.log(`   Missing Transaction ID: ${purchases.filter(p => !p.transactionId).length}`);
+    console.log('\n✅ Check complete\n');
     
-    if (snapshotNum.empty && snapshotStr.empty) {
-      console.log('\n⚠️ No purchase found with squareNumber = 4');
-      console.log('💡 The purchase might not have been saved to Firestore yet.');
-      console.log('💡 Or it might be saved with a different squareNumber.');
-      console.log('\n📋 Check the list above to find your purchase.');
-    }
+    process.exit(0);
     
   } catch (error) {
-    console.error('❌ Error finding purchases:', error);
-    throw error;
-  }
-}
-
-// Run the script
-findAllPurchases()
-  .then(() => {
-    console.log('\n✅ Script completed successfully');
-    process.exit(0);
-  })
-  .catch(error => {
-    console.error('\n❌ Script failed:', error);
+    console.error('❌ Error checking purchases:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
     process.exit(1);
-  });
+  }
+};
+
+findAllPurchases();
