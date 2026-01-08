@@ -623,10 +623,19 @@ app.post('/api/create-checkout-session',
       }
     });
 
-    console.log('✅ SUCCESS: Stripe session created');
+    console.log('\n✅ SUCCESS: Stripe session created');
     console.log('   Session ID:', session.id);
     console.log('   Success URL:', `${frontendUrl}/success?session_id=${session.id}&square=${squareNumber}`);
     console.log('   Session URL (Stripe):', session.url);
+    console.log('   Metadata included:', {
+      squareNumber: squareNumber.toString(),
+      pageNumber: pageNumber.toString(),
+      duration: duration.toString(),
+      contactEmail: contactEmail,
+      businessName: businessName || '',
+      storagePath: storagePath || 'NOT INCLUDED ⚠️'
+    });
+    console.log('='.repeat(80) + '\n');
     console.log('   Metadata included:', {
       squareNumber: squareNumber.toString(),
       pageNumber: pageNumber.toString(),
@@ -1123,15 +1132,26 @@ app.get('/api/invoice/download', async (req, res) => {
     }
 
     // Prepare purchase data for invoice generation
+    // Parse amounts correctly - handle null/undefined/empty string
+    const parsedOriginalAmount = originalAmount !== undefined && originalAmount !== null && originalAmount !== '' 
+      ? parseFloat(originalAmount) 
+      : undefined;
+    const parsedDiscountAmount = discountAmount !== undefined && discountAmount !== null && discountAmount !== '' 
+      ? parseFloat(discountAmount) 
+      : 0;
+    const parsedFinalAmount = finalAmount !== undefined && finalAmount !== null && finalAmount !== '' 
+      ? parseFloat(finalAmount) 
+      : undefined;
+    
     const purchaseData = {
       businessName: businessName || 'N/A',
       contactEmail: contactEmail || '',
       squareNumber: parseInt(squareNumber) || 1,
       pageNumber: parseInt(pageNumber) || 1,
       selectedDuration: parseInt(duration) || 30,
-      originalAmount: parseFloat(originalAmount) || 0,
-      discountAmount: parseFloat(discountAmount) || 0,
-      finalAmount: parseFloat(finalAmount) || 0,
+      originalAmount: parsedOriginalAmount,
+      discountAmount: parsedDiscountAmount,
+      finalAmount: parsedFinalAmount,
       transactionId: transactionId || '',
       promoCode: promoCode || null,
       website: website || ''
