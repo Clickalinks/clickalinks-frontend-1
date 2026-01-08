@@ -453,6 +453,15 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         }
         
         // Prepare purchase data from Stripe session metadata
+        const storagePath = metadata.storagePath || '';
+        let logoData = null;
+        
+        // Construct logoData URL from storagePath if available
+        if (storagePath && storagePath.trim() && storagePath.startsWith('logos/')) {
+          logoData = `https://firebasestorage.googleapis.com/v0/b/clickalinks-frontend.firebasestorage.app/o/${encodeURIComponent(storagePath)}?alt=media`;
+          console.log('✅ Webhook: Constructed logo URL from storagePath:', storagePath);
+        }
+        
         const purchaseData = {
           squareNumber: parseInt(metadata.squareNumber) || 1,
           pageNumber: parseInt(metadata.pageNumber) || 1,
@@ -466,13 +475,17 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           status: 'active',
           startDate: new Date().toISOString(),
           endDate: new Date(Date.now() + (parseInt(metadata.duration) || 30) * 24 * 60 * 60 * 1000).toISOString(),
-          purchaseDate: new Date().toISOString()
+          purchaseDate: new Date().toISOString(),
+          logoData: logoData,
+          storagePath: storagePath || null
         };
         
         console.log('💾 Webhook attempting to save purchase:', {
           squareNumber: purchaseData.squareNumber,
           businessName: purchaseData.businessName,
-          contactEmail: purchaseData.contactEmail
+          contactEmail: purchaseData.contactEmail,
+          hasLogo: !!purchaseData.logoData,
+          storagePath: purchaseData.storagePath || 'NOT PROVIDED'
         });
         
         // Call the purchase route handler logic directly
