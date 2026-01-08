@@ -422,8 +422,25 @@ const Payment = () => {
       }
 
       // Get storagePath from localStorage if available (logo was uploaded earlier)
-      const storagePath = localStorage.getItem(`logoPath_${selectedSquare}`) || null;
-      const logoData = localStorage.getItem(`logoData_${selectedSquare}`) || null;
+      let storagePath = localStorage.getItem(`logoPath_${selectedSquare}`) || null;
+      const logoData = localStorage.getItem(`logoData_${selectedSquare}`) || businessData?.logoData || null;
+      
+      // CRITICAL FIX: If storagePath is missing but logoData exists, try to extract it from logoData URL
+      if (!storagePath && logoData && logoData.includes('firebasestorage.googleapis.com')) {
+        try {
+          // Extract storagePath from Firebase Storage URL
+          // Format: https://firebasestorage.googleapis.com/v0/b/bucket-name/o/logos%2Ffilename?alt=media&token=...
+          const urlMatch = logoData.match(/\/o\/([^?]+)/);
+          if (urlMatch) {
+            storagePath = decodeURIComponent(urlMatch[1]);
+            console.log('✅ Extracted storagePath from logoData URL:', storagePath);
+            // Save it to localStorage for future use
+            localStorage.setItem(`logoPath_${selectedSquare}`, storagePath);
+          }
+        } catch (extractError) {
+          console.warn('⚠️ Could not extract storagePath from logoData URL:', extractError.message);
+        }
+      }
       
       console.log('\n' + '='.repeat(80));
       console.log('💰 FRONTEND: Creating Stripe Checkout Session');
@@ -437,8 +454,11 @@ const Payment = () => {
       console.log('   contactEmail:', businessData?.email || 'MISSING');
       console.log('   website:', businessData?.website || 'none');
       console.log('   promoCode:', appliedPromo ? promoCode.toUpperCase() : 'none');
-      console.log('   storagePath:', storagePath || 'MISSING');
+      console.log('   storagePath:', storagePath || 'MISSING ⚠️');
       console.log('   hasLogoData in localStorage:', !!logoData);
+      if (!storagePath) {
+        console.warn('   ⚠️  WARNING: storagePath is MISSING - logo may not appear in purchase!');
+      }
       console.log('='.repeat(80));
       
       const payload = {
