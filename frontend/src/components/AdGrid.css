@@ -1209,14 +1209,24 @@
 }
 
 .grid-header .timer-value {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   width: auto;
+  height: 100%;
   margin: 0;
   padding: 0;
   font-size: 0.95rem;
   line-height: 1;
   font-weight: 600;
   text-align: center;
+}
+
+.grid-header .timer-icon,
+.grid-header .timer-digits {
+  display: block;
+  line-height: 1;
 }
 
 .grid-header .page-arrow {

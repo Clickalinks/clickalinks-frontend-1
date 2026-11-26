@@ -1073,7 +1073,10 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
             <div className="occupied-stat">🔴 {occupiedCount} Occupied Square</div>
             <div className="shuffle-timer-display">
               <span className="timer-value">
-                ⏱️ {Math.floor(timeUntilShuffle / 3600)}:{(Math.floor((timeUntilShuffle % 3600) / 60)).toString().padStart(2, '0')}:{(timeUntilShuffle % 60).toString().padStart(2, '0')}
+                <span className="timer-icon" aria-hidden="true">⏱</span>
+                <span className="timer-digits">
+                  {Math.floor(timeUntilShuffle / 3600)}:{(Math.floor((timeUntilShuffle % 3600) / 60)).toString().padStart(2, '0')}:{(timeUntilShuffle % 60).toString().padStart(2, '0')}
+                </span>
               </span>
             </div>
             {isAdmin && (

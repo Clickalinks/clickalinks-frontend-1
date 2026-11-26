@@ -76,8 +76,11 @@
   }
 
   .grid-header .timer-value {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: auto;
+    height: 100%;
     margin: 0;
     padding: 0;
     line-height: 1;
