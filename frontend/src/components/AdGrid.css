@@ -905,13 +905,6 @@
     margin-bottom: 0.3rem;
     max-width: 100%;
     width: 100%;
-    background: 
-      linear-gradient(135deg, rgba(255,255,255,0.72) 0%, rgba(237,233,254,0.55) 100%),
-      linear-gradient(135deg, rgba(30, 64, 175, 0.7) 0%, rgba(59, 130, 246, 0.7) 100%);
-  }
-  
-  .grid-header::before {
-    opacity: 0.6;
   }
   
   .page-info {
@@ -935,7 +928,7 @@
   }
   
   .shuffle-timer-display {
-    min-width: 100px; /* Match desktop */
+    min-width: 0;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -1070,13 +1063,6 @@
     padding: 0.18rem 0.3rem;
     gap: 0.2rem;
     margin-bottom: 0.3rem;
-    background: 
-      linear-gradient(135deg, rgba(255,255,255,0.72) 0%, rgba(237,233,254,0.55) 100%),
-      linear-gradient(135deg, rgba(30, 64, 175, 0.6) 0%, rgba(59, 130, 246, 0.6) 100%);
-  }
-  
-  .grid-header::before {
-    opacity: 0.5;
   }
   
   .available-stat, .occupied-stat, .shuffle-timer-display {
@@ -1085,7 +1071,7 @@
   }
   
   .shuffle-timer-display {
-    min-width: 80px; /* Match desktop proportionally */
+    min-width: 0;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -1203,23 +1189,51 @@
 .grid-header .available-stat,
 .grid-header .occupied-stat,
 .grid-header .shuffle-timer-display {
-  font-size: 1.05rem;
-  line-height: 1.2;
-  padding: 0.45rem 0.9rem;
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 0 auto;
+  height: 40px;
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 0.75rem;
   border-radius: 12px;
-  min-height: 44px;
+  font-size: 0.95rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  border: 2px solid #000000;
+  box-sizing: border-box;
 }
 
 .grid-header .timer-value {
-  font-size: 1.05rem;
+  display: block;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  font-size: 0.95rem;
+  line-height: 1;
+  font-weight: 600;
+  text-align: center;
 }
 
 .grid-header .page-arrow {
-  font-size: 1.35rem;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0.15rem 0.65rem;
+  font-size: 1.25rem;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
   border-radius: 12px;
+  border: 0;
+  box-sizing: border-box;
+}
+
+.grid-header .page-arrow:hover,
+.grid-header .page-arrow:active {
+  border: 0;
 }
 
 .grid-header {
@@ -1255,10 +1269,14 @@
 
   .grid-header .available-stat,
   .grid-header .occupied-stat,
-  .grid-header .shuffle-timer-display,
+  .grid-header .shuffle-timer-display {
+    font-size: 0.92rem;
+    padding: 0 0.65rem;
+  }
+
   .grid-header .timer-value {
-    font-size: 0.98rem;
-    padding: 0.4rem 0.7rem;
+    font-size: 0.92rem;
+    padding: 0;
   }
 
   .sample-app-note {
@@ -1300,17 +1318,31 @@
 
   .grid-header .available-stat,
   .grid-header .occupied-stat,
-  .grid-header .shuffle-timer-display,
+  .grid-header .shuffle-timer-display {
+    height: 34px;
+    min-height: 34px;
+    font-size: 0.75rem;
+    padding: 0 0.5rem;
+    justify-content: center;
+    text-align: center;
+  }
+
   .grid-header .timer-value {
-    font-size: 0.92rem;
-    padding: 0.35rem 0.55rem;
-    min-height: 40px;
+    height: auto;
+    min-height: 0;
+    font-size: 0.75rem;
+    padding: 0;
+    line-height: 1;
+    text-align: center;
   }
 
   .grid-header .page-arrow {
-    min-width: 44px;
-    min-height: 44px;
-    font-size: 1.3rem;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 1.15rem;
+    border: 0;
   }
 }
 
@@ -1321,10 +1353,14 @@
 
   .grid-header .available-stat,
   .grid-header .occupied-stat,
-  .grid-header .shuffle-timer-display,
+  .grid-header .shuffle-timer-display {
+    font-size: 0.72rem;
+    padding: 0 0.45rem;
+  }
+
   .grid-header .timer-value {
-    font-size: 0.88rem;
-    padding: 0.35rem 0.5rem;
+    font-size: 0.72rem;
+    padding: 0;
   }
 
   .sample-app-note {

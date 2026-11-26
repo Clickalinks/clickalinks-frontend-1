@@ -4,6 +4,7 @@ import './App.css';
 import Header from './components/Header';
 import RunningStrip from './components/RunningStrip';
 import AdGrid from './components/AdGrid';
+import './mobile-polish.css';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
