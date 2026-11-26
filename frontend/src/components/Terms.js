@@ -6,9 +6,9 @@ const Terms = () => {
   return (
     <>
       <SEO
-        title="Terms & Conditions - CLICKaLINKS Advertising Platform"
-        description="Read CLICKaLINKS terms and conditions. Learn about our advertising guidelines, pricing, refund policy, campaign duration, content moderation, and service terms. UK-based advertising platform terms."
-        keywords="terms and conditions, advertising terms, service terms, clickalinks terms, UK advertising terms, business terms, legal terms"
+        title="Terms & Conditions | Games and Apps | CLICKaLINKS"
+        description="Terms for CLICKaLINKS, a grid where games and apps are shown and a square can be bought from £1 a day. Covers placement, payment, and how Get opens the app stores."
+        keywords="clickalinks terms, games and apps terms, £1 a day, tap get play, UK"
       />
       <div>
       {/* Main Content */}
@@ -26,11 +26,11 @@ const Terms = () => {
           
           <div className="terms-section">
             <h2>🔧 2. Service Description</h2>
-            <p>CLICKaLINKS provides grid-based advertising space where businesses can purchase squares to display their logos and link to their deals/discount pages.</p>
+            <p>CLICKaLINKS provides a public grid where a game or app can be shown. A player can open a store-style page and press Get to continue to the App Store or Google Play. A developer can buy a square from £1 a day.</p>
             <p><strong>Service Includes:</strong></p>
             <ul className="terms-list">
-              <li>✅ 2000 advertising squares across 10 pages</li>
-              <li>✅ Direct click-through to your website/deals</li>
+              <li>✅ 2000 squares across 10 pages</li>
+              <li>✅ A Get button that opens your App Store or Google Play listing</li>
               <li>✅ Automatic square shuffling for fair visibility</li>
               <li>✅ Secure payment processing</li>
             </ul>
@@ -128,7 +128,7 @@ const Terms = () => {
           <div className="terms-section">
             <h2>⚖️ 9. Intellectual Property Rights</h2>
             <p><strong>Platform Ownership:</strong> The CLICKaLINKS platform, including its design, functionality, and all intellectual property rights, are owned by Clicado Media UK Ltd or its licensors. You may not copy, modify, distribute, or create derivative works based on our platform.</p>
-            <p><strong>Your Content:</strong> You retain ownership of your business logos, images, and content submitted to us. However, by submitting content, you grant Clicado Media UK Ltd a non-exclusive, worldwide, royalty-free license to:</p>
+            <p><strong>Your Content:</strong> You retain ownership of your app icons, images, and other content submitted to us. By submitting content, you grant Clicado Media UK Ltd a non-exclusive, worldwide, royalty-free license to:</p>
             <ul className="terms-list">
               <li>• Display your content on our advertising grid</li>
               <li>• Store and process your content to provide the Service</li>

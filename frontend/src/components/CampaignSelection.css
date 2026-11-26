@@ -1,15 +1,7 @@
 .campaign-selection-container {
   min-height: 100vh;
   background: 
-    repeating-linear-gradient(
-      45deg,
-      rgba(255, 107, 53, 0.1) 0px, rgba(255, 107, 53, 0.1) 12px,
-      rgba(6, 182, 212, 0.1) 12px, rgba(6, 182, 212, 0.1) 24px,
-      rgba(59, 130, 246, 0.1) 24px, rgba(59, 130, 246, 0.1) 36px,
-      rgba(16, 185, 129, 0.1) 36px, rgba(16, 185, 129, 0.1) 48px,
-      rgba(236, 72, 153, 0.1) 48px, rgba(236, 72, 153, 0.1) 60px,
-      rgba(251, 191, 36, 0.1) 60px, rgba(251, 191, 36, 0.1) 72px
-    ),
+    linear-gradient(135deg, rgba(255,255,255,0.72) 0%, rgba(237,233,254,0.55) 100%),
     linear-gradient(135deg, rgba(30, 64, 175, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
   padding: 20px;
   display: flex;
@@ -44,16 +36,7 @@
   right: 0;
   height: 4px;
   background: 
-    repeating-linear-gradient(
-      45deg,
-      #ff6b35 0px, #ff6b35 12px,
-      #06b6d4 12px, #06b6d4 24px,
-      #3b82f6 24px, #3b82f6 36px,
-      #10b981 36px, #10b981 48px,
-      #ec4899 48px, #ec4899 60px,
-      #fbbf24 60px, #fbbf24 72px
-    ),
-    linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    linear-gradient(135deg, #2a215f 0%, #5b3cc4 48%, #2563eb 100%);
   z-index: 0;
 }
 
@@ -108,17 +91,8 @@
 
 .progress-step.active .step-indicator {
   background: 
-    repeating-linear-gradient(
-      45deg,
-      #ff6b35 0px, #ff6b35 12px,
-      #06b6d4 12px, #06b6d4 24px,
-      #3b82f6 24px, #3b82f6 36px,
-      #10b981 36px, #10b981 48px,
-      #ec4899 48px, #ec4899 60px,
-      #fbbf24 60px, #fbbf24 72px
-    ),
-    linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  background-blend-mode: overlay;
+    linear-gradient(135deg, #2a215f 0%, #5b3cc4 48%, #2563eb 100%);
+  background-blend-mode: normal;
   color: white;
   border-color: rgba(255, 255, 255, 0.3);
 }
@@ -142,7 +116,7 @@
 }
 
 .progress-step.active .step-label {
-  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
+  background: linear-gradient(135deg, #5b3cc4 0%, #2563eb 55%, #38bdf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -238,17 +212,9 @@
 
 .plan-badge--popular {
   background: 
-    repeating-linear-gradient(
-      45deg,
-      #ff6b35 0px, #ff6b35 12px,
-      #06b6d4 12px, #06b6d4 24px,
-      #3b82f6 24px, #3b82f6 36px,
-      #10b981 36px, #10b981 48px,
-      #ec4899 48px, #ec4899 60px,
-      #fbbf24 60px, #fbbf24 72px
-    ),
+    linear-gradient(135deg, #2a215f 0%, #5b3cc4 48%, #2563eb 100%),
     linear-gradient(115deg, #1e40af 0%, #3b82f6 100%);
-  background-blend-mode: overlay;
+  background-blend-mode: normal;
   border: 1.5px solid rgba(255, 255, 255, 0.3);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
@@ -495,17 +461,8 @@
 
 .btn--primary {
   background: 
-    repeating-linear-gradient(
-      45deg,
-      #ff6b35 0px, #ff6b35 12px,
-      #06b6d4 12px, #06b6d4 24px,
-      #3b82f6 24px, #3b82f6 36px,
-      #10b981 36px, #10b981 48px,
-      #ec4899 48px, #ec4899 60px,
-      #fbbf24 60px, #fbbf24 72px
-    ),
-    linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  background-blend-mode: overlay;
+    linear-gradient(135deg, #2a215f 0%, #5b3cc4 48%, #2563eb 100%);
+  background-blend-mode: normal;
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.3);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -519,12 +476,12 @@
 .btn--secondary {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
+  background: linear-gradient(135deg, #5b3cc4 0%, #2563eb 55%, #38bdf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   border: 2px solid;
-  border-image: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%) 1;
+  border-image: linear-gradient(135deg, #5b3cc4 0%, #2563eb 55%, #38bdf8 100%) 1;
 }
 
 .btn--secondary:hover {

@@ -6,9 +6,9 @@ const PrivacyPolicy = () => {
   return (
     <>
       <SEO
-        title="Privacy Policy - CLICKaLINKS Data Protection & Privacy"
-        description="Read CLICKaLINKS privacy policy. Learn how we collect, store, and protect your data. Transparent data practices, no user tracking, secure cloud storage. GDPR compliant privacy policy for UK-based advertising platform."
-        keywords="privacy policy, data protection, GDPR, privacy, data security, clickalinks privacy, advertising privacy, UK privacy policy, data protection UK"
+        title="Privacy Policy | Games and Apps | CLICKaLINKS"
+        description="How CLICKaLINKS handles data when you browse games or place a game on the grid. Covers payments, the app icon, the store link, and Get clicks."
+        keywords="clickalinks privacy, data protection, GDPR, games and apps, UK privacy policy"
       />
       <div className="privacy-container">
       <div className="privacy-content">
@@ -24,10 +24,8 @@ const PrivacyPolicy = () => {
         <div className="privacy-intro">
           <h2>About ClickaLinks</h2>
           <p>
-            <strong>ClickaLinks</strong> is an advertising platform that connects businesses with customers looking for great deals. 
-            We provide an affordable way for businesses of all sizes to showcase their offers on our advertising grid, 
-            helping customers easily discover genuine savings. Our mission is to make finding real deals simple by giving 
-            businesses an affordable way to advertise their everyday deals and helping customers discover savings all year round.
+            <strong>ClickaLinks</strong> is a grid of games and apps. Players open a square and press Get to continue to the App Store or Google Play.
+            Developers can place a game on the grid from £1 a day.
           </p>
         </div>
 
@@ -66,8 +64,8 @@ const PrivacyPolicy = () => {
             </div>
 
             <div className="transparency-note">
-              <strong>Note:</strong> We do NOT collect personal identification information beyond your business contact email. 
-              We do NOT create user accounts, track individual browsing behavior, or use third-party analytics services. 
+              <strong>Note:</strong> We do not collect personal identification information beyond your business contact email.
+              We do not create user accounts. Page visits are measured with Google Analytics, and the site also loads a TikTok pixel.
               Payment processing is handled securely through Stripe, and we do not store credit card information.
             </div>
           </section>
@@ -83,7 +81,7 @@ const PrivacyPolicy = () => {
                 <div className="usage-icon">🖼️</div>
                 <div>
                   <h4>Display Your Advertisement</h4>
-                  <p>Show your business logo and link on the advertising grid for the duration of your campaign</p>
+                  <p>Show your game name, app icon and store link on the grid for the days you paid for</p>
                 </div>
               </div>
               <div className="usage-item">
@@ -326,14 +324,15 @@ const PrivacyPolicy = () => {
               </p>
             </div>
             <div className="info-category" style={{ marginTop: '20px' }}>
-              <h3>What We Don't Use</h3>
+              <h3>Analytics</h3>
               <ul>
-                <li>❌ Third-party analytics cookies (Google Analytics, etc.)</li>
-                <li>❌ Advertising/tracking cookies</li>
-                <li>❌ Social media tracking pixels</li>
-                <li>❌ Cross-site tracking technologies</li>
-                <li>❌ Behavioral profiling cookies</li>
+                <li><strong>Google Analytics:</strong> Page views on clickalinks.com, so we can see which pages are used. IP addresses are anonymised.</li>
+                <li><strong>TikTok pixel:</strong> A visit measurement tag already used on the site.</li>
               </ul>
+              <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                You can block these in your browser, or use your browser’s “Do Not Track” and cookie settings.
+                We do not sell visitor profiles.
+              </p>
             </div>
             <p style={{ marginTop: '15px', fontSize: '14px', color: '#666' }}>
               <strong>Managing Storage:</strong> You can clear cookies and local storage at any time through your browser settings. 
@@ -439,8 +438,7 @@ const PrivacyPolicy = () => {
               </ul>
             </div>
             <div className="transparency-note" style={{ marginTop: '20px' }}>
-              <strong>Important:</strong> Your business name, logo, and website link are publicly displayed on our 
-              advertising grid as part of the service you've purchased. This is necessary for your advertisement to function.
+              <strong>Important:</strong> The game name, app icon, and store link you submit are shown on the public grid. That is how a player reaches the store.
             </div>
           </section>
 

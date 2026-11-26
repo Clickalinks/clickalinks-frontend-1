@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, getDocs, onSnapshot, query, where, doc, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { cleanupExpiredAds } from '../utils/cleanupExpiredAds';
+import { parseDateValue } from '../utils/dateUtils';
 import { syncLocalStorageToFirestore } from '../utils/savePurchaseToFirestore';
 import { perfLog, perfWarn, perfError } from '../utils/performance';
 import { getCachedPurchases, cachePurchases, clearExpiredCache } from '../utils/cache';
@@ -10,7 +11,25 @@ import { createImageObserver } from '../utils/imageOptimizer';
 import { debounce } from '../utils/debounce';
 import { trackClick } from '../utils/clickTracker';
 import SEO from './SEO';
+import AppStorePreview from './AppStorePreview';
+import { SAMPLE_APPS, listingFromPurchase } from '../data/sampleApps';
 import './AdGrid.css';
+
+const SHUFFLE_INTERVAL_MS = 2 * 60 * 60 * 1000;
+
+const shuffleWithSeed = (items, seed) => {
+  const shuffled = [...items];
+  let current = seed || 1;
+  const random = () => {
+    current = (current * 9301 + 49297) % 233280;
+    return current / 233280;
+  };
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const swapIndex = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[i]];
+  }
+  return shuffled;
+};
 
 // Helper function to detect mobile devices (NOT tablets)
 // Tablets should use desktop layout, only phones use mobile layout
@@ -40,12 +59,16 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
   const navigate = useNavigate();
   const location = useLocation(); // For search highlighting
   const [selectedOccupiedSquare, setSelectedOccupiedSquare] = useState(null);
+  const [appPreview, setAppPreview] = useState(null);
   const [purchasedSquares, setPurchasedSquares] = useState({});
+  const hoverTimerRef = useRef(null);
+  const closeTimerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [loadedImages, setLoadedImages] = useState(new Set());
   const [failedImages, setFailedImages] = useState(new Set());
   const [timeUntilShuffle, setTimeUntilShuffle] = useState(0);
+  const [shufflePeriod, setShufflePeriod] = useState(() => Math.floor(Date.now() / SHUFFLE_INTERVAL_MS));
   const imageObserverRef = useRef(null);
   const imageRefsRef = useRef(new Map());
 
@@ -54,6 +77,38 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     Array.from({ length: end - start + 1 }, (_, index) => start + index),
     [start, end]
   );
+
+  useEffect(() => () => {
+    clearTimeout(hoverTimerRef.current);
+    clearTimeout(closeTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!appPreview) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') setAppPreview(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [appPreview]);
+
+  useEffect(() => {
+    if (!appPreview?.position) return undefined;
+    const update = () => {
+      const element = document.querySelector(`[data-square="${appPreview.position}"]`);
+      if (!element) return;
+      const rect = element.getBoundingClientRect();
+      setAppPreview((current) => (
+        current && current.position === appPreview.position ? { ...current, rect } : current
+      ));
+    };
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [appPreview?.position]);
 
   // Mobile detection with debouncing and orientation change handling
   useEffect(() => {
@@ -144,12 +199,11 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
   // Auto-shuffle timer and manual shuffle handler
   useEffect(() => {
     const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://clickalinks-backend-2.onrender.com';
-    const SHUFFLE_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
 
     const calculateTimeUntilShuffle = () => {
       const now = Date.now();
-      const currentPeriod = Math.floor(now / SHUFFLE_INTERVAL);
-      const nextShuffleTime = (currentPeriod + 1) * SHUFFLE_INTERVAL;
+      const currentPeriod = Math.floor(now / SHUFFLE_INTERVAL_MS);
+      const nextShuffleTime = (currentPeriod + 1) * SHUFFLE_INTERVAL_MS;
       return Math.max(0, Math.floor((nextShuffleTime - now) / 1000));
     };
 
@@ -190,13 +244,15 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
 
     // Update timer every second
     const timerInterval = setInterval(() => {
+      const period = Math.floor(Date.now() / SHUFFLE_INTERVAL_MS);
       setTimeUntilShuffle(calculateTimeUntilShuffle());
+      setShufflePeriod((current) => (current === period ? current : period));
     }, 1000);
 
     // Auto-shuffle interval (2 hours)
     const shuffleInterval = setInterval(() => {
       triggerAutoShuffle();
-    }, SHUFFLE_INTERVAL);
+    }, SHUFFLE_INTERVAL_MS);
 
     return () => {
       clearInterval(timerInterval);
@@ -303,8 +359,8 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
         
         // Check expiration
         if (data.endDate) {
-          const endDate = new Date(data.endDate);
-          if (endDate < now) return;
+          const endDate = parseDateValue(data.endDate);
+          if (!endDate || endDate < now) return;
         }
         
         // Must have valid logo
@@ -460,8 +516,8 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
           const data = localPurchases[squareNum];
           if (data && data.status === 'active') {
             if (data.endDate) {
-              const endDate = new Date(data.endDate);
-              if (endDate > now) {
+              const endDate = parseDateValue(data.endDate);
+              if (endDate && endDate > now) {
                 activePurchases[squareNum] = data;
               }
             } else {
@@ -630,8 +686,8 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
             }
             
             if (data.endDate) {
-              const endDate = new Date(data.endDate);
-              if (endDate > now) {
+              const endDate = parseDateValue(data.endDate);
+              if (endDate && endDate > now) {
                 // CRITICAL: Check for duplicates by squareNumber
                 if (squareToDocMap.has(squareNum)) {
                   perfWarn(`⚠️ Real-time duplicate detected: Square ${squareNum}, skipping duplicate ${doc.id}`);
@@ -870,7 +926,65 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
     return null;
   }, [purchasedSquares]);
 
-  const handlePositionClick = useCallback((position) => {
+  const samplePlacements = useMemo(() => {
+    if (process.env.NODE_ENV !== 'development' || !isHome) return {};
+    const emptySquares = squares.filter((position) => !purchasedSquares[position]);
+    if (emptySquares.length === 0) return {};
+    const order = shuffleWithSeed(emptySquares, shufflePeriod + 1);
+    const placements = {};
+    SAMPLE_APPS.forEach((app, index) => {
+      const position = order[index];
+      if (!position) return;
+      const appIndex = (index + shufflePeriod) % SAMPLE_APPS.length;
+      placements[position] = { ...SAMPLE_APPS[appIndex], squareNumber: position };
+    });
+    return placements;
+  }, [squares, purchasedSquares, isHome, shufflePeriod]);
+
+  const resolveAppListing = useCallback((position) => {
+    if (samplePlacements[position]) return samplePlacements[position];
+    return listingFromPurchase(purchasedSquares[position], position);
+  }, [samplePlacements, purchasedSquares]);
+
+  const openAppPreview = useCallback((position, target, pinned) => {
+    const listing = resolveAppListing(position);
+    if (!listing || !target) return;
+    const rect = target.getBoundingClientRect();
+    setAppPreview((current) => {
+      if (current?.pinned && !pinned) return current;
+      return { listing, rect, position, pinned };
+    });
+  }, [resolveAppListing]);
+
+  const scheduleClosePreview = useCallback(() => {
+    clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
+      setAppPreview((current) => (current?.pinned ? current : null));
+    }, 220);
+  }, []);
+
+  const handleAppPointerEnter = useCallback((position, event) => {
+    if (!resolveAppListing(position)) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    clearTimeout(closeTimerRef.current);
+    const target = event.currentTarget;
+    clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      openAppPreview(position, target, false);
+    }, 280);
+  }, [openAppPreview, resolveAppListing]);
+
+  const handleAppPointerLeave = useCallback(() => {
+    clearTimeout(hoverTimerRef.current);
+    scheduleClosePreview();
+  }, [scheduleClosePreview]);
+
+  const handlePositionClick = useCallback((position, event) => {
+    if (resolveAppListing(position)) {
+      openAppPreview(position, event.currentTarget, true);
+      return;
+    }
+
     if (isAvailable(position)) {
       navigate('/campaign', { 
         state: { selectedSquare: position, pageNumber } 
@@ -890,7 +1004,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
         setSelectedOccupiedSquare(position);
       }
     }
-  }, [isAvailable, getBusinessInfo, navigate, pageNumber]);
+  }, [isAvailable, getBusinessInfo, navigate, pageNumber, resolveAppListing, openAppPreview]);
 
   const closeModal = useCallback(() => {
     setSelectedOccupiedSquare(null);
@@ -898,8 +1012,8 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
 
   // Memoize expensive calculations - MUST be before early returns (React Rules of Hooks)
   const availableCount = useMemo(() => 
-    squares.filter(position => isAvailable(position)).length,
-    [squares, purchasedSquares, isAvailable]
+    squares.filter(position => isAvailable(position) && !samplePlacements[position]).length,
+    [squares, purchasedSquares, isAvailable, samplePlacements]
   );
   const occupiedCount = useMemo(() => 
     squares.length - availableCount,
@@ -911,14 +1025,14 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
       <>
         {isHome && (
           <SEO
-            title="CLICKaLINKS - Affordable Grid Advertising Platform | £1 Per Day | UK"
-            description="Browse 2000+ affordable advertising squares starting at just £1 per day. CLICKaLINKS connects UK businesses with customers through grid advertising."
+            title="Games and Apps | Tap. Get. Play. | £1 a Day | CLICKaLINKS"
+            description="Discover games and apps on CLICKaLINKS. Tap a square, see the store page, and press Get. Developers can place a game from £1 a day."
           />
         )}
         <div className="ad-grid-container">
           <div className="loading-message">
             <div className="loading-spinner"></div>
-            Loading advertising spots...
+            Loading the games grid...
           </div>
         </div>
       </>
@@ -927,12 +1041,12 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
 
   // SEO meta tags for home page only
   const seoTitle = isHome 
-    ? "CLICKaLINKS - Affordable Grid Advertising Platform | £1 Per Day | UK"
-    : `Page ${pageNumber} - CLICKaLINKS Advertising Grid`;
+    ? "Games and Apps | Tap. Get. Play. | £1 a Day | CLICKaLINKS"
+    : `Games and Apps, Page ${pageNumber} | CLICKaLINKS`;
   
   const seoDescription = isHome
-    ? "CLICKaLINKS is the UK's most affordable grid advertising platform. Starting at just £1 per day, showcase your business across 2000+ advertising squares on 10 pages. Perfect for small businesses, local shops, online stores, and service providers looking to reach customers with their deals, promotions, and special offers. Join hundreds of UK businesses already advertising. No contracts, no hidden fees, instant activation. Click through to customer deals, discounts, and promotions all year round."
-    : `Browse advertising squares on page ${pageNumber} of CLICKaLINKS grid. £1 per day affordable advertising for UK businesses. Select from available squares, upload your logo, and start reaching customers today.`;
+    ? "Discover games and apps on CLICKaLINKS. Tap a square, see screenshots and ratings, and press Get to open the App Store or Google Play. Place your own game from £1 a day."
+    : `Browse games and apps on page ${pageNumber} of CLICKaLINKS. Tap a square to open the store page, or claim an open square for your game from £1 a day.`;
 
   return (
     <>
@@ -947,6 +1061,13 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
       {/* Header Section - FIXED LAYOUT */}
       <div className="grid-header">
         <div className="page-info">
+          <Link
+            to={pageNumber > 1 ? `/page${pageNumber - 1}` : '/page10'}
+            className="page-arrow page-arrow-left"
+            aria-label="Previous page"
+          >
+            ←
+          </Link>
           <div className="page-stats">
             <div className="available-stat">✅ {availableCount} Available square</div>
             <div className="occupied-stat">🔴 {occupiedCount} Occupied Square</div>
@@ -956,7 +1077,7 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
               </span>
             </div>
             {isAdmin && (
-              <button 
+              <button
                 className="manual-shuffle-btn"
                 onClick={handleManualShuffle}
                 title="Shuffle all squares now (Admin only)"
@@ -965,33 +1086,29 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
               </button>
             )}
           </div>
-          <div className="page-navigation">
-            <Link 
-              to={pageNumber > 1 ? `/page${pageNumber - 1}` : '/page10'}
-              className="page-arrow page-arrow-left"
-              aria-label="Previous page"
-            >
-              ←
-            </Link>
-            <span className="page-indicator">Page {pageNumber || 1} of 10</span>
-            <Link 
-              to={pageNumber < 10 ? `/page${pageNumber + 1}` : '/'}
-              className="page-arrow page-arrow-right"
-              aria-label="Next page"
-            >
-              →
-            </Link>
-          </div>
+          <span className="page-indicator">Page {pageNumber || 1} of 10</span>
+          <Link
+            to={pageNumber < 10 ? `/page${pageNumber + 1}` : '/'}
+            className="page-arrow page-arrow-right"
+            aria-label="Next page"
+          >
+            →
+          </Link>
         </div>
       </div>
 
+
+      {Object.keys(samplePlacements).length > 0 && (
+        <div className="sample-app-note">Sample games move to new squares each time the grid shuffles. Rest on one to open its store page. They only appear on this local site.</div>
+      )}
 
       {/* Grid Container - CENTERED */}
       <div className="grid-container">
         <div className={`positions-grid ${isMobile ? 'mobile-layout' : 'desktop-layout'}`}>
           {squares.map((position) => {
             const businessInfo = getBusinessInfo(position);
-            const available = isAvailable(position);
+            const appListing = resolveAppListing(position);
+            const available = isAvailable(position) && !appListing;
             // Check if this square should be highlighted (from search)
             const shouldHighlight = location.state?.highlightSquare === position;
             
@@ -999,14 +1116,25 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
               <div
                 key={position}
                 data-square={position}
-                className={`ad-position ${available ? 'available' : 'occupied'} ${shouldHighlight ? 'highlighted-square' : ''}`}
-                onClick={() => handlePositionClick(position)}
+                className={`ad-position ${available ? 'available' : 'occupied'} ${appListing ? 'app-listing' : ''} ${shouldHighlight ? 'highlighted-square' : ''}`}
+                onClick={(event) => handlePositionClick(position, event)}
+                onMouseEnter={(event) => handleAppPointerEnter(position, event)}
+                onMouseLeave={handleAppPointerLeave}
               >
                 <div className="position-content">
                   {available ? (
                     <div className="available-spot">
-                      <div className="spot-text">Ad Spot</div>
+                      <div className="spot-text">Open</div>
                       <div className="spot-price">£1/day</div>
+                    </div>
+                  ) : appListing ? (
+                    <div className="occupied-spot">
+                      {appListing.icon ? (
+                        <img src={appListing.icon} alt="" className="business-logo loaded app-icon" />
+                      ) : (
+                        <div className="app-icon-letter">{(appListing.name || 'A').slice(0, 1)}</div>
+                      )}
+                      {appListing.sample && <span className="sample-app-badge">Sample</span>}
                     </div>
                   ) : (
                     <div className="occupied-spot">
@@ -1150,18 +1278,40 @@ const AdGrid = ({ start = 1, end = 200, pageNumber, isHome = false }) => {
         </div>
       </div>
 
+      {appPreview && (
+        <AppStorePreview
+          app={appPreview.listing}
+          anchorRect={appPreview.rect}
+          pinned={appPreview.pinned}
+          sheet={isMobile}
+          onClose={() => setAppPreview(null)}
+          onPointerEnter={() => clearTimeout(closeTimerRef.current)}
+          onPointerLeave={scheduleClosePreview}
+          onGet={(url) => {
+            if (!appPreview.listing.sample) {
+              trackClick(
+                appPreview.position,
+                appPreview.listing.name,
+                url,
+                pageNumber
+              );
+            }
+          }}
+        />
+      )}
+
       {/* Occupied Square Modal */}
       {selectedOccupiedSquare && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Advertisement Spot</h3>
+            <h3>This square is taken</h3>
             <div className="business-details">
-              <p>This advertising spot is currently occupied.</p>
+              <p>A game or app is already on this square.</p>
               {getBusinessInfo(selectedOccupiedSquare)?.contactEmail && (
                 <p><strong>Contact:</strong> {getBusinessInfo(selectedOccupiedSquare).contactEmail}</p>
               )}
               {getBusinessInfo(selectedOccupiedSquare)?.businessName && (
-                <p><strong>Business:</strong> {getBusinessInfo(selectedOccupiedSquare).businessName}</p>
+                <p><strong>Game:</strong> {getBusinessInfo(selectedOccupiedSquare).businessName}</p>
               )}
             </div>
             <button onClick={closeModal} className="btn-secondary">Close</button>

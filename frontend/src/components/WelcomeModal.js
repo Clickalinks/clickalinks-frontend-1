@@ -73,41 +73,41 @@ const WelcomeModal = () => {
         </button>
         
         <div className="welcome-modal-header">
-          <h2>Welcome to ClickaLinks!</h2>
-          <p className="welcome-modal-subtitle">Your Direct Advertising Platform</p>
+          <h2>Welcome to ClickaLinks</h2>
+          <p className="welcome-modal-subtitle">Tap. Get. Play.</p>
         </div>
 
         <div className="welcome-modal-content">
           <div className="welcome-features">
             <div className="welcome-feature-item">
+              <span className="welcome-feature-icon">🎮</span>
+              <div className="welcome-feature-text">
+                <h3>Games and apps</h3>
+                <p>A wall of games and apps for iPhone and Android. Rest on a square to open the store page.</p>
+              </div>
+            </div>
+
+            <div className="welcome-feature-item">
               <span className="welcome-feature-icon">💰</span>
               <div className="welcome-feature-text">
-                <h3>Affordable Advertising</h3>
-                <p>Just £1 per day - cost-effective marketing that fits any budget</p>
+                <h3>£1 a day</h3>
+                <p>A square for your game or app, with no contract. Most of the games here are free to download.</p>
               </div>
             </div>
 
             <div className="welcome-feature-item">
-              <span className="welcome-feature-icon">🤝</span>
+              <span className="welcome-feature-icon">📲</span>
               <div className="welcome-feature-text">
-                <h3>Supporting Small Businesses</h3>
-                <p>Built specifically to help small businesses reach customers affordably</p>
-              </div>
-            </div>
-
-            <div className="welcome-feature-item">
-              <span className="welcome-feature-icon">🎯</span>
-              <div className="welcome-feature-text">
-                <h3>Promote Sales & Deals</h3>
-                <p>Perfect for showcasing sales, special offers, and clearance products</p>
+                <h3>Press Get</h3>
+                <p>The Get button opens the App Store or Google Play, and the player installs the game there.</p>
               </div>
             </div>
 
             <div className="welcome-feature-item">
               <span className="welcome-feature-icon">⚖️</span>
               <div className="welcome-feature-text">
-                <h3>Fair Placement System</h3>
-                <p>Our automatic shuffling ensures fair visibility for every business</p>
+                <h3>Fair placement</h3>
+                <p>Squares shuffle so every game gets a turn on the page, not only the ones that arrived first.</p>
               </div>
             </div>
           </div>

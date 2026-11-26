@@ -4,9 +4,9 @@ import { useLocation } from 'react-router-dom';
 
 const SITE_URL = 'https://clickalinks.com';
 const SITE_NAME = 'CLICKaLINKS';
-const DEFAULT_TITLE = 'CLICKaLINKS - Affordable Grid Advertising Platform | £1 Per Day | UK';
-const DEFAULT_DESCRIPTION = 'CLICKaLINKS is the UK\'s most affordable grid advertising platform. Starting at just £1 per day, showcase your business across 2000+ advertising squares on 10 pages. Perfect for small businesses, local shops, online stores, and service providers looking to reach customers with their deals, promotions, and special offers. Join hundreds of UK businesses already advertising. No contracts, no hidden fees, instant activation. Click through to customer deals, discounts, and promotions all year round.';
-const DEFAULT_KEYWORDS = 'affordable advertising, grid advertising, advertising platform, UK advertising, business advertising, £1 per day advertising, cheap advertising, digital marketing, online advertising, business promotion, deals platform, promotions advertising, clickalinks, clickalinks.com';
+const DEFAULT_TITLE = 'CLICKaLINKS | Games and Apps | Tap. Get. Play.';
+const DEFAULT_DESCRIPTION = 'CLICKaLINKS is a grid of games and apps. Tap a square, see the store page, and press Get. Place your own game from £1 a day.';
+const DEFAULT_KEYWORDS = 'games, apps, indie games, app store, google play, tap get play, clickalinks, £1 a day, game promotion';
 const DEFAULT_IMAGE = `${SITE_URL}/logo.PNG`;
 
 const SEO = ({
@@ -21,7 +21,9 @@ const SEO = ({
 }) => {
   const location = useLocation();
   const canonicalUrl = canonical || `${SITE_URL}${location.pathname}`;
-  const fullTitle = title === DEFAULT_TITLE ? title : `${title} | ${SITE_NAME}`;
+  const fullTitle = title === DEFAULT_TITLE || title.endsWith(SITE_NAME)
+    ? title
+    : `${title} | ${SITE_NAME}`;
 
   // Structured Data - Organization
   const organizationSchema = {
@@ -41,13 +43,7 @@ const SEO = ({
       "@type": "ContactPoint",
       "email": "support@clickalinks.com",
       "contactType": "Customer Support"
-    },
-    "sameAs": [
-      "https://www.facebook.com",
-      "https://www.instagram.com",
-      "https://www.linkedin.com",
-      "https://www.tiktok.com"
-    ]
+    }
   };
 
   // Structured Data - Website
@@ -71,7 +67,7 @@ const SEO = ({
   const serviceSchema = {
     "@context": "https://schema.org",
     "@type": "Service",
-    "name": "Grid Advertising Platform",
+    "name": "Games and apps grid",
     "description": DEFAULT_DESCRIPTION,
     "provider": {
       "@type": "Organization",
@@ -143,7 +139,7 @@ const SEO = ({
 
       {/* Additional Meta Tags */}
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <meta name="theme-color" content="#667eea" />
+      <meta name="theme-color" content="#1a1458" />
       <meta name="format-detection" content="telephone=no" />
       <meta name="geo.region" content="GB" />
       <meta name="geo.placename" content="United Kingdom" />

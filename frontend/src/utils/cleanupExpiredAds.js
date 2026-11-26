@@ -2,6 +2,7 @@
 import { db, storage } from '../firebase';
 import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { ref, listAll, deleteObject } from 'firebase/storage';
+import { parseDateValue } from './dateUtils';
 
 /**
  * Clean up expired ads - removes from Firestore and deletes logos from Storage
@@ -22,8 +23,8 @@ export const cleanupExpiredAds = async () => {
 
       // Check if ad has expired
       if (data && data.endDate) {
-        const endDate = new Date(data.endDate);
-        if (endDate <= now) {
+        const endDate = parseDateValue(data.endDate);
+        if (endDate && endDate <= now) {
           console.log(`🗑️ Cleaning up expired ad for square ${squareId}`);
           
           // Delete from Firestore
@@ -105,8 +106,8 @@ export const cleanupExpiredAds = async () => {
     Object.keys(localPurchases).forEach(squareNum => {
       const localData = localPurchases[squareNum];
       if (localData && localData.endDate) {
-        const endDate = new Date(localData.endDate);
-        if (endDate <= now) {
+        const endDate = parseDateValue(localData.endDate);
+        if (endDate && endDate <= now) {
           delete localPurchases[squareNum];
           localCleaned++;
         }
@@ -141,8 +142,8 @@ export const markExpiredAdsInactive = async () => {
     querySnapshot.forEach((docSnapshot) => {
       const data = docSnapshot.data();
       if (data && data.status === 'active' && data.endDate) {
-        const endDate = new Date(data.endDate);
-        if (endDate <= now) {
+        const endDate = parseDateValue(data.endDate);
+        if (endDate && endDate <= now) {
           const updatePromise = updateDoc(doc(db, 'purchasedSquares', docSnapshot.id), {
             status: 'expired',
             expiredAt: new Date().toISOString()

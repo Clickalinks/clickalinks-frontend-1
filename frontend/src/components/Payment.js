@@ -293,6 +293,9 @@ const Payment = () => {
     setIsProcessing(true);
     setErrors({});
 
+    // Capture logoData from location.state to avoid shadowing issues
+    const logoDataFromState = logoData || businessData?.logoData || null;
+
     try {
       // CRITICAL: Check if promo code makes it free
       // Check both the calculated amount AND if appliedPromo exists with discountType 'free'
@@ -348,7 +351,7 @@ const Payment = () => {
           businessName: businessData?.name,
           contactEmail: businessData?.email,
           website: businessData?.website,
-          logoData: logoData || businessData?.logoData || localStorage.getItem(`logoData_${selectedSquare}`),
+          logoData: logoDataFromState || localStorage.getItem(`logoData_${selectedSquare}`),
           amount: 0,
           duration: finalDuration,
           selectedDuration: finalDuration,
@@ -423,22 +426,22 @@ const Payment = () => {
 
       // Get storagePath from localStorage if available (logo was uploaded earlier)
       let storagePath = localStorage.getItem(`logoPath_${selectedSquare}`) || null;
-      const logoData = localStorage.getItem(`logoData_${selectedSquare}`) || businessData?.logoData || null;
+      const retrievedLogoData = localStorage.getItem(`logoData_${selectedSquare}`) || logoDataFromState || null;
       
-      // CRITICAL FIX: If storagePath is missing but logoData exists, try to extract it from logoData URL
-      if (!storagePath && logoData && logoData.includes('firebasestorage.googleapis.com')) {
+      // CRITICAL FIX: If storagePath is missing but retrievedLogoData exists, try to extract it from retrievedLogoData URL
+      if (!storagePath && retrievedLogoData && retrievedLogoData.includes('firebasestorage.googleapis.com')) {
         try {
           // Extract storagePath from Firebase Storage URL
           // Format: https://firebasestorage.googleapis.com/v0/b/bucket-name/o/logos%2Ffilename?alt=media&token=...
-          const urlMatch = logoData.match(/\/o\/([^?]+)/);
+          const urlMatch = retrievedLogoData.match(/\/o\/([^?]+)/);
           if (urlMatch) {
             storagePath = decodeURIComponent(urlMatch[1]);
-            console.log('✅ Extracted storagePath from logoData URL:', storagePath);
+            console.log('✅ Extracted storagePath from retrievedLogoData URL:', storagePath);
             // Save it to localStorage for future use
             localStorage.setItem(`logoPath_${selectedSquare}`, storagePath);
           }
         } catch (extractError) {
-          console.warn('⚠️ Could not extract storagePath from logoData URL:', extractError.message);
+          console.warn('⚠️ Could not extract storagePath from retrievedLogoData URL:', extractError.message);
         }
       }
       
@@ -455,7 +458,7 @@ const Payment = () => {
       console.log('   website:', businessData?.website || 'none');
       console.log('   promoCode:', appliedPromo ? promoCode.toUpperCase() : 'none');
       console.log('   storagePath:', storagePath || 'MISSING ⚠️');
-      console.log('   hasLogoData in localStorage:', !!logoData);
+      console.log('   hasLogoData in localStorage:', !!retrievedLogoData);
       if (!storagePath) {
         console.warn('   ⚠️  WARNING: storagePath is MISSING - logo may not appear in purchase!');
       }

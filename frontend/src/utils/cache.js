@@ -1,3 +1,5 @@
+import { parseDateValue } from './dateUtils';
+
 /**
  * IndexedDB Cache Layer for Clickalinks
  * Provides fast local caching for Firestore data to reduce queries and improve performance
@@ -72,8 +74,8 @@ export const getCachedPurchases = async (start, end) => {
           if (data.cachedAt && (now - data.cachedAt) < CACHE_DURATION) {
             // Check expiration
             if (data.endDate) {
-              const endDate = new Date(data.endDate).getTime();
-              if (endDate > now) {
+              const endDate = parseDateValue(data.endDate);
+              if (endDate && endDate.getTime() > now) {
                 purchases[data.squareNumber] = data;
               }
             } else {
@@ -137,7 +139,8 @@ export const clearExpiredCache = async () => {
           const data = cursor.value;
           // Remove if cache expired or ad expired
           const cacheExpired = data.cachedAt && (now - data.cachedAt) >= CACHE_DURATION;
-          const adExpired = data.endDate && new Date(data.endDate).getTime() <= now;
+          const endDate = data.endDate ? parseDateValue(data.endDate) : null;
+          const adExpired = endDate ? endDate.getTime() <= now : false;
           
           if (cacheExpired || adExpired) {
             cursor.delete();

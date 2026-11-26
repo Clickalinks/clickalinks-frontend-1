@@ -970,7 +970,7 @@ const Success = () => {
             <div className="step-card">
               <div className="step-icon">🔄</div>
               <h4>Fair Placement</h4>
-              <p>Your position may change during shuffles, ensuring fair visibility for all businesses.</p>
+              <p>The square can move when the grid shuffles, so each game gets a turn near the front.</p>
             </div>
           </div>
         </div>
@@ -1013,7 +1013,7 @@ const Success = () => {
         {/* Thank You Message */}
         <div className="thank-you-message">
           <p>Thank you for choosing ClickaLinks! 🚀</p>
-          <p className="thank-you-subtitle">We're excited to help grow your business.</p>
+          <p className="thank-you-subtitle">Your game is on the grid. Players can press Get to open the store.</p>
         </div>
       </div>
     </div>

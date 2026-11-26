@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import SEO from './SEO';
 import './HowItWorks.css';
 
@@ -6,16 +7,16 @@ const HowItWorks = () => {
   return (
     <>
       <SEO
-        title="How It Works - CLICKaLINKS Advertising Platform Guide"
-        description="Learn how CLICKaLINKS advertising platform works. Simple 3-step process: select a square, upload your logo and details, complete payment. Your ad goes live immediately. £1 per day affordable advertising."
-        keywords="how clickalinks works, advertising guide, how to advertise, advertising process, clickalinks tutorial, advertising steps, advertising platform guide"
+        title="How CLICKaLINKS Works | Place a Game from £1 a Day"
+        description="Choose a square, add your game icon and store link, and pay. Players tap the square, see the store page, and press Get. £1 a day for iPhone and Android games and apps."
+        keywords="how clickalinks works, promote an indie game, app store advertising, £1 a day, tap get play, place a game"
       />
       <div className="how-it-works">
       {/* Hero Section */}
       <div className="hero-section">
         <div className="container">
           <h1>How It Works</h1>
-          <p className="subtitle">Get your business in front of thousands in just 3 simple steps</p>
+          <p className="subtitle">Put a game on the grid in three steps</p>
         </div>
       </div>
 
@@ -32,7 +33,7 @@ const HowItWorks = () => {
                 <div className="step-number">01</div>
               </div>
               <h3>Choose Your Square</h3>
-              <p>Browse our 2000-square grid across 10 pages and select any available advertising spot. Each square represents prime visibility where thousands of potential customers can discover your business.</p>
+              <p>Browse the grid across 10 pages and choose an open square. That square becomes your game’s place on the wall.</p>
             </div>
 
             {/* Section 2 */}
@@ -43,8 +44,8 @@ const HowItWorks = () => {
                 </div>
                 <div className="step-number">02</div>
               </div>
-              <h3>Upload & Customize</h3>
-              <p>Upload your professional company logo and provide the direct link to your special offers, discounted products, or landing page. Our system supports all standard image formats.</p>
+              <h3>Add your game</h3>
+              <p>Upload the app icon and paste the App Store or Google Play link. Players who press Get are taken to that store page.</p>
             </div>
 
             {/* Section 3 */}
@@ -56,7 +57,7 @@ const HowItWorks = () => {
                 <div className="step-number">03</div>
               </div>
               <h3>Launch & Track</h3>
-              <p>Choose your campaign duration (10, 20, 30 or 60 days), complete your payment, and watch the clicks roll in! Your advertisement goes live immediately upon payment confirmation.</p>
+              <p>Choose 10, 20, 30 or 60 days at £1 a day. The square goes live when payment is confirmed, and Get opens the store.</p>
             </div>
           </div>
         </div>
@@ -67,7 +68,7 @@ const HowItWorks = () => {
         <div className="container">
           <div className="section-header">
             <h2>Simple & Transparent Pricing</h2>
-            <p>Choose the perfect campaign duration for your business needs</p>
+            <p>£1 a day. Pick the length of the launch.</p>
           </div>
           
           <div className="pricing-grid">
@@ -77,11 +78,11 @@ const HowItWorks = () => {
                 <div className="price">£10</div>
               </div>
               <ul className="features">
-                <li>Perfect for testing</li>
-                <li>Short-term promotions</li>
-                <li>Immediate visibility</li>
+                <li>A short launch test</li>
+                <li>Useful around release day</li>
+                <li>Live after payment</li>
               </ul>
-              <button className="cta-button">Get Started</button>
+              <Link to="/campaign" className="cta-button">Get Started</Link>
             </div>
 
             <div className="pricing-card popular">
@@ -95,7 +96,7 @@ const HowItWorks = () => {
                 <li>Sustained visibility</li>
                 <li>Optimal exposure</li>
               </ul>
-              <button className="cta-button primary">Get Started</button>
+              <Link to="/campaign" className="cta-button primary">Get Started</Link>
             </div>
 
             <div className="pricing-card">
@@ -108,7 +109,7 @@ const HowItWorks = () => {
                 <li>Maximum exposure</li>
                 <li>Best value</li>
               </ul>
-              <button className="cta-button">Get Started</button>
+              <Link to="/campaign" className="cta-button">Get Started</Link>
             </div>
 
             <div className="pricing-card">
@@ -121,8 +122,23 @@ const HowItWorks = () => {
                 <li>Premium placement</li>
                 <li>Maximum ROI</li>
               </ul>
-              <button className="cta-button">Get Started</button>
+              <Link to="/campaign" className="cta-button">Get Started</Link>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Next Steps */}
+      <div className="pricing-section">
+        <div className="container">
+          <div className="section-header">
+            <h2>Ready to Launch?</h2>
+            <p>Start a campaign or explore the grid before you decide.</p>
+          </div>
+          <div className="cta-buttons">
+            <Link to="/campaign" className="cta-button primary">Start Your Campaign</Link>
+            <Link to="/page1" className="cta-button">View the Grid</Link>
+            <Link to="/help" className="cta-button">Help Centre</Link>
           </div>
         </div>
       </div>

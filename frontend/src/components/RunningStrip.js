@@ -6,10 +6,10 @@ const RunningStrip = () => {
     <div className="running-strip-container">
       <div className="running-strip">
         <div className="marquee-content">
-          🚀 Welcome to ClickaLinks - Your Direct Advertising Platform! • 
-          ⭐ Premium Advertising Spaces Available - Get Your Spot Now! • 
-          💫 Limited Time Offer - Secure Your Advertising Square Today! • 
-          🎯 Reach Thousands of Customers - Advertise with ClickaLinks! Follow three simple step, Step 1: select Ad campaign. Step 2: Entre business details & company Logo. Step 3: Pay for your campaign to go Live!
+          🎮 Tap. Get. Play. — games and apps on ClickaLinks • 
+          ⭐ A square from £1 a day • 
+          💫 Rest on a game to see it, then press Get • 
+          🎯 Step 1: choose a square. Step 2: add your game. Step 3: pay and go live!
         </div>
       </div>
     </div>

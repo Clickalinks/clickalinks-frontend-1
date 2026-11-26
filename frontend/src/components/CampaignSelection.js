@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './CampaignSelection.css';
 
 const CampaignSelection = () => {
@@ -17,7 +17,7 @@ const CampaignSelection = () => {
       price: 10, 
       label: 'Starter', 
       popular: false,
-      description: 'Perfect for testing campaigns',
+      description: 'A short launch test',
       savings: '0%',
       icon: '🚀'
     },
@@ -27,7 +27,7 @@ const CampaignSelection = () => {
       price: 20, 
       label: 'Growth', 
       popular: false,
-      description: 'Ideal for steady growth',
+      description: 'Two weeks around a release',
       savings: '0%',
       icon: '📈'
     },
@@ -37,7 +37,7 @@ const CampaignSelection = () => {
       price: 30,                             
       label: 'Professional', 
       popular: true,
-      description: 'Most popular choice',
+      description: 'A full month on the grid',
       savings: '0%',
       icon: '⭐'
     },
@@ -48,7 +48,7 @@ const CampaignSelection = () => {
       label: 'Enterprise', 
       popular: false,
       bestValue: true,
-      description: 'Maximum value',
+      description: 'Stay up while the game is new',
       savings: '0%',
       icon: '🏆'
     }
@@ -82,7 +82,11 @@ const CampaignSelection = () => {
         <div className="error-state">
           <div className="error-icon">⚠️</div>
           <h2>No Advertising Square Selected</h2>
-          <p>Please return to the grid and select an advertising square to continue.</p>
+          <p>Go back to the grid and choose an open square first.</p>
+          <p>
+            Need help? See <Link to="/how-it-works">how it works</Link> or visit the
+            <Link to="/help"> help centre</Link>.
+          </p>
           <button 
             onClick={() => navigate('/')} 
             className="btn btn--primary"
@@ -103,7 +107,7 @@ const CampaignSelection = () => {
             <div className="header-text">
               <h1>Select Your Campaign</h1>
               <p className="header-subtitle">
-                Choose the perfect duration for your advertising on <strong>Square #{selectedSquare}</strong>
+                Choose how long your game stays on <strong>square #{selectedSquare}</strong>
               </p>
             </div>
             <nav className="progress-navigation">
@@ -132,7 +136,7 @@ const CampaignSelection = () => {
             {/* Plans Selection Section */}
             <section className="plans-section">
               <div className="section-header">
-                <h2>Advertising Plans</h2>
+                <h2>Launch length</h2>
                 <p>Select your preferred campaign duration</p>
               </div>
 

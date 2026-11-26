@@ -18,20 +18,20 @@ const HelpCentre = () => {
       icon: '🚀',
       questions: [
         {
-          q: 'How do I create an advertising campaign?',
-          a: 'Creating a campaign is simple! Just follow these 3 steps: 1) Browse our grid and select an available square, 2) Upload your business logo and enter your business details, 3) Choose your campaign duration and complete payment. Your ad will go live immediately after payment confirmation.'
+          q: 'How do I put a game on the grid?',
+          a: 'Choose an open square, upload your app icon, paste your App Store or Google Play link, then pick 10, 20, 30 or 60 days and pay. The square goes live when payment is confirmed.'
         },
         {
-          q: 'What information do I need to provide?',
-          a: 'You\'ll need to provide: your business name, contact email address, website URL (or deal link), and your company logo. That\'s it! No complicated forms or lengthy sign-up process.'
+          q: 'What do I need to provide?',
+          a: 'The game or studio name, a contact email, the store link, and the app icon. Players who press Get are sent to that store link.'
         },
         {
-          q: 'How long does it take for my ad to go live?',
-          a: 'Your advertisement goes live immediately after your payment is confirmed. There\'s no waiting period - as soon as you complete the checkout process, your ad appears on the grid!'
+          q: 'How long until the game is live?',
+          a: 'The square goes live when payment is confirmed. There is no extra review queue on the site.'
         },
         {
-          q: 'Can I choose which square to advertise on?',
-          a: 'Yes! You can browse through all 2000 available squares across 10 pages and select any square that\'s currently available. Simply click on an empty square to start your campaign.'
+          q: 'Can I choose the square?',
+          a: 'Yes. Any open square across the 10 pages can be chosen. Tap or click an open square to start.'
         }
       ]
     },
@@ -41,8 +41,8 @@ const HelpCentre = () => {
       icon: '💳',
       questions: [
         {
-          q: 'How much does it cost to advertise?',
-          a: 'Our pricing is simple and transparent: £1 per day. You can choose campaign durations of 10 days (£10), 20 days (£20), 30 days (£30), or 60 days (£60). No hidden fees, no contracts, no surprises.'
+          q: 'How much does a square cost?',
+          a: '£1 per day. A 10-day run is £10, 20 days is £20, 30 days is £30, and 60 days is £60. There is no contract on top of that.'
         },
         {
           q: 'What payment methods do you accept?',
@@ -69,19 +69,19 @@ const HelpCentre = () => {
       questions: [
         {
           q: 'How long can my campaign run?',
-          a: 'You can choose from 10, 20, 30, or 60-day campaigns. Your ad will automatically stop displaying when your campaign duration expires. You can always purchase a new campaign to continue advertising.'
+          a: 'You can choose 10, 20, 30, or 60 days. When the time ends, the square comes off the grid. You can buy another run if you want the game to stay.'
         },
         {
-          q: 'Can I change my logo or link after my campaign starts?',
-          a: 'To maintain fairness and consistency, changes to active campaigns require purchasing a new campaign. If you need to update your information urgently (e.g., incorrect URL), please contact support@clickalinks.com with your purchase details, and we\'ll work with you to find the best solution.'
+          q: 'Can I change the icon or store link after the square is live?',
+          a: 'A live square stays as it was purchased, so the grid stays fair. If a store link is wrong, email support@clickalinks.com with the square number and we will help.'
         },
         {
           q: 'How do I know how many clicks my ad is getting?',
-          a: 'We track clicks on all advertisements. While detailed analytics aren\'t currently available in your account, you can contact us at support@clickalinks.com to request click statistics for your campaign.'
+          a: 'Get presses are counted. A developer dashboard is not on the site yet. Email support@clickalinks.com if you want the count for your square.'
         },
         {
           q: 'What happens when my campaign expires?',
-          a: 'When your campaign expires, your advertisement is automatically removed from the grid. The square becomes available for other businesses to purchase. You\'ll receive an email notification before your campaign expires.'
+          a: 'When the days run out, the game leaves the grid and the square can be taken by another game. You should get an email before that happens.'
         },
         {
           q: 'Can I extend my campaign?',
@@ -95,12 +95,12 @@ const HelpCentre = () => {
       icon: '🔧',
       questions: [
         {
-          q: 'My logo isn\'t displaying correctly. What should I do?',
-          a: 'Make sure your logo is in a standard image format (JPG, PNG, GIF, or WebP) and under 2MB. For best results, use a square logo (1:1 aspect ratio) with a transparent or white background. High-resolution images (at least 500x500 pixels) work best. If issues persist, try a different image file or contact support@clickalinks.com for assistance.'
+          q: 'My app icon is not showing. What should I do?',
+          a: 'Use a JPG, PNG, GIF or WebP under 2MB. A square icon, at least 500 by 500 pixels, fills the square best. If it still fails, email support@clickalinks.com.'
         },
         {
-          q: 'I can\'t see my ad on the grid after payment. What\'s wrong?',
-          a: 'First, try refreshing the page. If your ad still doesn\'t appear, check that your payment was successful by looking for the confirmation email. If you received a confirmation email but don\'t see your ad, contact support@clickalinks.com with your transaction ID.'
+          q: 'I paid and the game is not on the grid. What is wrong?',
+          a: 'Refresh the page and check the confirmation email. If the email arrived and the square is still empty, email support@clickalinks.com with the transaction id.'
         },
         {
           q: 'The website is loading slowly. Is this normal?',
@@ -108,11 +108,11 @@ const HelpCentre = () => {
         },
         {
           q: 'I didn\'t receive my confirmation email. What should I do?',
-          a: 'First, check your spam/junk folder. If you still don\'t see it, the email may have been delayed. Contact us at support@clickalinks.com with your business name and square number, and we\'ll resend your confirmation and invoice.'
+          a: 'Check spam first. If it is still missing, email support@clickalinks.com with the game name and square number and we will resend the confirmation.'
         },
         {
           q: 'Can I use the same email for multiple campaigns?',
-          a: 'Yes, you can use the same email address for multiple campaigns. Each campaign is independent, so you can advertise multiple businesses or run multiple campaigns simultaneously.'
+          a: 'Yes. The same email can cover more than one game. Each square is its own run.'
         }
       ]
     },
@@ -146,7 +146,7 @@ const HelpCentre = () => {
       questions: [
         {
           q: 'Do I need to create an account?',
-          a: 'No! ClickaLinks doesn\'t require account creation. Simply select a square, provide your business details, and complete payment. Your campaign goes live immediately - no sign-up needed.'
+          a: 'No account is required. Choose a square, add the game and the store link, and pay. The square goes live when payment is confirmed.'
         },
         {
           q: 'How do I contact support?',
@@ -185,12 +185,18 @@ const HelpCentre = () => {
   ];
 
   return (
-    <div className="help-centre">
+    <>
+      <SEO
+        title="Help Centre | Games and Apps | CLICKaLINKS"
+        description="Help for players and developers on CLICKaLINKS. How to open a game, press Get, or place your own game from £1 a day."
+        keywords="clickalinks help, place a game, app store link, £1 a day, tap get play"
+      />
+      <div className="help-centre">
       {/* Hero Section */}
       <div className="help-hero">
         <div className="container">
           <h1>Help Centre</h1>
-          <p className="subtitle">Find answers to common questions and get the support you need</p>
+          <p className="subtitle">Answers for players and for people placing a game</p>
           
           {/* Search Bar */}
           <div className="search-container">
@@ -293,6 +299,7 @@ const HelpCentre = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

@@ -7,7 +7,7 @@
   <!-- Home Page -->
   <url>
     <loc>https://clickalinks.com/</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -15,42 +15,42 @@
   <!-- Main Pages -->
   <url>
     <loc>https://clickalinks.com/about</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/how-it-works</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/help</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/blog</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/privacy</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/terms</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
@@ -58,7 +58,7 @@
   <!-- Campaign Pages -->
   <url>
     <loc>https://clickalinks.com/campaign</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -66,70 +66,70 @@
   <!-- Grid Pages (Pages 1-10) -->
   <url>
     <loc>https://clickalinks.com/page1</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page2</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page3</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page4</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page5</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page6</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page7</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page8</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page9</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://clickalinks.com/page10</loc>
-    <lastmod>2026-01-03</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.6</priority>
   </url>

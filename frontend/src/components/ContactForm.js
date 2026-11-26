@@ -64,7 +64,7 @@ const ContactForm = () => {
       <div className="contact-content">
         <div className="contact-header">
           <h1>📧 Contact CLICKaLINKS</h1>
-          <p>Get in touch with us - we're here to help your business grow!</p>
+          <p>Questions about a game on the grid, or about placing your own? Write to us.</p>
         </div>
 
         <div className="contact-grid">
@@ -164,8 +164,8 @@ const ContactForm = () => {
               <div className="contact-method">
                 <div className="contact-icon">🚀</div>
                 <div className="contact-details">
-                  <strong>Advertising Support</strong>
-                  <p>Need help with your campaign?</p>
+                  <strong>Game placement</strong>
+                  <p>Need help with a square?</p>
                   <small>We're here to help you succeed</small>
                 </div>
               </div>
@@ -173,12 +173,11 @@ const ContactForm = () => {
               <div className="contact-features">
                 <h4>Why Choose CLICKaLINKS?</h4>
                 <ul className="contact-features-list">
-                  <li>✅ Affordable advertising from £1/day</li>
-                  <li>✅ Direct customer connections</li>
-                  <li>✅ 2000+ advertising squares</li>
-                  <li>✅ Automatic square shuffling</li>
-                  <li>✅ Secure payment processing</li>
-                  <li>✅ Premium visibility for your business</li>
+                  <li>A square for a game or app from £1 a day</li>
+                  <li>Get opens the App Store or Google Play</li>
+                  <li>2,000 squares across 10 pages</li>
+                  <li>Squares shuffle so each game gets a turn</li>
+                  <li>Card payments through Stripe</li>
                 </ul>
               </div>
 

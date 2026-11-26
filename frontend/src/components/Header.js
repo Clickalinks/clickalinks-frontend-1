@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SearchBar from './SearchBar';
 import './Header.css';
@@ -8,6 +8,15 @@ const Header = () => {
   const navigate = useNavigate();
   const pages = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const [isMobile, setIsMobile] = useState(false);
+  const [isQuickLinksOpen, setIsQuickLinksOpen] = useState(false);
+  const quickLinksRef = useRef(null);
+  const quickLinks = [
+    { label: 'Start your campaign', path: '/campaign' },
+    { label: 'How it works', path: '/how-it-works' },
+    { label: 'About', path: '/about' },
+    { label: 'Blog', path: '/blog' },
+    { label: 'Help centre', path: '/help' }
+  ];
 
   // Detect mobile screen size (NOT tablets - tablets use desktop layout)
   useEffect(() => {
@@ -69,39 +78,120 @@ const Header = () => {
     }
   };
 
+  const toggleQuickLinks = () => {
+    setIsQuickLinksOpen((prev) => !prev);
+  };
+
+  const scrollToGrid = (event) => {
+    const onGrid = location.pathname === '/' || /^\/page\d+$/.test(location.pathname);
+    if (!onGrid) return;
+    event.preventDefault();
+    document.querySelector('.positions-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleQuickLinkSelect = (path) => {
+    setIsQuickLinksOpen(false);
+    navigate(path);
+  };
+
+  useEffect(() => {
+    if (!isQuickLinksOpen) return;
+    const handleOutsideClick = (event) => {
+      if (quickLinksRef.current && !quickLinksRef.current.contains(event.target)) {
+        setIsQuickLinksOpen(false);
+      }
+    };
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsQuickLinksOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isQuickLinksOpen]);
+
   return (
     <header className="header">
       <div className="header-container">
         {/* Promotional Strip */}
         <div className="promo-strip">
           <div className="promo-content">
-            <span className="promo-text">🚀 Direct Advertising Platform</span>
+            <span className="promo-text">🎮 Games and apps</span>
             <span className="promo-separator">•</span>
             <span className="promo-text">💰 £1 Per Day</span>
             <span className="promo-separator">•</span>
-            <span className="promo-text">⚖️ Fair visibility for every business</span>
+            <span className="promo-text">⚖️ Fair visibility</span>
             <span className="promo-separator">•</span>
             <span className="promo-text">⚡ Instant Setup</span>
             <span className="promo-separator">•</span>
-            <span className="promo-text">🎯 Click. Shop. Repeat.</span>
+            <span className="promo-text">🎮 Tap. Get. Play.</span>
           </div>
         </div>
         
-        {/* Logo Section */}
-        <div className="logo-section">
-          <Link to="/" className="logo-link" aria-label="ClickaLinks Home">
-            <img
-              src="/logo.PNG"
-              alt="ClickaLinks - Direct Advertising Platform"
-              className="logo-image"
-            />
-          </Link>
+        <div className="brand-row">
+          <div className="logo-section">
+            <Link to="/" className="logo-link" aria-label="ClickaLinks Home">
+              <img
+                src="/logo.PNG?v=neon"
+                alt="ClickaLinks — Tap. Get. Play."
+                className="logo-image"
+              />
+            </Link>
+          </div>
+          <aside className="header-guide" aria-label="How to use ClickaLinks">
+            <p className="header-guide-title">Tap a square. Press Get.</p>
+            <ol className="header-guide-steps">
+              <li><strong>Tap</strong> any game on the grid</li>
+              <li><strong>Get</strong> opens the App Store or Google Play</li>
+              <li><strong>Play</strong> once it is installed</li>
+            </ol>
+            <div className="header-guide-actions">
+              <Link to="/" className="header-guide-primary" onClick={scrollToGrid}>
+                Browse games
+              </Link>
+              <Link to="/how-it-works" className="header-guide-secondary">
+                Place a game · £1/day
+              </Link>
+            </div>
+          </aside>
         </div>
 
         {/* Mobile: Search Bar under Logo */}
         {isMobile ? (
           <div className="mobile-search-under-logo">
-            <SearchBar isMobile={true} />
+            <div className="mobile-search-row">
+              <SearchBar isMobile={true} />
+              <div className="quick-links-dropdown" ref={quickLinksRef}>
+                <button
+                  type="button"
+                  className="quick-links-button"
+                  onClick={toggleQuickLinks}
+                  aria-expanded={isQuickLinksOpen}
+                  aria-haspopup="menu"
+                >
+                  Quick links
+                </button>
+                {isQuickLinksOpen && (
+                  <div className="quick-links-menu" role="menu">
+                    {quickLinks.map(link => (
+                      <button
+                        key={link.path}
+                        type="button"
+                        className="quick-links-item"
+                        role="menuitem"
+                        onClick={() => handleQuickLinkSelect(link.path)}
+                      >
+                        {link.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           /* Desktop: Navigation Section with Search */
@@ -133,6 +223,32 @@ const Header = () => {
             {/* Search Bar - Next to Navigation */}
             <div className="search-container desktop-search">
               <SearchBar isMobile={false} />
+            </div>
+            <div className="quick-links-dropdown" ref={quickLinksRef}>
+              <button
+                type="button"
+                className="quick-links-button"
+                onClick={toggleQuickLinks}
+                aria-expanded={isQuickLinksOpen}
+                aria-haspopup="menu"
+              >
+                Quick links
+              </button>
+              {isQuickLinksOpen && (
+                <div className="quick-links-menu" role="menu">
+                  {quickLinks.map(link => (
+                    <button
+                      key={link.path}
+                      type="button"
+                      className="quick-links-item"
+                      role="menuitem"
+                      onClick={() => handleQuickLinkSelect(link.path)}
+                    >
+                      {link.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

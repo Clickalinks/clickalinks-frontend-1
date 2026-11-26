@@ -7,8 +7,13 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #87f2fc97 0%, #b8f77981 100%);
-  color: #333;
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(124, 92, 255, 0.28), transparent 42%),
+    radial-gradient(ellipse at 92% 8%, rgba(56, 189, 248, 0.24), transparent 40%),
+    radial-gradient(ellipse at 70% 100%, rgba(167, 139, 250, 0.22), transparent 46%),
+    linear-gradient(165deg, #eef2ff 0%, #f6f3ff 46%, #e7f4ff 100%);
+  background-attachment: fixed;
+  color: #1e1b4b;
   line-height: 1.5;
   min-height: 100vh;
 }
@@ -1542,7 +1547,7 @@ footer {
 }
 .running-strip {
   border: 3px solid (none) !important; /* Temporary to see if it exists */
-  background: linear-gradient(90deg, #ff6b35, #ff8e53, #ff6b35);
+  background: linear-gradient(90deg, #2a215f, #5b3cc4, #2563eb);
   height: 30px !important; /* Temporary */
 }
 .App {

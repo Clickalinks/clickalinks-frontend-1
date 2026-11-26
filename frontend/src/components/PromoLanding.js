@@ -9,11 +9,10 @@ const PromoLanding = () => {
       <div className="promo-hero">
         <div className="promo-hero-content">
           <h1 className="promo-hero-title">
-            Advertising from Just <span className="highlight">£1 Per Day</span>
+            A game square from <span className="highlight">£1 a day</span>
           </h1>
           <p className="promo-hero-subtitle">
-            Join hundreds of businesses advertising on ClickaLinks. 
-            Affordable, fair, and effective advertising that actually works.
+            Put your game or app on the grid. Players tap the square and press Get.
           </p>
           <div className="promo-hero-stats">
             <div className="stat-item">
@@ -22,7 +21,7 @@ const PromoLanding = () => {
             </div>
             <div className="stat-item">
               <div className="stat-number">2,000</div>
-              <div className="stat-label">Ad Spots</div>
+              <div className="stat-label">Squares</div>
             </div>
             <div className="stat-item">
               <div className="stat-number">10</div>
@@ -47,7 +46,7 @@ const PromoLanding = () => {
             <div className="benefit-card">
               <div className="benefit-icon">💰</div>
               <h3>Affordable Pricing</h3>
-              <p>Just £1 per day with no hidden fees. No contracts, no minimum spend. Perfect for businesses of all sizes.</p>
+              <p>£1 a day. No contract on top of the days you choose. Priced for a small game, not a large studio budget.</p>
             </div>
             <div className="benefit-card">
               <div className="benefit-icon">🎯</div>
@@ -86,7 +85,7 @@ const PromoLanding = () => {
             <div className="step-item">
               <div className="step-number">1</div>
               <h3>Choose Your Square</h3>
-              <p>Browse our interactive grid and select any available advertising square.</p>
+              <p>Pick an open square on the games grid.</p>
             </div>
             <div className="step-arrow">→</div>
             <div className="step-item">
@@ -98,13 +97,13 @@ const PromoLanding = () => {
             <div className="step-item">
               <div className="step-number">3</div>
               <h3>Enter Details</h3>
-              <p>Provide your business name, logo, and deal link. Quick and easy setup.</p>
+              <p>Add the game name, the app icon, and the App Store or Play Store link.</p>
             </div>
             <div className="step-arrow">→</div>
             <div className="step-item">
               <div className="step-number">4</div>
               <h3>Go Live!</h3>
-              <p>Complete payment and your ad goes live instantly. Start reaching customers today.</p>
+              <p>Pay, and the square goes live. Get opens the store.</p>
             </div>
           </div>
           <Link to="/" className="promo-cta-button secondary">
@@ -171,25 +170,22 @@ const PromoLanding = () => {
       {/* Social Proof Section */}
       <div className="promo-social-proof">
         <div className="container">
-          <h2 className="promo-section-title">Trusted by Businesses Across the UK</h2>
+          <h2 className="promo-section-title">How a player finds a game</h2>
           <div className="testimonials-grid">
             <div className="testimonial-card">
               <div className="testimonial-text">
-                "ClickaLinks has been a game-changer for our small business. Affordable advertising that actually brings in customers."
+                Tap or rest on a square. The store page opens with the icon, screenshots and rating.
               </div>
-              <div className="testimonial-author">- Local Retailer, Devon</div>
             </div>
             <div className="testimonial-card">
               <div className="testimonial-text">
-                "The fair rotation system means we get seen just as much as bigger brands. Great value for money!"
+                Press Get. iPhone opens the App Store. Android opens Google Play.
               </div>
-              <div className="testimonial-author">- Online Store Owner</div>
             </div>
             <div className="testimonial-card">
               <div className="testimonial-text">
-                "Easy to set up, instant activation, and we saw results within the first week. Highly recommend!"
+                Squares shuffle, so a new game is not stuck at the back of the grid.
               </div>
-              <div className="testimonial-author">- Service Provider, London</div>
             </div>
           </div>
         </div>
@@ -198,12 +194,12 @@ const PromoLanding = () => {
       {/* Final CTA Section */}
       <div className="promo-final-cta">
         <div className="container">
-          <h2>Ready to Grow Your Business?</h2>
-          <p>Join hundreds of businesses advertising on ClickaLinks today</p>
+          <h2>Ready to place a game?</h2>
+          <p>A square from £1 a day. Get sends players to the store.</p>
           <Link to="/" className="promo-cta-button large">
             Start Your Campaign Now
           </Link>
-          <p className="cta-note">No credit card required to browse. Start advertising in minutes.</p>
+          <p className="cta-note">Browsing the grid is free. Paying starts only when you claim a square.</p>
         </div>
       </div>
     </div>

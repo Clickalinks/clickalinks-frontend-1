@@ -1,7 +1,7 @@
 {
-  "name": "ClickaLinks - Direct Advertising Platform",
+  "name": "CLICKaLINKS — Tap. Get. Play.",
   "short_name": "ClickaLinks",
-  "description": "Affordable grid advertising starting at £1 per day",
+  "description": "A grid of games and apps. Place a game from £1 a day.",
   "icons": [
     {
       "src": "/favicon-16x16.png",
@@ -17,12 +17,22 @@
       "src": "/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ],
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#667eea",
-  "background_color": "#ffffff",
+  "theme_color": "#1a1458",
+  "background_color": "#1a1458",
   "orientation": "portrait-primary"
 }
 

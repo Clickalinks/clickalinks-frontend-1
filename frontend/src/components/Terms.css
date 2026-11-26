@@ -25,21 +25,12 @@
   right: 0;
   height: 4px;
   background: 
-    repeating-linear-gradient(
-      45deg,
-      #ff6b35 0px, #ff6b35 12px,
-      #06b6d4 12px, #06b6d4 24px,
-      #3b82f6 24px, #3b82f6 36px,
-      #10b981 36px, #10b981 48px,
-      #ec4899 48px, #ec4899 60px,
-      #fbbf24 60px, #fbbf24 72px
-    ),
-    linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    linear-gradient(135deg, #2a215f 0%, #5b3cc4 48%, #2563eb 100%);
   z-index: 0;
 }
 
 .terms-content h1 {
-  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
+  background: linear-gradient(135deg, #5b3cc4 0%, #2563eb 55%, #38bdf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -51,7 +42,7 @@
 }
 
 .terms-content h2 {
-  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
+  background: linear-gradient(135deg, #5b3cc4 0%, #2563eb 55%, #38bdf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -60,7 +51,7 @@
   font-weight: 700;
   text-align: left;
   border-left: 4px solid;
-  border-image: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%) 1;
+  border-image: linear-gradient(135deg, #5b3cc4 0%, #2563eb 55%, #38bdf8 100%) 1;
   padding-left: 1rem;
   position: relative;
   z-index: 1;
@@ -97,7 +88,7 @@
   border-radius: 12px;
   margin-bottom: 2rem;
   border-left: 4px solid;
-  border-image: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%) 1;
+  border-image: linear-gradient(135deg, #5b3cc4 0%, #2563eb 55%, #38bdf8 100%) 1;
   border-right: 2px solid rgba(255, 255, 255, 0.3);
   border-top: 2px solid rgba(255, 255, 255, 0.3);
   border-bottom: 2px solid rgba(255, 255, 255, 0.3);
@@ -118,7 +109,7 @@
 }
 
 .contact-link {
-  background: linear-gradient(135deg, #ff6b35 0%, #06b6d4 50%, #ec4899 100%);
+  background: linear-gradient(135deg, #5b3cc4 0%, #2563eb 55%, #38bdf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -134,7 +125,7 @@
 
 /* Terms Running Strip - REMOVED DUPLICATE (already in Header) */
 /* .terms-strip {
-  background: linear-gradient(90deg, #ff6b35, #ff8e53, #ff6b35);
+  background: linear-gradient(90deg, #2a215f, #5b3cc4, #2563eb);
   background-size: 200% 100%;
   animation: gradientShift 3s ease infinite;
   padding: 10px 0;

@@ -47,7 +47,7 @@ const BusinessDetails = () => {
 
     // Business name validation
     if (!formData.businessName.trim()) {
-      errors.businessName = 'Business name is required for our records';
+      errors.businessName = 'The game or studio name is required';
     }
 
     // Email validation
@@ -60,7 +60,7 @@ const BusinessDetails = () => {
 
     // Website validation - HTTPS only, block dangerous protocols
     if (!formData.website.trim()) {
-      errors.website = 'Website URL is required';
+      errors.website = 'An App Store or Google Play link is required';
     } else {
       const url = formData.website.trim().toLowerCase();
       
@@ -97,7 +97,7 @@ const BusinessDetails = () => {
 
     // Logo validation
     if (!logoData) {
-      errors.logoData = 'Company logo is required';
+      errors.logoData = 'An app icon is required';
     }
 
     setFormErrors(errors);
@@ -359,7 +359,7 @@ const BusinessDetails = () => {
         <header className="business-header">
           <div className="header-content">
             <div className="header-text">
-              <h1>Business Details</h1>
+              <h1>Your game</h1>
               <p className="header-subtitle">
                 Complete your information for your advertising spot
               </p>
@@ -389,8 +389,8 @@ const BusinessDetails = () => {
             {/* Form Section */}
             <section className="form-section">
               <div className="section-header">
-                <h2>Business Information</h2>
-                <p>Enter your details and upload your logo</p>
+                <h2>Game details</h2>
+                <p>Add the name, the store link, and the app icon</p>
               </div>
 
               <form className="business-form" onSubmit={handleSubmit}>
@@ -400,19 +400,19 @@ const BusinessDetails = () => {
                     <div className="card-icon">🏢</div>
                     <div>
                       <h3>Contact Details</h3>
-                      <p>Your contact information (business name is for our records only)</p>
+                      <p>The name players will see, and where we can reach you</p>
                     </div>
                   </div>
                   
                   {/* Business Name */}
                   <div className="form-group">
-                    <label htmlFor="businessName">Business Name *</label>
+                    <label htmlFor="businessName">Game or studio name *</label>
                     <input 
                       type="text" 
                       id="businessName"
                       name="businessName" 
                       required 
-                      placeholder="Enter your business name"
+                      placeholder="Enter the game or studio name"
                       value={formData.businessName}
                       onChange={handleInputChange}
                       autoComplete="organization"
@@ -421,7 +421,7 @@ const BusinessDetails = () => {
                     {formErrors.businessName && (
                       <span className="error-message">{formErrors.businessName}</span>
                     )}
-                    <small>For our records only - won't appear on your advertisement</small>
+                    <small>This name is shown with your square</small>
                   </div>
                   
                   <div className="form-group">
@@ -443,13 +443,13 @@ const BusinessDetails = () => {
                   </div>
                   
                   <div className="form-group">
-                    <label htmlFor="website">Website URL *</label>
+                    <label htmlFor="website">App Store or Google Play link *</label>
                     <input 
                       type="url" 
                       id="website"
                       name="website" 
                       required 
-                      placeholder="https://yourwebsite.com"
+                      placeholder="https://apps.apple.com/... or https://play.google.com/..."
                       value={formData.website}
                       onChange={handleInputChange}
                       autoComplete="url"
@@ -458,7 +458,7 @@ const BusinessDetails = () => {
                     {formErrors.website && (
                       <span className="error-message">{formErrors.website}</span>
                     )}
-                    <small>This is where customers will be directed when they click your logo</small>
+                    <small>Get opens this store page</small>
                   </div>
                 </div>
 
@@ -467,13 +467,13 @@ const BusinessDetails = () => {
                   <div className="card-header">
                     <div className="card-icon">🖼️</div>
                     <div>
-                      <h3>Company Logo</h3>
-                      <p>Upload your logo - it will fill the entire square</p>
+                      <h3>App icon</h3>
+                      <p>This icon fills the square</p>
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="logoUpload">Upload Logo *</label>
+                    <label htmlFor="logoUpload">Upload app icon *</label>
                     <div className="file-upload-area">
                       <input 
                         type="file" 
@@ -486,7 +486,7 @@ const BusinessDetails = () => {
                       />
                       <div className="upload-placeholder">
                         <div className="upload-icon">📁</div>
-                        <p>Click or tap to upload your logo</p>
+                        <p>Click or tap to upload the app icon</p>
                         <small>PNG, JPG, GIF, WebP up to 2MB</small>
                         <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
                           Works on desktop and mobile devices
@@ -501,8 +501,8 @@ const BusinessDetails = () => {
                   {logoData && (
                     <div className="logo-preview">
                       <div className="preview-header">
-                        <h4>Logo Preview</h4>
-                        <p><small>Your logo will fill the entire square perfectly</small></p>
+                        <h4>Icon preview</h4>
+                        <p><small>This is how the square will look</small></p>
                         <button 
                           type="button" 
                           className="btn-remove"
@@ -601,7 +601,7 @@ const BusinessDetails = () => {
                       className={`btn btn--primary ${!isFormValid || isUploading ? 'btn--disabled' : ''}`}
                       disabled={!isFormValid || isUploading}
                     >
-                      {isUploading ? 'Uploading Logo...' : 'Continue to Payment'}
+                      {isUploading ? 'Uploading icon...' : 'Continue to Payment'}
                       <span className="btn-icon">→</span>
                     </button>
                   </div>

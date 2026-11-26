@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { parseDateValue } from '../utils/dateUtils';
 import './SearchBar.css';
 
 const SearchBar = ({ isMobile = false }) => {
@@ -32,8 +33,8 @@ const SearchBar = ({ isMobile = false }) => {
         if (data && data.status === 'active') {
           // Check if expired
           if (data.endDate) {
-            const endDate = new Date(data.endDate);
-            if (endDate <= now) return; // Skip expired
+            const endDate = parseDateValue(data.endDate);
+            if (endDate && endDate <= now) return; // Skip expired
           }
 
           const businessName = (data.businessName || '').toLowerCase();
@@ -117,14 +118,14 @@ const SearchBar = ({ isMobile = false }) => {
         <div className="search-input-wrapper">
           <input
             type="text"
-            placeholder="🔍 Search businesses..."
+            placeholder="Search games..."
             value={searchQuery}
             onChange={handleSearchChange}
             onFocus={() => {
               if (searchResults.length > 0) setShowResults(true);
             }}
             className={`search-input ${isMobile ? 'mobile-search-input' : ''}`}
-            aria-label="Search businesses"
+            aria-label="Search games"
           />
           {isSearching && <div className="search-spinner"></div>}
           {searchQuery && !isSearching && (
@@ -187,7 +188,7 @@ const SearchBar = ({ isMobile = false }) => {
       {showResults && searchQuery && !isSearching && searchResults.length === 0 && (
         <div className="search-results">
           <div className="search-no-results">
-            No businesses found matching "{searchQuery}"
+            No games found matching "{searchQuery}"
           </div>
         </div>
       )}

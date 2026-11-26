@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import Header from './components/Header';
 import RunningStrip from './components/RunningStrip';
@@ -8,6 +8,7 @@ import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeModal from './components/WelcomeModal';
+import { initAnalytics, trackPageView } from './utils/analytics';
 
 // PERFORMANCE: Lazy load heavy components
 const Success = lazy(() => import('./components/Success'));
@@ -55,6 +56,22 @@ const KeyboardShortcutHandler = () => {
   return null;
 };
 
+// Track page views on SPA route changes for TikTok Pixel and Google Analytics
+const PageViewTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    initAnalytics();
+    const path = `${location.pathname}${location.search}${location.hash}`;
+    trackPageView(path);
+    if (window.ttq && typeof window.ttq.page === 'function') {
+      window.ttq.page();
+    }
+  }, [location.pathname, location.search, location.hash]);
+
+  return null;
+};
+
 function App() {
   // Create page routes dynamically
   const pages = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -81,6 +98,7 @@ function App() {
         >
           <ScrollToTop />
           <KeyboardShortcutHandler />
+          <PageViewTracker />
           <WelcomeModal />
           <div className="App">
             <Header />

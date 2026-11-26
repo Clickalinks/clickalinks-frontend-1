@@ -5,6 +5,7 @@
  */
 
 import { db } from '../firebase';
+import { parseDateValue } from './dateUtils';
 import { 
   collection, 
   getDocs, 
@@ -101,8 +102,8 @@ export async function performFairRotation() {
       
       // Filter expired purchases
       if (data.endDate) {
-        const endDate = new Date(data.endDate);
-        if (endDate <= now) return; // Skip expired
+        const endDate = parseDateValue(data.endDate);
+        if (endDate && endDate <= now) return; // Skip expired
       }
       
       // Filter unpaid purchases

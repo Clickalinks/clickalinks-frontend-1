@@ -7,16 +7,16 @@ const About = () => {
   return (
     <>
       <SEO
-        title="About CLICKaLINKS - UK-Based Deals & Advertising Platform"
-        description="Learn about CLICKaLINKS - a UK-based deals and promotions platform created to help customers find genuine savings and give businesses an affordable way to advertise. Founded in 2025 in Devon, connecting trusted businesses with shoppers."
-        keywords="about clickalinks, clickalinks history, UK advertising platform, Devon business, affordable advertising UK, business story, founder clickalinks, deals platform UK"
+        title="About CLICKaLINKS | Games and Apps | Tap. Get. Play."
+        description="CLICKaLINKS is a UK grid for games and apps. Players tap a square and press Get. Developers place a game from £1 a day. Founded in Devon in 2025 by Noor, Clicado Media UK Ltd."
+        keywords="about clickalinks, games advertising, app store grid, indie games UK, tap get play, clickalinks games, £1 a day game promotion"
       />
       <div className="about-page">
       {/* Hero Section */}
       <div className="about-hero">
         <div className="container">
           <h1>About CLICKaLINKS</h1>
-          <p className="subtitle">Connecting Trusted Businesses with Shoppers Looking to Save</p>
+          <p className="subtitle">A place to find games, and a square for the people who make them</p>
         </div>
       </div>
 
@@ -28,16 +28,14 @@ const About = () => {
             <div className="section-card">
               <h2>About CLICKaLINKS</h2>
               <p>
-                <strong>CLICKaLINKS</strong> is a UK-based deals and promotions platform created to help customers 
-                find genuine savings and to give businesses an affordable, effective way to advertise their offers. 
-                We connect trusted businesses with people who actively want to save money — not just during major 
-                sale events, but all year round.
+                <strong>CLICKaLINKS</strong> is a UK grid of games and apps. A player taps a square, sees the
+                icon, screenshots, rating and a Get button, then continues to the App Store or Google Play.
+                A developer can put a game on that grid from £1 a day.
               </p>
               <p>
-                Founded in 2025, CLICKaLINKS was built with simplicity, fairness, and accessibility at its core. 
-                We believe that great deals shouldn't be hidden behind expensive advertising campaigns or limited 
-                to a few days on the calendar. Our platform gives businesses of all sizes — from local independents 
-                to growing online brands — the opportunity to showcase their offers directly to engaged shoppers.
+                Founded in 2025, CLICKaLINKS was built to be simple and fair. Big studios buy installs from
+                the large ad networks. A solo developer or a small studio usually cannot. A square here is
+                a plain way to be seen while a game is new.
               </p>
             </div>
           </div>
@@ -47,21 +45,14 @@ const About = () => {
             <div className="section-card">
               <h2>Why We Started</h2>
               <p>
-                CLICKaLINKS began with a simple observation: finding real online deals outside of major holiday 
-                sales had become unnecessarily difficult. Most discounts are heavily promoted during events like 
-                Christmas, Black Friday, or Valentine's Day, while everyday savings often go unnoticed.
+                Most new games disappear. The stores are crowded, and a launch without a large ad budget
+                is easy to miss. CLICKaLINKS is a wall where a game can sit in the open, with its real
+                store page one tap away.
               </p>
               <p>
-                The idea came from real conversations. As a taxi driver in Devon, I speak with customers daily — 
-                working families, retirees, students, and business owners. A common topic kept coming up: the rising 
-                cost of living and how hard it is to find reliable discounts on everyday products and services. Like 
-                many others, I personally experienced the pressure of living bill to bill, maintaining a road-worthy 
-                vehicle, and covering increasing expenses.
-              </p>
-              <p>
-                Those conversations inspired CLICKaLINKS. The platform was created to support people facing real 
-                financial pressures, while also helping businesses reach customers without paying high advertising fees. 
-                Our mission is simple: make everyday deals easier to find and more accessible for everyone.
+                The company started in Devon. I drive a taxi here, and I build the site myself. The same
+                idea that shaped the first version still holds: a fair price, a simple page, and a place
+                that a small maker can actually afford.
               </p>
             </div>
           </div>
@@ -71,13 +62,11 @@ const About = () => {
             <div className="section-card">
               <h2>A Local Idea with a National Vision</h2>
               <p>
-                CLICKaLINKS was founded in Devon, but our vision reaches across the UK. What started as a local idea 
-                driven by everyday struggles has grown into a platform designed to benefit communities nationwide.
+                CLICKaLINKS was founded in Devon. The games on the grid can come from anywhere.
               </p>
               <p>
-                We are proud of our roots and the honest, hardworking values that shaped the business. By supporting 
-                local and online businesses alike, CLICKaLINKS helps strengthen communities while giving shoppers smarter 
-                ways to save money — no matter where they live.
+                The company is proud of those roots. The grid is for games and apps made anywhere, and the
+                company behind it remains in Devon.
               </p>
             </div>
           </div>
@@ -87,10 +76,9 @@ const About = () => {
             <div className="section-card">
               <h2>Founder's Note</h2>
               <blockquote style={{fontStyle: 'italic', borderLeft: '4px solid #667eea', paddingLeft: '20px', margin: '20px 0', fontSize: '1.1em', color: '#4a5568'}}>
-                "CLICKaLINKS wasn't created in a boardroom — it was created on the road. After years of speaking to 
-                customers and experiencing the same financial challenges myself, I realised there had to be a better way 
-                for people to find real deals throughout the year. This platform is built for everyday people, everyday 
-                businesses, and everyday savings."
+                "My name is Noor. I’m a taxi driver and the founder and developer of Clickalinks.com. I built
+                CLICKaLINKS so a game or app can be seen without a large advertising budget. Tap a square,
+                press Get, and the store does the rest. I want it to stay practical and fair."
               </blockquote>
             </div>
           </div>
@@ -102,28 +90,28 @@ const About = () => {
               <div className="features-grid">
                 <div className="feature-card">
                   <div className="feature-icon">💰</div>
-                  <h3>Affordable Advertising for Businesses</h3>
-                  <p>Low-cost advertising solutions that work for businesses of all sizes</p>
+                  <h3>A square from £1 a day</h3>
+                  <p>Priced for a solo developer or a small studio, not a large user-acquisition budget</p>
                 </div>
                 <div className="feature-card">
-                  <div className="feature-icon">🎯</div>
-                  <h3>Real Deals Promoted All Year Round</h3>
-                  <p>Not just seasonal — genuine savings available throughout the year</p>
+                  <div className="feature-icon">📲</div>
+                  <h3>A real store page</h3>
+                  <p>Icon, screenshots, rating and a Get button that opens the App Store or Google Play</p>
                 </div>
                 <div className="feature-card">
                   <div className="feature-icon">📱</div>
-                  <h3>Easy-to-Use Platform for Shoppers</h3>
-                  <p>Simple navigation to find the deals you're looking for</p>
+                  <h3>Made for phones</h3>
+                  <p>On a computer, rest on a square. On a phone, tap it. The same page opens.</p>
                 </div>
                 <div className="feature-card">
-                  <div className="feature-icon">🏪</div>
-                  <h3>Support for Local and Independent Businesses</h3>
-                  <p>Helping local businesses reach customers without breaking the bank</p>
+                  <div className="feature-icon">🎮</div>
+                  <h3>For indie games and apps</h3>
+                  <p>A place to be seen in the first weeks after launch</p>
                 </div>
                 <div className="feature-card">
                   <div className="feature-icon">🇬🇧</div>
-                  <h3>UK-Focused, Community-Driven Approach</h3>
-                  <p>Built in the UK, for UK businesses and shoppers</p>
+                  <h3>Built in the UK</h3>
+                  <p>Clicado Media UK Ltd, founded in Devon</p>
                 </div>
               </div>
             </div>
@@ -136,19 +124,19 @@ const About = () => {
               <div className="stats-grid">
                 <div className="stat-item">
                   <div className="stat-number">2,000+</div>
-                  <div className="stat-label">Advertising Squares</div>
+                  <div className="stat-label">Squares for games</div>
                   <div className="stat-description">Available across all pages</div>
                 </div>
                 
                 <div className="stat-item">
                   <div className="stat-number">£1</div>
                   <div className="stat-label">Starting Price Per Day</div>
-                  <div className="stat-description">Affordable advertising for all</div>
+                  <div className="stat-description">For a game or an app</div>
                 </div>
                 
                 <div className="stat-item">
                   <div className="stat-number">10</div>
-                  <div className="stat-label">Advertising Pages</div>
+                  <div className="stat-label">Pages of the grid</div>
                   <div className="stat-description">Multiple placement options</div>
                 </div>
                 
@@ -166,7 +154,7 @@ const About = () => {
             <div className="section-card">
               <h2>Company Information</h2>
               <p>
-                <strong>Clicado Media UK Ltd</strong> is an advertisement company registered in England and Wales, registration number is 16904433.
+                <strong>Clicado Media UK Ltd</strong> is registered in England and Wales, number 16904433.
               </p>
               <p style={{marginTop: '0.5rem'}}>
                 <strong>Clicado Media UK Ltd</strong> trading as <strong>clickalinks.com</strong>
@@ -174,14 +162,30 @@ const About = () => {
             </div>
           </div>
 
+          {/* Explore More */}
+          <div className="content-section">
+            <div className="section-card">
+              <h2>Explore More</h2>
+              <p>
+                Learn how the platform works and start your campaign when you are ready.
+              </p>
+              <div className="cta-buttons">
+                <Link to="/how-it-works" className="cta-btn secondary">How It Works</Link>
+                <Link to="/campaign" className="cta-btn primary">Start Your Campaign</Link>
+                <Link to="/blog" className="cta-btn secondary">Read the Blog</Link>
+              </div>
+            </div>
+          </div>
+
           {/* CTA Section */}
           <div className="cta-section">
             <div className="section-card accent">
               <h3>Ready to Get Started?</h3>
-              <p>Join hundreds of businesses already advertising on CLICKaLINKS.</p>
+              <p>Put a game on the grid, or tap one that is already there.</p>
               <div className="cta-buttons">
-                <a href="/" className="cta-btn primary">View Advertising Grid</a>
-                <Link to="/blog" className="cta-btn secondary">Read Our Blog</Link>
+                <a href="/" className="cta-btn primary">Open the games grid</a>
+                <Link to="/campaign" className="cta-btn secondary">Start a Campaign</Link>
+                <Link to="/how-it-works" className="cta-btn secondary">How It Works</Link>
               </div>
             </div>
           </div>
